@@ -1,12 +1,13 @@
 extern crate proc_macro;
 extern crate syn;
 
-#[macro_use]
-extern crate quote;
-
+use quote::{quote, TokenStreamExt};
 use syn::parse::{Parse, ParseStream, Result};
-use syn::{bracketed, token};
-use syn::{parse_macro_input, Ident, Token};
+use syn::{
+    bracketed,
+    token::{self, Colon2},
+};
+use syn::{parse_macro_input, punctuated::Punctuated, Ident, Path, PathSegment, Token};
 
 use std::collections::HashMap;
 
@@ -28,9 +29,26 @@ impl StateMachine {
 }
 
 #[derive(Debug)]
+struct EventMapping {
+    pub event: Ident,
+    pub guard: Option<Ident>,
+    pub action: Option<Ident>,
+    pub out_state: Ident,
+}
+
+fn eventmapping_to_tokens(em: &EventMapping) {
+    let event = &em.event;
+
+    let event = quote! { Events::#event };
+
+    println!("Ev: {:?}", event.to_string());
+}
+
+#[derive(Debug)]
 struct ParsedStateMachine {
     pub states: HashMap<String, Ident>,
     pub events: HashMap<String, Ident>,
+    pub states_events_mapping: HashMap<String, HashMap<String, EventMapping>>,
 }
 
 impl ParsedStateMachine {
@@ -50,6 +68,7 @@ impl ParsedStateMachine {
 
         let mut states = HashMap::new();
         let mut events = HashMap::new();
+        let mut states_events_mapping = HashMap::<String, HashMap<String, EventMapping>>::new();
 
         for transition in sm.transitions.iter() {
             // Collect states
@@ -61,9 +80,38 @@ impl ParsedStateMachine {
 
             // Collect events
             events.insert(transition.event.to_string(), transition.event.clone());
+
+            // Setup the states to events mapping
+            states_events_mapping.insert(transition.in_state.to_string(), HashMap::new());
         }
 
-        ParsedStateMachine { states, events }
+        // Create states to event mappings
+        for transition in sm.transitions.iter() {
+            let p = states_events_mapping
+                .get_mut(&transition.in_state.to_string())
+                .unwrap();
+
+            if let None = p.get(&transition.event.to_string()) {
+                let mapping = EventMapping {
+                    event: transition.event.clone(),
+                    guard: transition.guard.clone(),
+                    action: transition.action.clone(),
+                    out_state: transition.out_state.clone(),
+                };
+
+                eventmapping_to_tokens(&mapping);
+
+                p.insert(transition.event.to_string(), mapping);
+            } else {
+                panic!("State and event combination specified multiple times, remove duplicates");
+            }
+        }
+
+        ParsedStateMachine {
+            states,
+            events,
+            states_events_mapping,
+        }
     }
 }
 
@@ -154,6 +202,7 @@ pub fn statemachine(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Parse the syntax into structures
     let input = parse_macro_input!(input as StateMachine);
     let sm = ParsedStateMachine::new(input);
+    println!("ParsedStateMachine: {:#?}", sm);
 
     // Get only the unique states
     let states = sm.states.iter().map(|(_, value)| value);
@@ -161,16 +210,50 @@ pub fn statemachine(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Extract events
     let events = sm.events.iter().map(|(_, value)| value);
 
-    // Build the output, possibly using quasi-quotation
-    let output: proc_macro2::TokenStream = {
-        quote! {
-            #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-            enum States { #(#states,)* }
+    // Build the states and events output
+    let mut output = quote! {
+        #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+        pub enum States { #(#states),* }
 
-            #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-            enum Events { #(#events,)* }
-        }
+        #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+        pub enum Events { #(#events),* }
     };
+
+    // Build the state machine runner
+    let sm = quote! {
+    struct StateMachine {
+        state: States,
+    }
+
+    impl StateMachine {
+        pub fn new() -> Self {
+            StateMachine {
+                state: States::State1,
+            }
+        }
+
+        pub fn state(&self) -> States {
+            self.state
+        }
+
+        pub fn run(&mut self, event: Events) {
+            // match self.state {
+            //     States::State1 => match event {
+            //         Events::Event1 => {
+            //             println!("State1, Event1"); // Do something real in the future
+            //             if guard1() {
+            //                 action1();
+            //                 self.state = States::State2;
+            //             }
+            //         }
+            //         _ => println!("State1, {:?}, nothing happens", event),
+            //     },
+            // }
+        }
+    }
+    };
+
+    output.append_all(sm);
 
     // Hand the output tokens back to the compiler
     output.into()
