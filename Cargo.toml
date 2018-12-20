@@ -1,0 +1,16 @@
+[package]
+name = "sml"
+version = "0.1.0"
+authors = ["Emil Fresk <emil.fresk@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+quote = "0.6"
+proc-macro2 = "0.4"
+
+[dependencies.syn]
+features = ["extra-traits", "full"]
+version = "0.15"
+
+[lib]
+proc-macro = true
