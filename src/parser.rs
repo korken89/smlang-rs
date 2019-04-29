@@ -41,6 +41,7 @@ pub fn eventmapping_to_tokens(em: &EventMapping) -> String {
 #[derive(Debug)]
 pub struct ParsedStateMachine {
     pub states: HashMap<String, Ident>,
+    pub starting_state: Ident,
     pub events: HashMap<String, Ident>,
     pub states_events_mapping: HashMap<String, HashMap<String, EventMapping>>,
 }
@@ -59,6 +60,14 @@ impl ParsedStateMachine {
         } else if num_start > 1 {
             panic!("More than one starting state defined, remove duplicates");
         }
+
+        let starting_state = sm
+            .transitions
+            .iter()
+            .find(|sm| sm.start)
+            .unwrap()
+            .in_state
+            .clone();
 
         let mut states = HashMap::new();
         let mut events = HashMap::new();
@@ -103,6 +112,7 @@ impl ParsedStateMachine {
 
         ParsedStateMachine {
             states,
+            starting_state,
             events,
             states_events_mapping,
         }
