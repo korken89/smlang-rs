@@ -1,4 +1,3 @@
-use quote::quote;
 use syn::parse::{Parse, ParseStream, Result};
 use syn::{bracketed, token};
 use syn::{Ident, Token};
@@ -30,12 +29,13 @@ pub struct EventMapping {
     pub out_state: Ident,
 }
 
-pub fn eventmapping_to_tokens(em: &EventMapping) {
+pub fn eventmapping_to_tokens(em: &EventMapping) -> String {
     let event = &em.event;
 
-    let event = quote! { Events::#event };
+    //let event_tokens = quote! { Events::#event };
 
-    println!("Ev: {:?}", event.to_string());
+    event.to_string()
+    //println!("Ev: {:?}", event.to_string());
 }
 
 #[derive(Debug)]
