@@ -20,7 +20,11 @@ fn action2() {
     println!("Running Action 2");
 }
 
-// Transition DSL: src_state + event [ guard ] / action = dst_state
+// Transition DSL (from Boost-SML):
+// src_state + event [ guard ] / action = dst_state
+//
+// Defining starting state:
+// *src_state + event [ guard ] / action = dst_state
 statemachine!(
     *State1 + Event1[guard1] / action1 = State2,
     State2 + Event2[guard2] / action2 = State3,

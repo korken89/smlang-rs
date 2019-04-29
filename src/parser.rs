@@ -61,6 +61,7 @@ impl ParsedStateMachine {
             panic!("More than one starting state defined, remove duplicates");
         }
 
+        // Extract the starting state
         let starting_state = sm
             .transitions
             .iter()
