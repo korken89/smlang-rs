@@ -5,10 +5,12 @@ use std::vec;
 
 pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     // Get only the unique states
-    let state_list: vec::Vec<_> = sm.states.iter().map(|(_, value)| value).collect();
+    let mut state_list: vec::Vec<_> = sm.states.iter().map(|(_, value)| value).collect();
+    state_list.sort_by(|a, b| a.to_string().cmp(&b.to_string()));
 
     // Extract events
-    let event_list: vec::Vec<_> = sm.events.iter().map(|(_, value)| value).collect();
+    let mut event_list: vec::Vec<_> = sm.events.iter().map(|(_, value)| value).collect();
+    event_list.sort_by(|a, b| a.to_string().cmp(&b.to_string()));
 
     let transitions = &sm.states_events_mapping;
     let in_states: vec::Vec<_> = transitions
