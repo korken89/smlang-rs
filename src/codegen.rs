@@ -1,67 +1,14 @@
 use crate::parser::*;
 use proc_macro2;
-use quote::{quote, TokenStreamExt};
+use quote::quote;
 use std::vec;
 
 pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     // Get only the unique states
-    let states = sm.states.iter().map(|(_, value)| value);
+    let state_list: vec::Vec<_> = sm.states.iter().map(|(_, value)| value).collect();
 
     // Extract events
-    let events = sm.events.iter().map(|(_, value)| value);
-
-    // Build the states and events output
-    let mut output = quote! {
-        #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-        pub enum States { #(#states),* }
-
-        #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-        pub enum Events { #(#events),* }
-
-        pub enum Error { InvalidEvent, }
-    };
-
-    let starting_state = &sm.starting_state;
-
-    // Build the state machine runner
-    let sm_code = quote! {
-    struct StateMachine {
-        state: States,
-    }
-
-    impl StateMachine {
-        pub fn new() -> Self {
-            StateMachine {
-                state: States::#starting_state,
-            }
-        }
-
-        pub fn state(&self) -> States {
-            self.state
-        }
-    }
-
-    // How it should look when generated
-    //
-    // impl StateMachine {
-    //    pub fn run(&mut self, event: Events) {
-    //         match self.state {
-    //             States::State1 => match event {
-    //                 Events::Event1 => {
-    //                     println!("State1, Event1"); // Do something real in the future
-    //                     if guard1() {
-    //                         action1();
-    //                         self.state = States::State2;
-    //                     }
-    //                 }
-    //                 _ => println!("State1, {:?}, nothing happens", event),
-    //             },
-    //         }
-    //    }
-    // }
-    };
-
-    output.append_all(sm_code);
+    let event_list: vec::Vec<_> = sm.events.iter().map(|(_, value)| value).collect();
 
     let transitions = &sm.states_events_mapping;
     let in_states: vec::Vec<_> = transitions
@@ -102,16 +49,16 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     if let Some(g) = guard {
                         if let Some(a) = action {
                             quote! {
-                            if #g() {
-                                #a();
-                                self.state = States::#out_state;
-                            }
+                                if #g() {
+                                    #a();
+                                    self.state = States::#out_state;
+                                }
                             }
                         } else {
                             quote! {
-                            if #g() {
-                                self.state = States::#out_state;
-                            }
+                                if #g() {
+                                    self.state = States::#out_state;
+                                }
                             }
                         }
                     } else {
@@ -131,42 +78,47 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         })
         .collect();
 
-    // println!("Transitions: {:#?}", transitions);
-    // println!("States: {:#?}", in_states);
-    // println!("Events: {:#?}", events);
-    // println!("Guards: {:#?}", guards);
-    // println!("Actions: {:#?}", actions);
-    // println!("Out states: {:#?}", out_states);
-    // println!("Code blocks: {:#?}", code_blocks);
+    let starting_state = &sm.starting_state;
 
-    // Combine states, events and the internals code blocks
-    let run_code = quote! {
+    // Build the states and events output
+    quote! {
+        #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+        pub enum States { #(#state_list),* }
 
-    impl StateMachine {
-        pub fn run(&mut self, event: Events) -> Result<(),Error> {
-            // println!("In state: {:?}", self.state);
+        #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+        pub enum Events { #(#event_list),* }
 
-            match self.state {
-                #(States::#in_states => match event {
-                    #(Events::#events => {
-                        #code_blocks
+        #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+        pub enum Error { InvalidEvent }
 
-                        // println!("Going to state: {:?}", self.state);
-                        // println!("");
-                        Ok(())
+        // Build the state machine runner
+        pub struct StateMachine {
+            state: States,
+        }
+
+        impl StateMachine {
+            pub fn new() -> Self {
+                StateMachine {
+                    state: States::#starting_state,
+                }
+            }
+
+            pub fn state(&self) -> States {
+                self.state
+            }
+
+            pub fn run(&mut self, event: Events) -> Result<States, Error> {
+                match self.state {
+                    #(States::#in_states => match event {
+                        #(Events::#events => {
+                            #code_blocks
+
+                            Ok(self.state)
+                        }),*
+                        _ => Err(Error::InvalidEvent),
                     }),*
-                    _ => {
-                        // println!("State1, {:?}, nothing happens", event);
-                        // println!("");
-                        Err(Error::InvalidEvent)
-                    },
-                }),*
+                }
             }
         }
     }
-    };
-
-    output.append_all(run_code);
-
-    output
 }
