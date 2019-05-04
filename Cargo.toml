@@ -1,7 +1,12 @@
 [package]
 name = "sml"
-version = "0.1.0"
+categories = ["embedded", "no-std", "state machine"]
 authors = ["Emil Fresk <emil.fresk@gmail.com>"]
+description = "A state machine language DSL"
+keywords = ["dsl", "state machine"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/korken89/sml-rs"
+version = "0.1.0"
 edition = "2018"
 
 [dependencies]
