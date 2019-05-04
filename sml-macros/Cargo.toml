@@ -1,8 +1,8 @@
 [package]
-name = "sml"
+name = "sml-macros"
 categories = ["embedded", "no-std", "state machine"]
 authors = ["Emil Fresk <emil.fresk@gmail.com>"]
-description = "A state machine language DSL"
+description = "Macros for sml-rs"
 keywords = ["dsl", "state machine"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/korken89/sml-rs"
@@ -10,5 +10,12 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-sml-macros = { path = "./sml-macros" }
+quote = "0.6"
+proc-macro2 = "0.4"
 
+[dependencies.syn]
+features = ["extra-traits", "full"]
+version = "0.15"
+
+[lib]
+proc-macro = true
