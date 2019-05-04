@@ -1,9 +1,9 @@
 [package]
 name = "smlang-macros"
-categories = ["embedded", "no-std", "state machine"]
+categories = ["embedded", "no-std"]
 authors = ["Emil Fresk <emil.fresk@gmail.com>"]
 description = "Procedual macros for the smlang crate"
-keywords = ["dsl", "state machine"]
+keywords = ["dsl", "statemachine"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/korken89/smlang-rs"
 version = "0.1.0"
