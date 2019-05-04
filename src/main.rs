@@ -1,23 +1,29 @@
 use sml::statemachine;
 
 fn guard1() -> bool {
-    println!("Guard 1 ok");
+    //println!("Guard 1 ok");
 
     true
 }
 
 fn guard2() -> bool {
-    println!("Guard 2 ok");
+    //println!("Guard 2 ok");
+
+    true
+}
+
+fn guard_fail() -> bool {
+    //println!("Guard 2 ok");
 
     true
 }
 
 fn action1() {
-    println!("Running Action 1");
+    //println!("Running Action 1");
 }
 
 fn action2() {
-    println!("Running Action 2");
+    //println!("Running Action 2");
 }
 
 // Transition DSL (from Boost-SML):
@@ -30,6 +36,7 @@ statemachine!(
     State2 + Event2[guard2] / action2 = State3,
     State2 + Event3 = State1,
     State3 + Event3 = State1,
+    State2 + Event4[guard_fail] = State1,
 );
 
 fn main() {

@@ -12,6 +12,10 @@ fn guard2() -> bool {
     true
 }
 
+fn guard_fail() -> bool {
+    false
+}
+
 fn action1() {
     println!("Running Action 1");
 }
@@ -25,6 +29,7 @@ statemachine!(
     State2 + Event2[guard2] / action2 = State3,
     State2 + Event3 = State1,
     State3 + Event3 = State1,
+    State2 + Event4[guard_fail] = State1,
 );
 
 #[test]
@@ -84,4 +89,13 @@ fn event_error() {
 
     let output = sm.process_event(Events::Event1);
     assert_eq!(output, Ok(States::State2));
+}
+
+#[test]
+fn guard_error() {
+    let mut sm = StateMachine::new();
+
+    let _ = sm.process_event(Events::Event1);
+    let output = sm.process_event(Events::Event4);
+    assert_eq!(output, Err(Error::GuardFailed));
 }

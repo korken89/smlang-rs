@@ -29,15 +29,6 @@ pub struct EventMapping {
     pub out_state: Ident,
 }
 
-pub fn eventmapping_to_tokens(em: &EventMapping) -> String {
-    let event = &em.event;
-
-    //let event_tokens = quote! { Events::#event };
-
-    event.to_string()
-    //println!("Ev: {:?}", event.to_string());
-}
-
 #[derive(Debug)]
 pub struct ParsedStateMachine {
     pub states: HashMap<String, Ident>,
@@ -102,8 +93,6 @@ impl ParsedStateMachine {
                     action: transition.action.clone(),
                     out_state: transition.out_state.clone(),
                 };
-
-                eventmapping_to_tokens(&mapping);
 
                 p.insert(transition.event.to_string(), mapping);
             } else {

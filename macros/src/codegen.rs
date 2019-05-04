@@ -54,12 +54,16 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                 if #g() {
                                     #a();
                                     self.state = States::#out_state;
+                                } else {
+                                    return Err(Error::GuardFailed);
                                 }
                             }
                         } else {
                             quote! {
                                 if #g() {
                                     self.state = States::#out_state;
+                                } else {
+                                    return Err(Error::GuardFailed);
                                 }
                             }
                         }
@@ -84,31 +88,47 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     // Build the states and events output
     quote! {
+        /// List of auto-generated states
         #[derive(Clone, Copy, PartialEq, Eq, Debug)]
         pub enum States { #(#state_list),* }
 
+        /// List of auto-generated events
         #[derive(Clone, Copy, PartialEq, Eq, Debug)]
         pub enum Events { #(#event_list),* }
 
+        /// List of possible errors
         #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-        pub enum Error { InvalidEvent }
+        pub enum Error {
+            /// This can happen when an event is processed which should not come in this stage
+            /// of processing
+            InvalidEvent,
+            /// This can happen when an event is processed whose guard did not return `true`
+            GuardFailed,
+        }
 
-        // Build the state machine runner
+        /// State machine structure definition
+        #[derive(Debug)]
         pub struct StateMachine {
             state: States,
         }
 
         impl StateMachine {
+            /// Creates a new state machine with the specified starting state
             pub fn new() -> Self {
                 StateMachine {
                     state: States::#starting_state,
                 }
             }
 
+            /// Returns the current state
             pub fn state(&self) -> States {
                 self.state
             }
 
+            /// Process an event
+            ///
+            /// It will return `Ok(NextState)` if the transition was successful, or `Err(Error::...)`
+            /// if there was an error in the transition
             pub fn process_event(&mut self, event: Events) -> Result<States, Error> {
                 match self.state {
                     #(States::#in_states => match event {
