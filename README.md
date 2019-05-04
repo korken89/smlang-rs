@@ -1,6 +1,6 @@
 # smlang: A `no_std` State Machine Language DSL in Rust
 
-[![Build Status](https://travis-ci.org/korken89/sml-rs.svg?branch=master)](https://travis-ci.org/korken89/sml-rs)
+[![Build Status](https://travis-ci.org/korken89/smlang-rs.svg?branch=master)](https://travis-ci.org/korken89/smlang-rs)
 
 > A state machine language DSL based on the syntax of [Boost-SML](https://boost-experimental.github.io/sml/).
 
