@@ -8,90 +8,74 @@ A state machine language DSL based on the syntax of [Boost-SML](https://boost-ex
 
 The aim of this DSL is to facilitate the use of state machines, as they quite fast can become overly complicated to write and get an overview of.
 
-The DSL is as follows:
+## Transition DSL
 
-```
-Transition DSL (from Boost-SML):
-src_state + event [ guard ] / action = dst_state
-
-Defining starting state:
-*src_state + event [ guard ] / action = dst_state
-```
-
-Small example with 3 states, 3 events, 2 guards and 2 actions:
+The DSL is defined as follows (from Boost-SML):
 
 ```rust
-use sml::statemachine;
-
-fn guard1() -> bool {
-    println!("Guard 1 ok");
-
-    true
-}
-
-fn guard2() -> bool {
-    println!("Guard 2 ok");
-
-    true
-}
-
-fn action1() {
-    println!("Running Action 1");
-}
-
-fn action2() {
-    println!("Running Action 2");
-}
-
-statemachine!(
-    *State1 + Event1[guard1] / action1 = State2,
-    State2 + Event2[guard2] / action2 = State3,
-    State2 + Event3 = State1,
-    State3 + Event3 = State1,
-);
-
-fn main() {
-    let mut sm = StateMachine::new();
-    assert_eq!(sm.state(), States::State1);
-
-    let _ = sm.process_event(Events::Event1);
-    assert_eq!(sm.state(), States::State2);
-
-    let _ = sm.process_event(Events::Event1);
-    assert_eq!(sm.state(), States::State2);
-
-    let _ = sm.process_event(Events::Event1);
-    assert_eq!(sm.state(), States::State2);
-
-    let _ = sm.process_event(Events::Event2);
-    assert_eq!(sm.state(), States::State3);
-
-    let _ = sm.process_event(Events::Event1);
-    assert_eq!(sm.state(), States::State3);
-
-    let _ = sm.process_event(Events::Event1);
-    assert_eq!(sm.state(), States::State3);
-
-    let _ = sm.process_event(Events::Event2);
-    assert_eq!(sm.state(), States::State3);
-
-    let _ = sm.process_event(Events::Event2);
-    assert_eq!(sm.state(), States::State3);
-
-    let _ = sm.process_event(Events::Event3);
-    assert_eq!(sm.state(), States::State1);
-
-    let _ = sm.process_event(Events::Event2);
-    assert_eq!(sm.state(), States::State1);
-
-    let _ = sm.process_event(Events::Event1);
-    assert_eq!(sm.state(), States::State2);
-
-    let _ = sm.process_event(Events::Event2);
-    assert_eq!(sm.state(), States::State3);
+Transition DSL:
+statemachine!{
+    SrcState + Event [ guard ] / action = DstState,
+    *SrcState + Event [ guard ] / action = DstState, // * denotes starting state
+    // ...
 }
 ```
 
+Where `guard` and `action` are optional and can be left out. A `guard` is a function which returns `true` if the state transition should happen, and `false`  if the transition should not happen, while `action` are functions that are run during the transition which are guaranteed to finish before entering the new state.
+
+This implies that any state machine must be written as a list of transitions.
+
+## TODOs
+
+Features missing:
+
+* Add so `Events` can have data associated to them which is passed to the `guard` and `action`
+* Have the transition DSL automatically generate a DOT graph for easier debug
+* Give the state machine a settable type
+* Look into adding a context structure into the state machine to handle user added data
+
+## Examples
+
+Here are some examples of state machines converted from UML to the State Machine Language DSL.
+
+### Linear state machine
+
+![alt text](./docs/sm1.png "")
+
+DSL implementation:
+
+```rust
+statemachine!{
+    *State1 + Event1 = State2,
+    State2 + Event2 = State3,
+}
+```
+
+### Looping state machine
+
+![alt text](./docs/sm2.png "")
+
+DSL implementation:
+
+```rust
+statemachine!{
+    *State1 + Event1 = State2,
+    State2 + Event2 = State3,
+    State3 + Event3 = State2,
+}
+```
+
+### Using guards and actions
+
+![alt text](./docs/sm3.png "")
+
+DSL implementation:
+
+```rust
+statemachine!{
+    *State1 + Event1 [guard] / action = State2,
+}
+```
 
 ## Contributors
 

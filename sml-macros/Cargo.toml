@@ -2,12 +2,13 @@
 name = "sml-macros"
 categories = ["embedded", "no-std", "state machine"]
 authors = ["Emil Fresk <emil.fresk@gmail.com>"]
-description = "Macros for sml-rs"
+description = "Procedual macros for the sml crate"
 keywords = ["dsl", "state machine"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/korken89/sml-rs"
 version = "0.1.0"
 edition = "2018"
+readme = "../README.md"
 
 [dependencies]
 quote = "0.6"

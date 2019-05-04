@@ -9,6 +9,12 @@ repository = "https://github.com/korken89/sml-rs"
 version = "0.1.0"
 edition = "2018"
 
-[dependencies]
-sml-macros = { path = "./sml-macros" }
+[lib]
+name = "sml"
 
+[dependencies]
+sml-macros = { path = "./sml-macros", version = "0.1.0" }
+
+[profile.release]
+codegen-units = 1
+lto = true
