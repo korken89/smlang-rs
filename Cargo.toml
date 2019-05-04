@@ -1,19 +1,19 @@
 [package]
-name = "sml"
+name = "smlang"
 categories = ["embedded", "no-std", "state machine"]
 authors = ["Emil Fresk <emil.fresk@gmail.com>"]
-description = "A state machine language DSL"
+description = "A no-std state machine language DSL"
 keywords = ["dsl", "state machine"]
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/korken89/sml-rs"
+repository = "https://github.com/korken89/smlang-rs"
 version = "0.1.0"
 edition = "2018"
 
 [lib]
-name = "sml"
+name = "smllang"
 
 [dependencies]
-sml-macros = { path = "macros", version = "0.1.0" }
+smlang-macros = { path = "macros", version = "0.1.0" }
 
 [profile.release]
 codegen-units = 1

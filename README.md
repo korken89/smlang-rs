@@ -1,4 +1,4 @@
-# sml-rs: State Machine Language DSL in Rust
+# smlang: A `no_std` State Machine Language DSL in Rust
 
 [![Build Status](https://travis-ci.org/korken89/sml-rs.svg?branch=master)](https://travis-ci.org/korken89/sml-rs)
 

@@ -1,4 +1,4 @@
-use sml::statemachine;
+use smlang_macros::statemachine;
 
 fn guard1() -> bool {
     //println!("Guard 1 ok");

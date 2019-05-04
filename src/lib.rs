@@ -1,6 +1,6 @@
-//! # sml
+//! # smlang
 //!
-//! `sml` is a procedural macro library creating a state machine language DSL is to facilitate the
+//! `smlang` is a procedural macro library creating a state machine language DSL is to facilitate the
 //! use of state machines, as they quite fast can become overly complicated to write and get an
 //! overview of.
 //!
@@ -66,7 +66,7 @@
 
 #![no_std]
 
-pub use sml_macros::statemachine;
+pub use smlang_macros::statemachine;
 
 #[cfg(test)]
 #[macro_use]
