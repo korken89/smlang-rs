@@ -13,8 +13,11 @@ edition = "2018"
 name = "sml"
 
 [dependencies]
-sml-macros = { path = "./sml-macros", version = "0.1.0" }
+sml-macros = { path = "macros", version = "0.1.0" }
 
 [profile.release]
 codegen-units = 1
 lto = true
+
+[workspace]
+members = ["macros"]

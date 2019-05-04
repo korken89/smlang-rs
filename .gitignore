@@ -1,4 +1,4 @@
 /target
-sml-macros/target
+macros/target
 **/*.rs.bk
 Cargo.lock

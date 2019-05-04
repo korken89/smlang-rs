@@ -20,6 +20,3 @@ pub fn statemachine(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Hand the output tokens back to the compiler
     output.into()
 }
-
-#[cfg(test)]
-mod tests;
