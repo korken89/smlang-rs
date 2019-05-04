@@ -109,7 +109,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 self.state
             }
 
-            pub fn run(&mut self, event: Events) -> Result<States, Error> {
+            pub fn process_event(&mut self, event: Events) -> Result<States, Error> {
                 match self.state {
                     #(States::#in_states => match event {
                         #(Events::#events => {

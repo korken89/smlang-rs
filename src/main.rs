@@ -36,39 +36,39 @@ fn main() {
     let mut sm = StateMachine::new();
     // assert_eq!(sm.state(), States::State1);
 
-    let _ = sm.run(Events::Event1);
+    let _ = sm.process_event(Events::Event1);
     // assert_eq!(sm.state(), States::State2);
 
-    let _ = sm.run(Events::Event1);
+    let _ = sm.process_event(Events::Event1);
     // assert_eq!(sm.state(), States::State2);
 
-    let _ = sm.run(Events::Event1);
+    let _ = sm.process_event(Events::Event1);
     // assert_eq!(sm.state(), States::State2);
 
-    let _ = sm.run(Events::Event2);
+    let _ = sm.process_event(Events::Event2);
     // assert_eq!(sm.state(), States::State3);
 
-    let _ = sm.run(Events::Event1);
+    let _ = sm.process_event(Events::Event1);
     // assert_eq!(sm.state(), States::State3);
 
-    let _ = sm.run(Events::Event1);
+    let _ = sm.process_event(Events::Event1);
     // assert_eq!(sm.state(), States::State3);
 
-    let _ = sm.run(Events::Event2);
+    let _ = sm.process_event(Events::Event2);
     // assert_eq!(sm.state(), States::State3);
 
-    let _ = sm.run(Events::Event2);
+    let _ = sm.process_event(Events::Event2);
     // assert_eq!(sm.state(), States::State3);
 
-    let _ = sm.run(Events::Event3);
+    let _ = sm.process_event(Events::Event3);
     // assert_eq!(sm.state(), States::State1);
 
-    let _ = sm.run(Events::Event2);
+    let _ = sm.process_event(Events::Event2);
     // assert_eq!(sm.state(), States::State1);
 
-    let _ = sm.run(Events::Event1);
+    let _ = sm.process_event(Events::Event1);
     // assert_eq!(sm.state(), States::State2);
 
-    let _ = sm.run(Events::Event2);
+    let _ = sm.process_event(Events::Event2);
     // assert_eq!(sm.state(), States::State3);
 }
