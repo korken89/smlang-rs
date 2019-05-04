@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/korken89/sml-rs.svg?branch=master)](https://travis-ci.org/korken89/sml-rs)
 
-A state machine language DSL based on the syntax of [Boost-SML](https://boost-experimental.github.io/sml/).
+> A state machine language DSL based on the syntax of [Boost-SML](https://boost-experimental.github.io/sml/).
 
 ## Aim
 
@@ -13,7 +13,6 @@ The aim of this DSL is to facilitate the use of state machines, as they quite fa
 The DSL is defined as follows (from Boost-SML):
 
 ```rust
-Transition DSL:
 statemachine!{
     SrcState + Event [ guard ] / action = DstState,
     *SrcState + Event [ guard ] / action = DstState, // * denotes starting state
@@ -30,6 +29,7 @@ This implies that any state machine must be written as a list of transitions.
 Features missing:
 
 * Add so `Events` can have data associated to them which is passed to the `guard` and `action`
+* Allow `guard` and `action` to be closures
 * Have the transition DSL automatically generate a DOT graph for easier debug
 * Give the state machine a settable type
 * Look into adding a context structure into the state machine to handle user added data
