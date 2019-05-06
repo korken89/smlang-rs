@@ -139,6 +139,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         }),*
                         _ => Err(Error::InvalidEvent),
                     }),*
+                    _ => Err(Error::InvalidEvent),
                 }
             }
         }
