@@ -34,6 +34,36 @@ Features missing:
 * Give the state machine a settable type
 * Look into adding a context structure into the state machine to handle user added data
 
+Possible future straw-man syntax:
+
+```rust
+statemachine! {
+    type: MyStateMachine,
+    context: MyContextStruct,
+    transitions: {
+        *State1 + Event1 = State2,
+        State2 + Event2 = State3,
+    },
+    values: {
+        Event1: Type1,
+        Event2: Type2
+    }
+}
+```
+
+or
+
+```rust
+statemachine! {
+    type: MyStateMachine,
+    context: MyContextStruct,
+    transitions: {
+        *State1 + Event1(Type1) = State2,
+        State2 + Event2(Type2) = State3,
+    },
+}
+```
+
 ## Examples
 
 Here are some examples of state machines converted from UML to the State Machine Language DSL. Runnable versions of each example is available in the `examples` folder.
