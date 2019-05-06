@@ -36,7 +36,7 @@ Features missing:
 
 ## Examples
 
-Here are some examples of state machines converted from UML to the State Machine Language DSL.
+Here are some examples of state machines converted from UML to the State Machine Language DSL. Runnable versions of each example is available in the `examples` folder.
 
 ### Linear state machine
 
@@ -50,6 +50,8 @@ statemachine!{
     State2 + Event2 = State3,
 }
 ```
+
+This example is available in `ex1.rs`.
 
 ### Looping state machine
 
@@ -65,6 +67,8 @@ statemachine!{
 }
 ```
 
+This example is available in `ex2.rs`.
+
 ### Using guards and actions
 
 ![alt text](./docs/sm3.png "")
@@ -76,6 +80,8 @@ statemachine!{
     *State1 + Event1 [guard] / action = State2,
 }
 ```
+
+This example is available in `ex3.rs`.
 
 ## Contributors
 

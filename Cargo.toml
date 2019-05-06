@@ -11,10 +11,13 @@ edition = "2018"
 readme = "README.md"
 
 [lib]
-name = "smllang"
+name = "smlang"
+
+[badges]
+travis-ci = { repository = "korken89/smlang-rs", branch = "master" }
 
 [dependencies]
-smlang-macros = { path = "macros", version = "0.1.0" }
+smlang-macros = { path = "macros", version = "0.1.1" }
 
 [profile.release]
 codegen-units = 1
