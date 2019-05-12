@@ -2,6 +2,7 @@ use crate::parser::*;
 use proc_macro2;
 use quote::quote;
 use std::vec;
+use std::collections::HashSet;
 
 pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     // Get only the unique states
@@ -23,7 +24,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         .map(|(_, value)| value.iter().map(|(_, value)| &value.event).collect())
         .collect();
 
-    // Merge guards, actions and output states into code blocks
+    // Map guards, actions and output states into code blocks
     let guards: vec::Vec<vec::Vec<_>> = transitions
         .iter()
         .map(|(_, value)| value.iter().map(|(_, value)| &value.guard).collect())
@@ -39,6 +40,18 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         .map(|(_, value)| value.iter().map(|(_, value)| &value.out_state).collect())
         .collect();
 
+    let guard_context_methods: HashSet<_> = guards
+        .iter()
+        .flatten()
+        .filter_map(|g| g.as_ref())
+        .collect();
+
+    let action_context_methods: HashSet<_> = actions
+        .iter()
+        .flatten()
+        .filter_map(|a| a.as_ref())
+        .collect();
+
     // Create the code blocks inside the switch cases
     let code_blocks: vec::Vec<vec::Vec<_>> = guards
         .iter()
@@ -51,8 +64,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     if let Some(g) = guard {
                         if let Some(a) = action {
                             quote! {
-                                if #g() {
-                                    #a();
+                                if self.context.#g() {
+                                    self.context.#a();
                                     self.state = States::#out_state;
                                 } else {
                                     return Err(Error::GuardFailed);
@@ -60,7 +73,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                             }
                         } else {
                             quote! {
-                                if #g() {
+                                if self.context.#g() {
                                     self.state = States::#out_state;
                                 } else {
                                     return Err(Error::GuardFailed);
@@ -70,7 +83,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     } else {
                         if let Some(a) = action {
                             quote! {
-                                #a();
+                                self.context.#a();
                                 self.state = States::#out_state;
                             }
                         } else {
@@ -88,6 +101,11 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     // Build the states and events output
     quote! {
+        pub trait StateMachineContext : Default + core::fmt::Debug {
+            #(fn #guard_context_methods(&self) -> bool;)*
+            #(fn #action_context_methods(&self);)*
+        }
+
         /// List of auto-generated states
         #[derive(Clone, Copy, PartialEq, Eq, Debug)]
         pub enum States { #(#state_list),* }
@@ -108,15 +126,17 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
         /// State machine structure definition
         #[derive(Debug)]
-        pub struct StateMachine {
+        pub struct StateMachine<T: StateMachineContext> {
             state: States,
+            context: T
         }
 
-        impl StateMachine {
+        impl<T: StateMachineContext> StateMachine<T> {
             /// Creates a new state machine with the specified starting state
             pub fn new() -> Self {
                 StateMachine {
                     state: States::#starting_state,
+                    context: T::default()
                 }
             }
 

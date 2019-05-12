@@ -10,26 +10,31 @@ statemachine! {
     State2 + Event2 [guard_fail] / action2 = State3,
 }
 
-fn guard() -> bool {
-    // Always ok
-    true
-}
+#[derive(Debug, Default)]
+pub struct Context;
 
-fn guard_fail() -> bool {
-    // Always fail
-    false
-}
+impl StateMachineContext for Context {
+    fn guard(&self) -> bool {
+        // Always ok
+        true
+    }
 
-fn action1() {
-    println!("Action 1");
-}
+    fn guard_fail(&self) -> bool {
+        // Always fail
+        false
+    }
 
-fn action2() {
-    println!("Action 1");
+    fn action1(&self) {
+        println!("Action 1");
+    }
+
+    fn action2(&self) {
+        println!("Action 1");
+    }
 }
 
 fn main() {
-    let mut sm = StateMachine::new();
+    let mut sm = StateMachine::<Context>::new();
     assert_eq!(sm.state(), States::State1);
 
     println!("Before action 1");
