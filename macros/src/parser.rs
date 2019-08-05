@@ -1,8 +1,9 @@
-use syn::parse::{Parse, ParseStream, Result};
-use syn::{bracketed, token};
-use syn::{Ident, Token};
-
 use std::collections::HashMap;
+use syn::{
+    bracketed,
+    parse::{Parse, ParseStream, Result},
+    token, Ident, Token,
+};
 
 #[derive(Debug)]
 pub struct StateMachine {
@@ -40,7 +41,7 @@ pub struct ParsedStateMachine {
 impl ParsedStateMachine {
     pub fn new(sm: StateMachine) -> Self {
         // Check the initial state definition
-        let num_start: u32 = sm
+        let num_start: usize = sm
             .transitions
             .iter()
             .map(|sm| if sm.start { 1 } else { 0 })
