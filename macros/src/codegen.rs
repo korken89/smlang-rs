@@ -144,6 +144,16 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 self.state
             }
 
+            /// Returns the current context as a reference
+            pub fn context(&self) -> &T {
+                &self.context
+            }
+
+            /// Returns the current context as a mutable reference
+            pub fn context_mut(&mut self) -> &mut T {
+                &mut self.context
+            }
+
             /// Process an event
             ///
             /// It will return `Ok(NextState)` if the transition was successful, or `Err(Error::...)`
