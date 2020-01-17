@@ -1,29 +1,34 @@
 use smlang_macros::statemachine;
 
-fn guard1() -> bool {
-    //println!("Guard 1 ok");
+#[derive(Debug, Default)]
+pub struct Context;
 
-    true
-}
+impl StateMachineContext for Context {
+    fn guard1(&self) -> bool {
+        //println!("Guard 1 ok");
 
-fn guard2() -> bool {
-    //println!("Guard 2 ok");
+        true
+    }
 
-    true
-}
+    fn guard2(&self) -> bool {
+        //println!("Guard 2 ok");
 
-fn guard_fail() -> bool {
-    //println!("Guard 2 ok");
+        true
+    }
 
-    true
-}
+    fn guard_fail(&self) -> bool {
+        //println!("Guard 2 ok");
 
-fn action1() {
-    //println!("Running Action 1");
-}
+        true
+    }
 
-fn action2() {
-    //println!("Running Action 2");
+    fn action1(&self) {
+        //println!("Running Action 1");
+    }
+
+    fn action2(&self) {
+        //println!("Running Action 2");
+    }
 }
 
 // Transition DSL (from Boost-SML):
@@ -40,7 +45,7 @@ statemachine!(
 );
 
 fn main() {
-    let mut sm = StateMachine::new();
+    let mut sm = StateMachine::<Context>::new();
     // assert_eq!(sm.state(), States::State1);
 
     let _ = sm.process_event(Events::Event1);

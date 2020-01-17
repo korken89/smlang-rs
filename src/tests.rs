@@ -1,27 +1,32 @@
 use super::statemachine;
 
-fn guard1() -> bool {
-    println!("Guard 1 ok");
+#[derive(Debug, Default)]
+pub struct Context;
 
-    true
-}
+impl StateMachineContext for Context {
+    fn guard1(&self) -> bool {
+        println!("Guard 1 ok");
 
-fn guard2() -> bool {
-    println!("Guard 2 ok");
+        true
+    }
 
-    true
-}
+    fn guard2(&self) -> bool {
+        println!("Guard 2 ok");
 
-fn guard_fail() -> bool {
-    false
-}
+        true
+    }
 
-fn action1() {
-    println!("Running Action 1");
-}
+    fn guard_fail(&self) -> bool {
+        false
+    }
 
-fn action2() {
-    println!("Running Action 2");
+    fn action1(&self) {
+        println!("Running Action 1");
+    }
+
+    fn action2(&self) {
+        println!("Running Action 2");
+    }
 }
 
 statemachine!(
@@ -34,13 +39,13 @@ statemachine!(
 
 #[test]
 fn starting_state() {
-    let sm = StateMachine::new();
+    let sm = StateMachine::<Context>::new();
     assert_eq!(sm.state(), States::State1);
 }
 
 #[test]
 fn transitions() {
-    let mut sm = StateMachine::new();
+    let mut sm = StateMachine::<Context>::new();
 
     let _ = sm.process_event(Events::Event1);
     assert_eq!(sm.state(), States::State2);
@@ -81,7 +86,7 @@ fn transitions() {
 
 #[test]
 fn event_error() {
-    let mut sm = StateMachine::new();
+    let mut sm = StateMachine::<Context>::new();
     assert_eq!(sm.state(), States::State1);
 
     let output = sm.process_event(Events::Event3);
@@ -93,7 +98,7 @@ fn event_error() {
 
 #[test]
 fn guard_error() {
-    let mut sm = StateMachine::new();
+    let mut sm = StateMachine::<Context>::new();
 
     let _ = sm.process_event(Events::Event1);
     let output = sm.process_event(Events::Event4);

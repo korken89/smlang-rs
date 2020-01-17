@@ -10,8 +10,13 @@ statemachine! {
     State2 + Event2 = State3,
 }
 
+#[derive(Debug, Default)]
+pub struct Context;
+
+impl StateMachineContext for Context {}
+
 fn main() {
-    let mut sm = StateMachine::new();
+    let mut sm = StateMachine::<Context>::new();
     assert_eq!(sm.state(), States::State1);
 
     let r = sm.process_event(Events::Event1);
