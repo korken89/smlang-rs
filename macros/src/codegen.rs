@@ -102,7 +102,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     quote! {
         pub trait StateMachineContext : Default + core::fmt::Debug {
             #(fn #guard_context_methods(&self) -> bool;)*
-            #(fn #action_context_methods(&self);)*
+            #(fn #action_context_methods(&mut self);)*
         }
 
         /// List of auto-generated states

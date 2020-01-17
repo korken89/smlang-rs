@@ -22,11 +22,11 @@ impl StateMachineContext for Context {
         true
     }
 
-    fn action1(&self) {
+    fn action1(&mut self) {
         //println!("Running Action 1");
     }
 
-    fn action2(&self) {
+    fn action2(&mut self) {
         //println!("Running Action 2");
     }
 }
