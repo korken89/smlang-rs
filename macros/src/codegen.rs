@@ -1,59 +1,58 @@
 use crate::parser::*;
 use proc_macro2;
 use quote::quote;
-use std::vec;
-use std::collections::HashSet;
+use std::vec::Vec;
 
 pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     // Get only the unique states
-    let mut state_list: vec::Vec<_> = sm.states.iter().map(|(_, value)| value).collect();
+    let mut state_list: Vec<_> = sm.states.iter().map(|(_, value)| value).collect();
     state_list.sort_by(|a, b| a.to_string().cmp(&b.to_string()));
 
     // Extract events
-    let mut event_list: vec::Vec<_> = sm.events.iter().map(|(_, value)| value).collect();
+    let mut event_list: Vec<_> = sm.events.iter().map(|(_, value)| value).collect();
     event_list.sort_by(|a, b| a.to_string().cmp(&b.to_string()));
 
     let transitions = &sm.states_events_mapping;
-    let in_states: vec::Vec<_> = transitions
+    let in_states: Vec<_> = transitions
         .iter()
         .map(|(key, _)| sm.states.get(key).unwrap())
         .collect();
 
-    let events: vec::Vec<vec::Vec<_>> = transitions
+    let events: Vec<Vec<_>> = transitions
         .iter()
         .map(|(_, value)| value.iter().map(|(_, value)| &value.event).collect())
         .collect();
 
     // Map guards, actions and output states into code blocks
-    let guards: vec::Vec<vec::Vec<_>> = transitions
+    let guards: Vec<Vec<_>> = transitions
         .iter()
         .map(|(_, value)| value.iter().map(|(_, value)| &value.guard).collect())
         .collect();
 
-    let actions: vec::Vec<vec::Vec<_>> = transitions
+    let actions: Vec<Vec<_>> = transitions
         .iter()
         .map(|(_, value)| value.iter().map(|(_, value)| &value.action).collect())
         .collect();
 
-    let out_states: vec::Vec<vec::Vec<_>> = transitions
+    let out_states: Vec<Vec<_>> = transitions
         .iter()
         .map(|(_, value)| value.iter().map(|(_, value)| &value.out_state).collect())
         .collect();
 
-    let guard_context_methods: HashSet<_> = guards
+    let guard_context_methods: Vec<_> = guards
         .iter()
         .flatten()
         .filter_map(|g| g.as_ref())
         .collect();
 
-    let action_context_methods: HashSet<_> = actions
+    let action_context_methods: Vec<_> = actions
         .iter()
         .flatten()
         .filter_map(|a| a.as_ref())
         .collect();
 
     // Create the code blocks inside the switch cases
-    let code_blocks: vec::Vec<vec::Vec<_>> = guards
+    let code_blocks: Vec<Vec<_>> = guards
         .iter()
         .zip(actions.iter().zip(out_states.iter()))
         .map(|(guards, (actions, out_states))| {
