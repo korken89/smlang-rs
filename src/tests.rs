@@ -4,27 +4,27 @@ use super::statemachine;
 pub struct Context;
 
 impl StateMachineContext for Context {
-    fn guard1(&self) -> bool {
+    fn guard1(&self, _event: &Events) -> bool {
         println!("Guard 1 ok");
 
         true
     }
 
-    fn guard2(&self) -> bool {
+    fn guard2(&self, _event: &Events) -> bool {
         println!("Guard 2 ok");
 
         true
     }
 
-    fn guard_fail(&self) -> bool {
+    fn guard_fail(&self, _event: &Events) -> bool {
         false
     }
 
-    fn action1(&mut self) {
+    fn action1(&mut self, _event: &Events) {
         println!("Running Action 1");
     }
 
-    fn action2(&mut self) {
+    fn action2(&mut self, _event: &Events) {
         println!("Running Action 2");
     }
 }
