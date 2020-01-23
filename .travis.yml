@@ -16,11 +16,6 @@ matrix:
       script:
         - cargo check
         - cargo test
-    - env: TARGET=sml
-      rust: nightly
-      script:
-        - cargo check
-        - cargo test
 
 before_install: set -e
 
