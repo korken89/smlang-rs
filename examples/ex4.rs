@@ -1,6 +1,6 @@
 //! Linear state machine
 //!
-//! A simple example of a state machine which will get stuck in the final state.
+//! A example of a state machine which has values associated to the events.
 //! A picture depicting the state machine can be found in the README.
 
 use smlang::statemachine;
