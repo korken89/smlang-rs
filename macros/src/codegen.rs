@@ -12,6 +12,23 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     let mut event_list: Vec<_> = sm.events.iter().map(|(_, value)| value).collect();
     event_list.sort_by(|a, b| a.to_string().cmp(&b.to_string()));
 
+    // Extract events
+    let event_list: Vec<_> = event_list
+        .iter()
+        .map(|value| match sm.event_data_type.get(&value.to_string()) {
+            None => {
+                quote! {
+                    #value
+                }
+            }
+            Some(t) => {
+                quote! {
+                    #value(#t)
+                }
+            }
+        })
+        .collect();
+
     let transitions = &sm.states_events_mapping;
     let in_states: Vec<_> = transitions
         .iter()
@@ -20,8 +37,35 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     let events: Vec<Vec<_>> = transitions
         .iter()
-        .map(|(_, value)| value.iter().map(|(_, value)| &value.event).collect())
+        .map(|(_, value)| {
+            value
+                .iter()
+                .map(|(name, value)| {
+                    let value = &value.event;
+
+                    match sm.event_data_type.get(name) {
+                        None => {
+                            quote! {
+                                #value
+                            }
+                        }
+                        Some(_) => {
+                            quote! {
+                                #value(_)
+                            }
+                        }
+                    }
+                })
+                .collect()
+        })
         .collect();
+
+    // let events: Vec<Vec<_>> = transitions
+    //     .iter()
+    //     .map(|(_, value)| value.iter().map(|(_, value)| &value.event).collect())
+    //     .collect();
+
+    // println!("events: {:#?}", events);
 
     // Map guards, actions and output states into code blocks
     let guards: Vec<Vec<_>> = transitions
@@ -39,11 +83,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         .map(|(_, value)| value.iter().map(|(_, value)| &value.out_state).collect())
         .collect();
 
-    let guard_context_methods: Vec<_> = guards
-        .iter()
-        .flatten()
-        .filter_map(|g| g.as_ref())
-        .collect();
+    let guard_context_methods: Vec<_> =
+        guards.iter().flatten().filter_map(|g| g.as_ref()).collect();
 
     let action_context_methods: Vec<_> = actions
         .iter()
@@ -63,8 +104,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     if let Some(g) = guard {
                         if let Some(a) = action {
                             quote! {
-                                if self.context.#g() {
-                                    self.context.#a();
+                                if self.context.#g(&event) {
+                                    self.context.#a(&event);
                                     self.state = States::#out_state;
                                 } else {
                                     return Err(Error::GuardFailed);
@@ -72,7 +113,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                             }
                         } else {
                             quote! {
-                                if self.context.#g() {
+                                if self.context.#g(&event) {
                                     self.state = States::#out_state;
                                 } else {
                                     return Err(Error::GuardFailed);
@@ -82,7 +123,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     } else {
                         if let Some(a) = action {
                             quote! {
-                                self.context.#a();
+                                self.context.#a(&event);
                                 self.state = States::#out_state;
                             }
                         } else {
@@ -101,8 +142,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     // Build the states and events output
     quote! {
         pub trait StateMachineContext : Default + core::fmt::Debug {
-            #(fn #guard_context_methods(&self) -> bool;)*
-            #(fn #action_context_methods(&mut self);)*
+            #(fn #guard_context_methods(&self, event: &Events) -> bool;)*
+            #(fn #action_context_methods(&mut self, event: &Events);)*
         }
 
         /// List of auto-generated states
@@ -156,11 +197,11 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
             /// Process an event
             ///
-            /// It will return `Ok(NextState)` if the transition was successful, or `Err(Error::...)`
+            /// It will return `Ok(NextState)` if the transition was successful, or `Err(Error)`
             /// if there was an error in the transition
             pub fn process_event(&mut self, event: Events) -> Result<States, Error> {
                 match self.state {
-                    #(States::#in_states => match event {
+                    #(States::#in_states => match &event {
                         #(Events::#events => {
                             #code_blocks
 

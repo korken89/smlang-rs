@@ -1,9 +1,8 @@
+// TODO: Move panics to compile_error
+
+use proc_macro2::Span;
 use std::collections::HashMap;
-use syn::{
-    bracketed,
-    parse::{Parse, ParseStream, Result},
-    token, Ident, Token,
-};
+use syn::{bracketed, parenthesized, parse, spanned::Spanned, token, Ident, Token, Type};
 
 #[derive(Debug)]
 pub struct StateMachine {
@@ -35,11 +34,12 @@ pub struct ParsedStateMachine {
     pub states: HashMap<String, Ident>,
     pub starting_state: Ident,
     pub events: HashMap<String, Ident>,
+    pub event_data_type: HashMap<String, Type>,
     pub states_events_mapping: HashMap<String, HashMap<String, EventMapping>>,
 }
 
 impl ParsedStateMachine {
-    pub fn new(sm: StateMachine) -> Self {
+    pub fn new(sm: StateMachine) -> parse::Result<Self> {
         // Check the initial state definition
         let num_start: usize = sm
             .transitions
@@ -48,9 +48,15 @@ impl ParsedStateMachine {
             .sum();
 
         if num_start == 0 {
-            panic!("No starting state defined, indicate the starting state with a *");
+            return Err(parse::Error::new(
+                Span::call_site(),
+                "No starting state defined, indicate the starting state with a *",
+            ));
         } else if num_start > 1 {
-            panic!("More than one starting state defined, remove duplicates");
+            return Err(parse::Error::new(
+                Span::call_site(),
+                "More than one starting state defined, remove duplicates",
+            ));
         }
 
         // Extract the starting state
@@ -64,6 +70,7 @@ impl ParsedStateMachine {
 
         let mut states = HashMap::new();
         let mut events = HashMap::new();
+        let mut event_data_type = HashMap::new();
         let mut states_events_mapping = HashMap::<String, HashMap<String, EventMapping>>::new();
 
         for transition in sm.transitions.iter() {
@@ -76,6 +83,28 @@ impl ParsedStateMachine {
 
             // Collect events
             events.insert(transition.event.to_string(), transition.event.clone());
+
+            // Collect event to data mappings and check for definition errors
+            if let Some(event_type) = transition.event_data_type.clone() {
+                match event_data_type.get(&transition.event.to_string()) {
+                    None => {
+                        event_data_type.insert(transition.event.to_string(), event_type);
+                    }
+                    Some(v) => {
+                        if v != &event_type {
+                            return Err(parse::Error::new(
+                                transition.event.span(),
+                                "This event's type does not match its previous definition.",
+                            ));
+                        }
+                    }
+                }
+            } else if let Some(_) = event_data_type.get(&transition.event.to_string()) {
+                return Err(parse::Error::new(
+                    transition.event.span(),
+                    "This event's type does not match its previous definition.",
+                ));
+            }
 
             // Setup the states to events mapping
             states_events_mapping.insert(transition.in_state.to_string(), HashMap::new());
@@ -97,16 +126,20 @@ impl ParsedStateMachine {
 
                 p.insert(transition.event.to_string(), mapping);
             } else {
-                panic!("State and event combination specified multiple times, remove duplicates");
+                return Err(parse::Error::new(
+                    transition.in_state.span(),
+                    "State and event combination specified multiple times, remove duplicates",
+                ));
             }
         }
 
-        ParsedStateMachine {
+        Ok(ParsedStateMachine {
             states,
             starting_state,
             events,
+            event_data_type,
             states_events_mapping,
-        }
+        })
     }
 }
 
@@ -115,13 +148,14 @@ pub struct StateTransition {
     start: bool,
     in_state: Ident,
     event: Ident,
+    event_data_type: Option<Type>,
     guard: Option<Ident>,
     action: Option<Ident>,
     out_state: Ident,
 }
 
-impl Parse for StateMachine {
-    fn parse(input: ParseStream) -> Result<Self> {
+impl parse::Parse for StateMachine {
+    fn parse(input: parse::ParseStream) -> parse::Result<Self> {
         let mut statemachine = StateMachine::new();
 
         loop {
@@ -146,6 +180,33 @@ impl Parse for StateMachine {
             let in_state: Ident = input.parse()?;
             input.parse::<Token![+]>()?;
             let event: Ident = input.parse()?;
+
+            // Possible type on the event
+            let event_data_type = if input.peek(token::Paren) {
+                let content;
+                parenthesized!(content in input);
+                let input: Type = content.parse()?;
+
+                // Check so the type is supported
+                match &input {
+                    Type::Array(_)
+                    | Type::Path(_)
+                    | Type::Ptr(_)
+                    | Type::Reference(_)
+                    | Type::Slice(_)
+                    | Type::Tuple(_) => (),
+                    _ => {
+                        return Err(parse::Error::new(
+                            input.span(),
+                            "This is an unsupported type for events.",
+                        ))
+                    }
+                }
+
+                Some(input)
+            } else {
+                None
+            };
 
             // Possible guard
             let guard = if input.peek(token::Bracket) {
@@ -173,6 +234,7 @@ impl Parse for StateMachine {
                 start,
                 in_state,
                 event,
+                event_data_type,
                 guard,
                 action,
                 out_state,
