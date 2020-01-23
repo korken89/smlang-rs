@@ -83,14 +83,17 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         .map(|(_, value)| value.iter().map(|(_, value)| &value.out_state).collect())
         .collect();
 
-    let guard_context_methods: Vec<_> =
+    let mut guard_context_methods: Vec<_> =
         guards.iter().flatten().filter_map(|g| g.as_ref()).collect();
+    guard_context_methods.dedup();
 
-    let action_context_methods: Vec<_> = actions
+
+    let mut action_context_methods: Vec<_> = actions
         .iter()
         .flatten()
         .filter_map(|a| a.as_ref())
         .collect();
+    action_context_methods.dedup();
 
     // Create the code blocks inside the switch cases
     let code_blocks: Vec<Vec<_>> = guards
