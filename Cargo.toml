@@ -10,14 +10,17 @@ version = "0.1.3"
 edition = "2018"
 readme = "README.md"
 
-[lib]
-name = "smlang"
-
 [badges]
 travis-ci = { repository = "korken89/smlang-rs", branch = "master" }
 
 [dependencies]
 smlang-macros = { path = "macros", version = "0.1.2" }
+
+[target.'cfg(not(target_os = "none"))'.dev-dependencies]
+compiletest_rs = "0.4.0"
+
+[[test]]
+name = "compiletest"
 
 [profile.release]
 codegen-units = 1
