@@ -1,4 +1,4 @@
-//! Linear state machine
+//! Linear state machine with data dependent guards and actions
 //!
 //! A example of a state machine which has values associated to the events.
 //! A picture depicting the state machine can be found in the README.

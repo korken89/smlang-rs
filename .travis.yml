@@ -13,9 +13,6 @@ matrix:
         - find . -name '*.md' -print0 | xargs -0 mdcheckr
     - env: TARGET=sml
       rust: stable
-      script:
-        - cargo check
-        - cargo test
 
 before_install: set -e
 
@@ -23,12 +20,15 @@ install:
   - bash ci/install.sh
   - export PATH="$PATH:$PWD/mdcheck"
 
+script:
+  - bash ci/script.sh
+
 after_script: set +e
 
-cache: cargo
-
-before_cache:
-  - chmod -R a+r $HOME/.cargo
+# cache: cargo
+#
+# before_cache:
+#   - chmod -R a+r $HOME/.cargo
 
 branches:
   only:
