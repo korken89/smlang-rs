@@ -10,7 +10,7 @@ statemachine! {
     State2 + Event2((u32, u32, u32)) / action = State3,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Context;
 
 impl StateMachineContext for Context {
@@ -24,7 +24,7 @@ impl StateMachineContext for Context {
 }
 
 fn main() {
-    let mut sm = StateMachine::<Context>::new();
+    let mut sm = StateMachine::<Context>::new(Context);
     assert_eq!(sm.state(), States::State1);
 
     // Wrong value, guard will fail
