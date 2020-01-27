@@ -144,7 +144,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     // Build the states and events output
     quote! {
-        pub trait StateMachineContext : Default + core::fmt::Debug {
+        pub trait StateMachineContext : core::fmt::Debug {
             #(fn #guard_context_methods(&self, event: &Events) -> bool;)*
             #(fn #action_context_methods(&mut self, event: &Events);)*
         }
@@ -176,10 +176,10 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
         impl<T: StateMachineContext> StateMachine<T> {
             /// Creates a new state machine with the specified starting state
-            pub fn new() -> Self {
+            pub fn new(context: T) -> Self {
                 StateMachine {
                     state: States::#starting_state,
-                    context: T::default()
+                    context
                 }
             }
 

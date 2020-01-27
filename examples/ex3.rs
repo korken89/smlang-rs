@@ -10,7 +10,7 @@ statemachine! {
     State2 + Event2 [guard_fail] / action2 = State3,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Context;
 
 impl StateMachineContext for Context {
@@ -34,7 +34,7 @@ impl StateMachineContext for Context {
 }
 
 fn main() {
-    let mut sm = StateMachine::<Context>::new();
+    let mut sm = StateMachine::<Context>::new(Context);
     assert_eq!(sm.state(), States::State1);
 
     println!("Before action 1");
