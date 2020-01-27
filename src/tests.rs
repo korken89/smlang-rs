@@ -1,6 +1,6 @@
 use super::statemachine;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Context;
 
 impl StateMachineContext for Context {
@@ -39,13 +39,13 @@ statemachine!(
 
 #[test]
 fn starting_state() {
-    let sm = StateMachine::<Context>::new();
+    let sm = StateMachine::<Context>::new(Context);
     assert_eq!(sm.state(), States::State1);
 }
 
 #[test]
 fn transitions() {
-    let mut sm = StateMachine::<Context>::new();
+    let mut sm = StateMachine::<Context>::new(Context);
 
     let _ = sm.process_event(Events::Event1);
     assert_eq!(sm.state(), States::State2);
@@ -86,7 +86,7 @@ fn transitions() {
 
 #[test]
 fn event_error() {
-    let mut sm = StateMachine::<Context>::new();
+    let mut sm = StateMachine::<Context>::new(Context);
     assert_eq!(sm.state(), States::State1);
 
     let output = sm.process_event(Events::Event3);
@@ -98,7 +98,7 @@ fn event_error() {
 
 #[test]
 fn guard_error() {
-    let mut sm = StateMachine::<Context>::new();
+    let mut sm = StateMachine::<Context>::new(Context);
 
     let _ = sm.process_event(Events::Event1);
     let output = sm.process_event(Events::Event4);
