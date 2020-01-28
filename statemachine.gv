@@ -1,0 +1,24 @@
+digraph G {
+    rankdir="LR";
+    node [fontname=Arial];
+    s [shape=circle size=2 color="black" style=filled]
+    
+    s -> State1
+	State1 [shape=box color="red" fillcolor="#ffbb33" style=filled]
+	State2 [shape=box color="red" fillcolor="#ffbb33" style=filled]
+	State3 [shape=box color="red" fillcolor="#ffbb33" style=filled]
+
+	Event2 [label="Event2\n[guard_fail] / action2"]
+	Event1 [label="Event1\n[guard] / action1"]
+
+	State2 -> Event2  -> State3;
+	State1 -> Event1  -> State2;
+}
+	Event1 [label="Event1\n[guard1] / action1"]
+
+	State2 -> Event4  -> State1;
+	State2 -> Event2  -> State3;
+	State2 -> Event3  -> State1;
+	State3 -> Event3  -> State1;
+	State1 -> Event1  -> State2;
+}

@@ -1,5 +1,3 @@
-extern crate smlang;
-
 use smlang::statemachine;
 
 statemachine! { //~ ERROR No starting state defined, indicate the starting state with a *

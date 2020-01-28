@@ -1,5 +1,3 @@
-extern crate smlang;
-
 use smlang::statemachine;
 
 statemachine! {
