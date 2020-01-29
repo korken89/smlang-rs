@@ -6,8 +6,8 @@
 use smlang::statemachine;
 
 statemachine! {
-    *State1 + Event1(u32) [guard] / action = State2,
-    State2 + Event2((u32, u32, u32)) / action = State3,
+    *State1 + Event1(u32) [ guard ] / action = State2,
+    State2(f32) + Event2(i32) / action = State3,
 }
 
 #[derive(Debug)]
@@ -34,7 +34,4 @@ fn main() {
     // Now guard will be ok
     let r = sm.process_event(Events::Event1(1));
     assert_eq!(r, Ok(States::State2));
-
-    let r = sm.process_event(Events::Event2((1, 2, 3)));
-    assert_eq!(r, Ok(States::State3));
 }
