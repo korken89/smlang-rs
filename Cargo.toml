@@ -28,3 +28,6 @@ lto = true
 
 [workspace]
 members = ["macros"]
+
+[features]
+graphviz = ["smlang-macros/graphviz"]
