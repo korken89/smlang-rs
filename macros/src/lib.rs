@@ -62,16 +62,16 @@ pub fn statemachine(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                             // Try write to the dot file.
                             if let Err(err) = file.write_all(diagram.as_bytes()) {
                                 // Fallback to printing to the commandline.
-                                println!("'statemachine.dot' could not be created: {}", err);
-                                println!("Here is the contents:");
-                                println!("{}", diagram);
+                                // println!("'statemachine.dot' could not be created: {}", err);
+                                // println!("Here is the contents:");
+                                // println!("{}", diagram);
                             }
                         },
                         Err(err) => {
                             // Fallback to printing to the commandline.
-                            println!("'statemachine.dot' could not be created: {}", err);
-                            println!("Here is the contents:");
-                            println!("{}", diagram);
+                            // println!("'statemachine.dot' could not be created: {}", err);
+                            // println!("Here is the contents:");
+                            // println!("{}", diagram);
                         }
                 }
             }
