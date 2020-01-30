@@ -6,8 +6,9 @@
 use smlang::statemachine;
 
 statemachine! {
-    *State1 + Event1(u32) [ guard ] / action = State2,
+    *State1 + Event1(u32) [guard] / action = State2,
     State2(f32) + Event2(i32) / action = State3,
+    State3 + Event3 / action = State2,
 }
 
 #[derive(Debug)]
