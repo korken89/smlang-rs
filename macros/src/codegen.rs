@@ -1,7 +1,11 @@
+// Move guards to return a Result
+
 use crate::parser::*;
 use proc_macro2;
+use proc_macro2::Span;
 use quote::quote;
 use std::vec::Vec;
+use syn::{punctuated::Punctuated, token::Paren, Type, TypeTuple};
 
 pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     // Get only the unique states
@@ -80,37 +84,77 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         .map(|(_, value)| value.iter().map(|(_, value)| &value.out_state).collect())
         .collect();
 
-    let mut guard_context_methods: Vec<_> =
-        guards.iter().flatten().filter_map(|g| g.as_ref()).collect();
-    guard_context_methods.dedup();
-
-    let mut g2 = Vec::new();
-    for (_state, value) in transitions.iter() {
+    let mut g2 = proc_macro2::TokenStream::new();
+    let mut a2 = proc_macro2::TokenStream::new();
+    for (state, value) in transitions.iter() {
         value.iter().for_each(|(event, value)| {
-            let guard = &value.guard;
-            g2.push(match sm.event_data_type.get(event) {
-                None => {
-                    quote! {
-                        fn #guard(&self) -> bool;
+            // Create the guard traits for user implementation
+            if let Some(guard) = &value.guard {
+                match (sm.state_data_type.get(state), sm.event_data_type.get(event)) {
+                    (None, None) => {
+                        g2.extend(quote! {
+                            fn #guard(&self) -> bool;
+                        });
+                    }
+                    (Some(st), None) => {
+                        g2.extend(quote! {
+                            fn #guard(&self, state_data: &#st) -> bool;
+                        });
+                    }
+                    (None, Some(et)) => {
+                        g2.extend(quote! {
+                            fn #guard(&self, event_data: &#et) -> bool;
+                        });
+                    }
+                    (Some(st), Some(et)) => {
+                        g2.extend(quote! {
+                            fn #guard(&self, state_data: &#st, event_data: &#et) -> bool;
+                        });
                     }
                 }
-                Some(t) => {
-                    quote! {
-                        fn #guard(&self, data: &#t) -> bool;
+            }
+
+            // Create the action traits for user implementation
+            if let Some(action) = &value.action {
+                let return_type = if let Some(output_data) =
+                    sm.state_data_type.get(&value.out_state.to_string())
+                {
+                    output_data.clone()
+                } else {
+                    // Empty return type
+                    Type::Tuple(TypeTuple {
+                        paren_token: Paren {
+                            span: Span::call_site(),
+                        },
+                        elems: Punctuated::new(),
+                    })
+                };
+
+                match (sm.state_data_type.get(state), sm.event_data_type.get(event)) {
+                    (None, None) => {
+                        a2.extend(quote! {
+                            fn #action(&mut self) -> #return_type;
+                        });
+                    }
+                    (Some(st), None) => {
+                        a2.extend(quote! {
+                            fn #action(&mut self, state_data: &mut #st) -> #return_type;
+                        });
+                    }
+                    (None, Some(et)) => {
+                        a2.extend(quote! {
+                            fn #action(&mut self, event_data: &#et) -> #return_type;
+                        });
+                    }
+                    (Some(st), Some(et)) => {
+                        a2.extend(quote! {
+                            fn #action(&mut self, state_data: &mut #st, event_data: &#et) -> #return_type;
+                        });
                     }
                 }
-            });
+            }
         })
     }
-
-    println!("new guard: {:#?}", g2);
-
-    let mut action_context_methods: Vec<_> = actions
-        .iter()
-        .flatten()
-        .filter_map(|a| a.as_ref())
-        .collect();
-    action_context_methods.dedup();
 
     // Create the code blocks inside the switch cases
     let code_blocks: Vec<Vec<_>> = guards
@@ -162,7 +206,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     // Build the states and events output
     quote! {
         pub trait StateMachineContext : core::fmt::Debug {
-            //#(#(#g2)*)*
+            #g2
+            #a2
             // #(fn #action_context_methods(&mut self, event: &Events);)*
         }
 

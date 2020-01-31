@@ -6,22 +6,22 @@
 use smlang::statemachine;
 
 statemachine! {
-    *State1 + Event1(u32) [guard] / action = State2,
-    State2(f32) + Event2(i32) / action = State3,
-    State3 + Event3 / action = State2,
+    *State1 + Event1(u32) [guard1] / action1 = State2,
+    State2(f32) + Event2(i32) [guard2] / action2 = State3,
+    State3 + Event3 [guard3] / action3 = State2,
 }
 
 #[derive(Debug)]
 pub struct Context;
 
 impl StateMachineContext for Context {
-    fn guard(&self, event: &Events) -> bool {
-        event == &Events::Event1(1)
-    }
+    // fn guard(&self, event: &Events) -> bool {
+    //     event == &Events::Event1(1)
+    // }
 
-    fn action(&mut self, event: &Events) {
-        println!("Action {:?}", event);
-    }
+    // fn action(&mut self, event: &Events) {
+    //     println!("Action {:?}", event);
+    // }
 }
 
 fn main() {

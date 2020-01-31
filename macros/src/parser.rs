@@ -1,5 +1,3 @@
-// TODO: Move panics to compile_error
-
 use proc_macro2::Span;
 use std::collections::HashMap;
 use syn::{bracketed, parenthesized, parse, spanned::Spanned, token, Ident, Token, Type};
@@ -56,7 +54,7 @@ impl ParsedStateMachine {
         } else if num_start > 1 {
             return Err(parse::Error::new(
                 Span::call_site(),
-                "More than one starting state defined, remove duplicates",
+                "More than one starting state defined (indicated with *), remove duplicates",
             ));
         }
 
