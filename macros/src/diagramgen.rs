@@ -26,15 +26,16 @@ pub fn generate_diagram(sm: &ParsedStateMachine) -> String {
         format!("\t{} [shape=box color=\"red\" fillcolor=\"#ffbb33\" style=filled]", s)
     }).collect::<Vec<String>>();
     let event_string = diagram_events.iter().map(|s| {
-        format!("\t{0} [label=\"{0}\\n[{1}] / {2}\"]", s.0, s.1, s.2)
+        format!("\t{0} [shape=box label=\"{0}\\n[{1}] / {2}\"]", s.0, s.1, s.2)
     }).collect::<Vec<String>>();
     let transition_string = diagram_transitions.iter().map(|t| {
-            format!("\t{0} -> {2}  -> {1};", t.0, t.1, t.2)
+            format!("\t{0} -> {1} [color=blue label={2}];", t.0, t.1, t.2)
     }).collect::<Vec<String>>();
 
 format!("digraph G {{
     rankdir=\"LR\";
     node [fontname=Arial];
+    edge [fontname=Arial];
     s [shape=circle size=2 color=\"black\" style=filled]
     
     s -> {}
