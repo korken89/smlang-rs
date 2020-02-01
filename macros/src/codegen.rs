@@ -142,6 +142,11 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     let starting_state = &sm.starting_state;
 
+    #[cfg(feature = "serde")]
+    let serde = quote! { Serialize, Deserialize };
+    #[cfg(not(feature = "serde"))]
+    let serde = quote! {  };
+
     // Build the states and events output
     quote! {
         pub trait StateMachineContext : core::fmt::Debug {
@@ -150,15 +155,15 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         }
 
         /// List of auto-generated states
-        #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+        #[derive(Clone, Copy, PartialEq, Eq, Debug, #serde)]
         pub enum States { #(#state_list),* }
 
         /// List of auto-generated events
-        #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+        #[derive(Clone, Copy, PartialEq, Eq, Debug, #serde)]
         pub enum Events { #(#event_list),* }
 
         /// List of possible errors
-        #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+        #[derive(Clone, Copy, PartialEq, Eq, Debug, #serde)]
         pub enum Error {
             /// This can happen when an event is processed which should not come in this stage
             /// of processing

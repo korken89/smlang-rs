@@ -31,3 +31,4 @@ members = ["macros"]
 
 [features]
 graphviz = ["smlang-macros/graphviz"]
+serde = ["smlang-macros/serde"]
