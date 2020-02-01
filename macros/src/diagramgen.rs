@@ -43,11 +43,10 @@ format!("digraph G {{
 
 {}
 
-{}
 }}",
 sm.starting_state.to_string(),
 state_string.join("\n"),
-event_string.join("\n"),
+// event_string.join("\n"),
 transition_string.join("\n")
 )
 }
