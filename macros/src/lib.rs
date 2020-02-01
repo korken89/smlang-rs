@@ -57,6 +57,7 @@ pub fn statemachine(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                 match std::fs::OpenOptions::new()
                     .write(true)
                     .create(true)
+                    .truncate(true)
                     .open("statemachine.gv") {
                         Ok(mut file) => {
                             // Try write to the dot file.
