@@ -16,7 +16,7 @@ pub struct Context;
 impl StateMachineContext for Context {}
 
 fn main() {
-    let mut sm = StateMachine::<Context>::new(Context);
+    let mut sm = StateMachine::new(Context);
     assert_eq!(sm.state(), States::State1);
 
     let r = sm.process_event(Events::Event1);

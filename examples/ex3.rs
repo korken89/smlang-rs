@@ -14,27 +14,27 @@ statemachine! {
 pub struct Context;
 
 impl StateMachineContext for Context {
-    fn guard(&self, _event: &Events) -> bool {
+    fn guard(&self) -> bool {
         // Always ok
         true
     }
 
-    fn guard_fail(&self, _event: &Events) -> bool {
+    fn guard_fail(&self) -> bool {
         // Always fail
         false
     }
 
-    fn action1(&mut self, _event: &Events) {
+    fn action1(&mut self) {
         //println!("Action 1");
     }
 
-    fn action2(&mut self, _event: &Events) {
+    fn action2(&mut self) {
         //println!("Action 1");
     }
 }
 
 fn main() {
-    let mut sm = StateMachine::<Context>::new(Context);
+    let mut sm = StateMachine::new(Context);
     assert_eq!(sm.state(), States::State1);
 
     println!("Before action 1");

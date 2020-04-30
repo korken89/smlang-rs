@@ -14,8 +14,8 @@ The DSL is defined as follows (from Boost-SML):
 
 ```rust
 statemachine!{
-    SrcState1 + Event1 [ guard1 ] / action1 = DstState1,
-    *SrcState2 + Event2 [ guard2 ] / action2 = DstState2, // * denotes starting state
+    SrcState1 + Event1 [ guard1 ] / action1 = DstState2,
+    *SrcState2 + Event2 [ guard2 ] / action2 = DstState1, // * denotes starting state
     // ...
 }
 ```
@@ -40,7 +40,7 @@ pub struct Context;
 impl StateMachineContext for Context {}
 
 fn main() {
-    let mut sm = StateMachine::<Context>::new();
+    let mut sm = StateMachine::new(Context);
 
     // ...
 }
@@ -50,7 +50,7 @@ See example `examples/context.rs` for a usage example.
 
 ### State data
 
-Any stat may have some data associated with it (except the starting state), which means that this data is only visible while in this state.
+Any stat may have some data associated with it (except the starting state), which means that this data is only exists while in this state.
 
 ```rust
 struct MyStateData(pub u32);
@@ -130,46 +130,6 @@ statemachine!{
 ```
 
 This example is available in `ex3.rs`.
-
-## TODOs
-
-Features missing:
-
-* Add so `Events` can have data associated to them which is passed to the `guard` and `action`
-* Allow `guard` and `action` to be closures
-* Have the transition DSL automatically generate a DOT graph for easier debug
-* Give the state machine a settable type
-* Look into adding a context structure into the state machine to handle user added data
-
-Possible future straw-man syntax:
-
-```rust
-statemachine! {
-    type: MyStateMachine,
-    context: MyContextStruct,
-    transitions: {
-        *State1 + Event1 = State2,
-        State2 + Event2 = State3,
-    },
-    values: {
-        Event1: Type1,
-        Event2: Type2
-    }
-}
-```
-
-or
-
-```rust
-statemachine! {
-    type: MyStateMachine,
-    context: MyContextStruct,
-    transitions: {
-        *State1 + Event1(Type1) = State2,
-        State2 + Event2(Type2) = State3,
-    },
-}
-```
 
 ## Contributors
 

@@ -12,6 +12,22 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     let mut state_list: Vec<_> = sm.states.iter().map(|(_, value)| value).collect();
     state_list.sort_by(|a, b| a.to_string().cmp(&b.to_string()));
 
+    let state_list: Vec<_> = state_list
+        .iter()
+        .map(|value| match sm.state_data_type.get(&value.to_string()) {
+            None => {
+                quote! {
+                    #value
+                }
+            }
+            Some(t) => {
+                quote! {
+                    #value(#t)
+                }
+            }
+        })
+        .collect();
+
     // Extract events
     let mut event_list: Vec<_> = sm.events.iter().map(|(_, value)| value).collect();
     event_list.sort_by(|a, b| a.to_string().cmp(&b.to_string()));
@@ -34,9 +50,25 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         .collect();
 
     let transitions = &sm.states_events_mapping;
+
     let in_states: Vec<_> = transitions
         .iter()
-        .map(|(key, _)| sm.states.get(key).unwrap())
+        .map(|(name, _)| {
+            let state_name = sm.states.get(name).unwrap();
+
+            match sm.state_data_type.get(name) {
+                None => {
+                    quote! {
+                        #state_name
+                    }
+                }
+                Some(_) => {
+                    quote! {
+                        #state_name(ref state_data)
+                    }
+                }
+            }
+        })
         .collect();
 
     let events: Vec<Vec<_>> = transitions
@@ -55,7 +87,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         }
                         Some(_) => {
                             quote! {
-                                #value(ref data)
+                                #value(ref event_data)
                             }
                         }
                     }
@@ -65,6 +97,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         .collect();
 
     // println!("sm: {:#?}", sm);
+    // println!("in_states: {:#?}", in_states);
     // println!("events: {:#?}", events);
     // println!("transitions: {:#?}", transitions);
 
@@ -79,9 +112,67 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         .map(|(_, value)| value.iter().map(|(_, value)| &value.action).collect())
         .collect();
 
+    let guard_action_parameters: Vec<Vec<_>> = transitions
+        .iter()
+        .map(|(name, value)| {
+            let state_name = &sm.states.get(name).unwrap().to_string();
+
+            value
+                .iter()
+                .map(|(name, _)| {
+                    // let event_name = &value.event;
+
+                    match (
+                        sm.state_data_type.get(state_name),
+                        sm.event_data_type.get(name),
+                    ) {
+                        (None, None) => {
+                            quote! {}
+                        }
+                        (Some(_), None) => {
+                            quote! {
+                                state_data
+                            }
+                        }
+                        (None, Some(_)) => {
+                            quote! {
+                                event_data
+                            }
+                        }
+                        (Some(_), Some(_)) => {
+                            quote! {
+                                state_data, event_data
+                            }
+                        }
+                    }
+                })
+                .collect()
+        })
+        .collect();
+
     let out_states: Vec<Vec<_>> = transitions
         .iter()
-        .map(|(_, value)| value.iter().map(|(_, value)| &value.out_state).collect())
+        .map(|(_, value)| {
+            value
+                .iter()
+                .map(|(_, value)| {
+                    let out_state = &value.out_state;
+
+                    match sm.state_data_type.get(&out_state.to_string()) {
+                        None => {
+                            quote! {
+                                #out_state
+                            }
+                        }
+                        Some(_) => {
+                            quote! {
+                                #out_state(_data)
+                            }
+                        }
+                    }
+                })
+                .collect()
+        })
         .collect();
 
     let mut g2 = proc_macro2::TokenStream::new();
@@ -138,7 +229,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     }
                     (Some(st), None) => {
                         a2.extend(quote! {
-                            fn #action(&mut self, state_data: &mut #st) -> #return_type;
+                            fn #action(&mut self, state_data: &#st) -> #return_type;
                         });
                     }
                     (None, Some(et)) => {
@@ -148,7 +239,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     }
                     (Some(st), Some(et)) => {
                         a2.extend(quote! {
-                            fn #action(&mut self, state_data: &mut #st, event_data: &#et) -> #return_type;
+                            fn #action(&mut self, state_data: &#st, event_data: &#et) -> #return_type;
                         });
                     }
                 }
@@ -159,46 +250,56 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     // Create the code blocks inside the switch cases
     let code_blocks: Vec<Vec<_>> = guards
         .iter()
-        .zip(actions.iter().zip(out_states.iter()))
-        .map(|(guards, (actions, out_states))| {
-            guards
+        .zip(
+            actions
                 .iter()
-                .zip(actions.iter().zip(out_states.iter()))
-                .map(|(guard, (action, out_state))| {
-                    if let Some(g) = guard {
-                        if let Some(a) = action {
-                            quote! {
-                                if self.context.#g(&event) {
-                                    self.context.#a(&event);
-                                    self.state = States::#out_state;
-                                } else {
-                                    return Err(Error::GuardFailed);
+                .zip(out_states.iter().zip(guard_action_parameters.iter())),
+        )
+        .map(
+            |(guards, (actions, (out_states, guard_action_parameters)))| {
+                guards
+                    .iter()
+                    .zip(
+                        actions
+                            .iter()
+                            .zip(out_states.iter().zip(guard_action_parameters.iter())),
+                    )
+                    .map(|(guard, (action, (out_state, g_a_param)))| {
+                        if let Some(g) = guard {
+                            if let Some(a) = action {
+                                quote! {
+                                    if self.context.#g(#g_a_param) {
+                                        let _data = self.context.#a(#g_a_param);
+                                        self.state = States::#out_state;
+                                    } else {
+                                        return Err(Error::GuardFailed);
+                                    }
+                                }
+                            } else {
+                                quote! {
+                                    if self.context.#g(#g_a_param) {
+                                        self.state = States::#out_state;
+                                    } else {
+                                        return Err(Error::GuardFailed);
+                                    }
                                 }
                             }
                         } else {
-                            quote! {
-                                if self.context.#g(&event) {
+                            if let Some(a) = action {
+                                quote! {
+                                    let _data = self.context.#a(#g_a_param);
                                     self.state = States::#out_state;
-                                } else {
-                                    return Err(Error::GuardFailed);
+                                }
+                            } else {
+                                quote! {
+                                    self.state = States::#out_state;
                                 }
                             }
                         }
-                    } else {
-                        if let Some(a) = action {
-                            quote! {
-                                self.context.#a(&event);
-                                self.state = States::#out_state;
-                            }
-                        } else {
-                            quote! {
-                                self.state = States::#out_state;
-                            }
-                        }
-                    }
-                })
-                .collect()
-        })
+                    })
+                    .collect()
+            },
+        )
         .collect();
 
     let starting_state = &sm.starting_state;
@@ -208,15 +309,14 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         pub trait StateMachineContext : core::fmt::Debug {
             #g2
             #a2
-            // #(fn #action_context_methods(&mut self, event: &Events);)*
         }
 
         /// List of auto-generated states
-        #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+        #[derive(Clone, Copy, PartialEq, Debug)]
         pub enum States { #(#state_list),* }
 
         /// List of auto-generated events
-        #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+        #[derive(Clone, Copy, PartialEq, Debug)]
         pub enum Events { #(#event_list),* }
 
         /// List of possible errors
