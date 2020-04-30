@@ -14,17 +14,75 @@ The DSL is defined as follows (from Boost-SML):
 
 ```rust
 statemachine!{
-    SrcState + Event [ guard ] / action = DstState,
-    *SrcState + Event [ guard ] / action = DstState, // * denotes starting state
+    SrcState1 + Event1 [ guard1 ] / action1 = DstState2,
+    *SrcState2 + Event2 [ guard2 ] / action2 = DstState1, // * denotes starting state
     // ...
 }
 ```
 
 Where `guard` and `action` are optional and can be left out. A `guard` is a function which returns `true` if the state transition should happen, and `false`  if the transition should not happen, while `action` are functions that are run during the transition which are guaranteed to finish before entering the new state.
 
-This implies that any state machine must be written as a list of transitions.
+> This implies that any state machine must be written as a list of transitions.
 
-## Examples
+### State machine context
+
+The definition of a state machine needs a context to be defined, the context is data that is available to all states within the state machine and persists between state transitions:
+
+```rust
+statemachine!{
+    State1 + Event1 = State2,
+    // ...
+}
+
+#[derive(Debug, Default)]
+pub struct Context;
+
+impl StateMachineContext for Context {}
+
+fn main() {
+    let mut sm = StateMachine::new(Context);
+
+    // ...
+}
+```
+
+See example `examples/context.rs` for a usage example.
+
+### State data
+
+Any stat may have some data associated with it (except the starting state), which means that this data is only exists while in this state.
+
+```rust
+struct MyStateData(pub u32);
+
+statemachine!{
+    State1(MyStateData) + Event1 = State2,
+    // ...
+}
+```
+
+See example `examples/state_with_data.rs` for a usage example.
+
+### Event data
+
+Data may be passed along with an event into the `guard` and `action`:
+
+```rust
+struct MyEventData(pub u32);
+
+statemachine!{
+    State1 + Event1(MyEventData) = State2,
+    // ...
+}
+```
+
+See example `examples/event_with_data.rs` for a usage example.
+
+### Guard and Action syntax
+
+See example `examples/guard_action_syntax.rs` for a usage-example.
+
+## State Machine Examples
 
 Here are some examples of state machines converted from UML to the State Machine Language DSL. Runnable versions of each example is available in the `examples` folder.
 
@@ -72,46 +130,6 @@ statemachine!{
 ```
 
 This example is available in `ex3.rs`.
-
-## TODOs
-
-Features missing:
-
-* Add so `Events` can have data associated to them which is passed to the `guard` and `action`
-* Allow `guard` and `action` to be closures
-* Have the transition DSL automatically generate a DOT graph for easier debug
-* Give the state machine a settable type
-* Look into adding a context structure into the state machine to handle user added data
-
-Possible future straw-man syntax:
-
-```rust
-statemachine! {
-    type: MyStateMachine,
-    context: MyContextStruct,
-    transitions: {
-        *State1 + Event1 = State2,
-        State2 + Event2 = State3,
-    },
-    values: {
-        Event1: Type1,
-        Event2: Type2
-    }
-}
-```
-
-or
-
-```rust
-statemachine! {
-    type: MyStateMachine,
-    context: MyContextStruct,
-    transitions: {
-        *State1 + Event1(Type1) = State2,
-        State2 + Event2(Type2) = State3,
-    },
-}
-```
 
 ## Contributors
 

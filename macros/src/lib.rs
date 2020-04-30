@@ -20,7 +20,7 @@ pub fn statemachine(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         // Generate code and hand the output tokens back to the compiler
         Ok(sm) => {
             use std::io::Write;
-            
+
             // Generate dot syntax for the statemachine.
             let diagram = diagramgen::generate_diagram(&sm);
 
@@ -42,7 +42,7 @@ pub fn statemachine(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                     .stdin
                     .as_mut()
                     .map(|s| s.write_all(diagram.as_bytes()));
-                
+
                 // Check the graphviz return status to see if it was successful.
                 match process.wait() {
                     Ok(status) => if !status.success() {
@@ -60,14 +60,14 @@ pub fn statemachine(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                     .open("statemachine.gv") {
                         Ok(mut file) => {
                             // Try write to the dot file.
-                            if let Err(err) = file.write_all(diagram.as_bytes()) {
+                            if let Err(_err) = file.write_all(diagram.as_bytes()) {
                                 // Fallback to printing to the commandline.
                                 // println!("'statemachine.dot' could not be created: {}", err);
                                 // println!("Here is the contents:");
                                 // println!("{}", diagram);
                             }
                         },
-                        Err(err) => {
+                        Err(_err) => {
                             // Fallback to printing to the commandline.
                             // println!("'statemachine.dot' could not be created: {}", err);
                             // println!("Here is the contents:");
