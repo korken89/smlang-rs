@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changes
 
+## [v0.2.2]
+
+### Added
+
+* Lifetime support added to guards and actions
+
 ## [v0.2.1]
 
 ### Added
@@ -30,5 +36,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Change log added
 
 
+[Unreleased]: https://github.com/korken89/smlang-rs/compare/v0.2.2...master
+[v0.2.2]: https://github.com/korken89/smlang-rs/compare/v0.2.1...v0.2.2
 [v0.2.1]: https://github.com/korken89/smlang-rs/compare/v0.2.0...v0.2.1
-[Unreleased]: https://github.com/korken89/smlang-rs/compare/v0.2.0...master
