@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changes
 
+## [v0.2.1]
+
+### Added
+
+* Basic lifetime support for event data
 
 ## v0.2.0
 
@@ -25,4 +30,5 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Change log added
 
 
-[Unreleased]: https://github.com/korken89/biquad-rs/compare/v0.2.0...master
+[v0.2.1]: https://github.com/korken89/smlang-rs/compare/v0.2.0...v0.2.1
+[Unreleased]: https://github.com/korken89/smlang-rs/compare/v0.2.0...master
