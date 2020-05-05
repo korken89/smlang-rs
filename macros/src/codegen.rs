@@ -304,6 +304,18 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     let starting_state = &sm.starting_state;
 
+    let events_code_block = if sm.event_data_lifetimes.is_empty() {
+        quote! {
+            pub enum Events { #(#event_list),* }
+        }
+    } else {
+        let event_lifetimes = &sm.event_data_lifetimes;
+
+        quote! {
+            pub enum Events<#(#event_lifetimes),*> { #(#event_list),* }
+        }
+    };
+
     // Build the states and events output
     quote! {
         pub trait StateMachineContext : core::fmt::Debug {
@@ -317,7 +329,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
         /// List of auto-generated events
         #[derive(Clone, Copy, PartialEq, Debug)]
-        pub enum Events { #(#event_list),* }
+        #events_code_block
 
         /// List of possible errors
         #[derive(Clone, Copy, PartialEq, Eq, Debug)]

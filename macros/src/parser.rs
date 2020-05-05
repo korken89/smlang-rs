@@ -1,6 +1,9 @@
 use proc_macro2::Span;
 use std::collections::HashMap;
-use syn::{bracketed, parenthesized, parse, spanned::Spanned, token, Ident, Token, Type};
+use syn::{
+    bracketed, parenthesized, parse, spanned::Spanned, token, GenericArgument, Ident, Lifetime,
+    PathArguments, Token, Type,
+};
 
 #[derive(Debug)]
 pub struct StateMachine {
@@ -34,6 +37,7 @@ pub struct ParsedStateMachine {
     pub state_data_type: HashMap<String, Type>,
     pub events: HashMap<String, Ident>,
     pub event_data_type: HashMap<String, Type>,
+    pub event_data_lifetimes: Vec<Lifetime>,
     pub states_events_mapping: HashMap<String, HashMap<String, EventMapping>>,
 }
 
@@ -71,6 +75,7 @@ impl ParsedStateMachine {
         let mut state_data_type = HashMap::new();
         let mut events = HashMap::new();
         let mut event_data_type = HashMap::new();
+        let mut event_data_lifetimes = Vec::new();
         let mut states_events_mapping = HashMap::<String, HashMap<String, EventMapping>>::new();
 
         for transition in sm.transitions.iter() {
@@ -110,6 +115,31 @@ impl ParsedStateMachine {
             if let Some(event_type) = transition.event_data_type.clone() {
                 match event_data_type.get(&transition.event.to_string()) {
                     None => {
+                        match &event_type {
+                            Type::Reference(tr) => {
+                                if let Some(lifetime) = &tr.lifetime {
+                                    event_data_lifetimes.push(lifetime.clone());
+                                } else {
+                                    return Err(parse::Error::new(
+                                    transition.event_data_type.span(),
+                                    "This event's data lifetime is not defined, consider adding a lifetime.",
+                                ));
+                                }
+                            }
+                            Type::Path(tp) => {
+                                let punct = &tp.path.segments;
+                                for p in punct.iter() {
+                                    if let PathArguments::AngleBracketed(abga) = &p.arguments {
+                                        for arg in &abga.args {
+                                            if let GenericArgument::Lifetime(lifetime) = &arg {
+                                                event_data_lifetimes.push(lifetime.clone());
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            _ => (),
+                        }
                         event_data_type.insert(transition.event.to_string(), event_type);
                     }
                     Some(v) => {
@@ -155,12 +185,16 @@ impl ParsedStateMachine {
             }
         }
 
+        // Remove duplicate lifetimes
+        event_data_lifetimes.dedup();
+
         Ok(ParsedStateMachine {
             states,
             starting_state,
             state_data_type,
             events,
             event_data_type,
+            event_data_lifetimes,
             states_events_mapping,
         })
     }
