@@ -37,7 +37,8 @@ pub struct ParsedStateMachine {
     pub state_data_type: HashMap<String, Type>,
     pub events: HashMap<String, Ident>,
     pub event_data_type: HashMap<String, Type>,
-    pub event_data_lifetimes: Vec<Lifetime>,
+    pub all_event_data_lifetimes: Vec<Lifetime>,
+    pub event_data_lifetimes: HashMap<String, Vec<Lifetime>>,
     pub states_events_mapping: HashMap<String, HashMap<String, EventMapping>>,
 }
 
@@ -75,7 +76,8 @@ impl ParsedStateMachine {
         let mut state_data_type = HashMap::new();
         let mut events = HashMap::new();
         let mut event_data_type = HashMap::new();
-        let mut event_data_lifetimes = Vec::new();
+        let mut all_event_data_lifetimes = Vec::new();
+        let mut event_data_lifetimes = HashMap::new();
         let mut states_events_mapping = HashMap::<String, HashMap<String, EventMapping>>::new();
 
         for transition in sm.transitions.iter() {
@@ -115,10 +117,11 @@ impl ParsedStateMachine {
             if let Some(event_type) = transition.event_data_type.clone() {
                 match event_data_type.get(&transition.event.to_string()) {
                     None => {
+                        let mut lifetimes = Vec::new();
                         match &event_type {
                             Type::Reference(tr) => {
                                 if let Some(lifetime) = &tr.lifetime {
-                                    event_data_lifetimes.push(lifetime.clone());
+                                    lifetimes.push(lifetime.clone());
                                 } else {
                                     return Err(parse::Error::new(
                                     transition.event_data_type.span(),
@@ -132,7 +135,7 @@ impl ParsedStateMachine {
                                     if let PathArguments::AngleBracketed(abga) = &p.arguments {
                                         for arg in &abga.args {
                                             if let GenericArgument::Lifetime(lifetime) = &arg {
-                                                event_data_lifetimes.push(lifetime.clone());
+                                                lifetimes.push(lifetime.clone());
                                             }
                                         }
                                     }
@@ -141,6 +144,11 @@ impl ParsedStateMachine {
                             _ => (),
                         }
                         event_data_type.insert(transition.event.to_string(), event_type);
+                        if !lifetimes.is_empty() {
+                            event_data_lifetimes
+                                .insert(transition.event.to_string(), lifetimes.clone());
+                        }
+                        all_event_data_lifetimes.append(&mut lifetimes);
                     }
                     Some(v) => {
                         if v != &event_type {
@@ -186,7 +194,7 @@ impl ParsedStateMachine {
         }
 
         // Remove duplicate lifetimes
-        event_data_lifetimes.dedup();
+        all_event_data_lifetimes.dedup();
 
         Ok(ParsedStateMachine {
             states,
@@ -194,6 +202,7 @@ impl ParsedStateMachine {
             state_data_type,
             events,
             event_data_type,
+            all_event_data_lifetimes,
             event_data_lifetimes,
             states_events_mapping,
         })

@@ -181,28 +181,40 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         value.iter().for_each(|(event, value)| {
             // Create the guard traits for user implementation
             if let Some(guard) = &value.guard {
-                match (sm.state_data_type.get(state), sm.event_data_type.get(event)) {
-                    (None, None) => {
-                        g2.extend(quote! {
-                            fn #guard(&self) -> bool;
-                        });
+                let guard = if let Some(lifetimes) = sm.event_data_lifetimes.get(event) {
+                    let lifetimes = &lifetimes;
+                    quote! {
+                        #guard<#(#lifetimes),*>
                     }
-                    (Some(st), None) => {
-                        g2.extend(quote! {
-                            fn #guard(&self, state_data: &#st) -> bool;
-                        });
+                } else {
+                    quote! {
+                        #guard
                     }
-                    (None, Some(et)) => {
-                        g2.extend(quote! {
-                            fn #guard(&self, event_data: &#et) -> bool;
-                        });
+                };
+
+                let state_data = match sm.state_data_type.get(state) {
+                    Some(st) => {
+                        quote! { state_data: &#st, }
                     }
-                    (Some(st), Some(et)) => {
-                        g2.extend(quote! {
-                            fn #guard(&self, state_data: &#st, event_data: &#et) -> bool;
-                        });
+                    None => {
+                        quote! {}
                     }
-                }
+                };
+                let event_data = match sm.event_data_type.get(event) {
+                    Some(et) => match et {
+                        Type::Reference(_) => {
+                            quote! { event_data: #et }
+                        }
+                        _ => {
+                            quote! { event_data: &#et }
+                        }
+                    },
+                    None => {
+                        quote! {}
+                    }
+                };
+
+                g2.extend(quote! { fn #guard(&self, #state_data #event_data) -> bool; });
             }
 
             // Create the action traits for user implementation
@@ -221,28 +233,42 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     })
                 };
 
-                match (sm.state_data_type.get(state), sm.event_data_type.get(event)) {
-                    (None, None) => {
-                        a2.extend(quote! {
-                            fn #action(&mut self) -> #return_type;
-                        });
+                let action = if let Some(lifetimes) = sm.event_data_lifetimes.get(event) {
+                    let lifetimes = &lifetimes;
+                    quote! {
+                        #action<#(#lifetimes),*>
                     }
-                    (Some(st), None) => {
-                        a2.extend(quote! {
-                            fn #action(&mut self, state_data: &#st) -> #return_type;
-                        });
+                } else {
+                    quote! {
+                        #action
                     }
-                    (None, Some(et)) => {
-                        a2.extend(quote! {
-                            fn #action(&mut self, event_data: &#et) -> #return_type;
-                        });
+                };
+
+                let state_data = match sm.state_data_type.get(state) {
+                    Some(st) => {
+                        quote! { state_data: &#st, }
                     }
-                    (Some(st), Some(et)) => {
-                        a2.extend(quote! {
-                            fn #action(&mut self, state_data: &#st, event_data: &#et) -> #return_type;
-                        });
+                    None => {
+                        quote! {}
                     }
-                }
+                };
+                let event_data = match sm.event_data_type.get(event) {
+                    Some(et) => match et {
+                        Type::Reference(_) => {
+                            quote! { event_data: #et }
+                        }
+                        _ => {
+                            quote! { event_data: &#et }
+                        }
+                    },
+                    None => {
+                        quote! {}
+                    }
+                };
+
+                a2.extend(
+                    quote! { fn #action(&mut self, #state_data #event_data) -> #return_type; },
+                );
             }
         })
     }
@@ -309,7 +335,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             pub enum Events { #(#event_list),* }
         }
     } else {
-        let event_lifetimes = &sm.event_data_lifetimes;
+        let event_lifetimes = &sm.all_event_data_lifetimes;
 
         quote! {
             pub enum Events<#(#event_lifetimes),*> { #(#event_list),* }
