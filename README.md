@@ -10,12 +10,12 @@ The aim of this DSL is to facilitate the use of state machines, as they quite fa
 
 ## Transition DSL
 
-The DSL is defined as follows (from Boost-SML):
+The DSL is defined as follows:
 
 ```rust
 statemachine!{
-    SrcState1 + Event1 [ guard1 ] / action1 = DstState2,
-    *SrcState2 + Event2 [ guard2 ] / action2 = DstState1, // * denotes starting state
+    *SrcState1 + Event1 [ guard1 ] / action1 = DstState2, // * denotes starting state
+    SrcState2 + Event2 [ guard2 ] / action2 = DstState1,
     // ...
 }
 ```
@@ -26,7 +26,8 @@ Where `guard` and `action` are optional and can be left out. A `guard` is a func
 
 ### State machine context
 
-The definition of a state machine needs a context to be defined, the context is data that is available to all states within the state machine and persists between state transitions:
+The state machine needs a context to be defined.
+The `StateMachineContext` is generated from the `statemachine!` proc-macro and is what implements guards and actions, and data that is available in all states within the state machine and persists between state transitions:
 
 ```rust
 statemachine!{
@@ -34,7 +35,6 @@ statemachine!{
     // ...
 }
 
-#[derive(Debug, Default)]
 pub struct Context;
 
 impl StateMachineContext for Context {}
@@ -53,7 +53,7 @@ See example `examples/context.rs` for a usage example.
 Any stat may have some data associated with it (except the starting state), which means that this data is only exists while in this state.
 
 ```rust
-struct MyStateData(pub u32);
+pub struct MyStateData(pub u32);
 
 statemachine!{
     State1(MyStateData) + Event1 = State2,
@@ -68,10 +68,22 @@ See example `examples/state_with_data.rs` for a usage example.
 Data may be passed along with an event into the `guard` and `action`:
 
 ```rust
-struct MyEventData(pub u32);
+pub struct MyEventData(pub u32);
 
 statemachine!{
-    State1 + Event1(MyEventData) = State2,
+    State1 + Event1(MyEventData) [guard] = State2,
+    // ...
+}
+```
+
+Event data may also have associated lifetimes which the `statemachine!` macro will pick up and add the `Events` structure. This means the following will also work:
+
+```rust
+pub struct MyEventData<'a>(pub &'a u32);
+
+statemachine!{
+    State1 + Event1(MyEventData<'a>) [guard1] = State2,
+    State1 + Event2(&'a [u8]) [guard2] = State3,
     // ...
 }
 ```

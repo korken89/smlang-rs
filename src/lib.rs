@@ -67,10 +67,3 @@
 #![no_std]
 
 pub use smlang_macros::statemachine;
-
-#[cfg(test)]
-#[macro_use]
-extern crate std;
-
-#[cfg(test)]
-mod tests;
