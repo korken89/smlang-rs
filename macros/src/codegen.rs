@@ -175,8 +175,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         })
         .collect();
 
-    let mut g2 = proc_macro2::TokenStream::new();
-    let mut a2 = proc_macro2::TokenStream::new();
+    let mut guard_list = proc_macro2::TokenStream::new();
+    let mut action_list = proc_macro2::TokenStream::new();
     for (state, value) in transitions.iter() {
         value.iter().for_each(|(event, value)| {
             // Create the guard traits for user implementation
@@ -214,7 +214,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     }
                 };
 
-                g2.extend(quote! { fn #guard(&self, #state_data #event_data) -> bool; });
+                guard_list.extend(quote! { fn #guard(&mut self, #state_data #event_data) -> bool; });
             }
 
             // Create the action traits for user implementation
@@ -266,7 +266,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     }
                 };
 
-                a2.extend(
+                action_list.extend(
                     quote! { fn #action(&mut self, #state_data #event_data) -> #return_type; },
                 );
             }
@@ -344,38 +344,39 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     // Build the states and events output
     quote! {
-        pub trait StateMachineContext : core::fmt::Debug {
-            #g2
-            #a2
+        /// This trait outlines the guards and actions that need to be implemented for the state
+        /// machine.
+        pub trait StateMachineContext {
+            #guard_list
+            #action_list
         }
 
-        /// List of auto-generated states
-        #[derive(Clone, Copy, PartialEq, Debug)]
+        /// List of auto-generated states.
+        #[derive(PartialEq)]
         pub enum States { #(#state_list),* }
 
-        /// List of auto-generated events
-        #[derive(Clone, Copy, PartialEq, Debug)]
+        /// List of auto-generated events.
+        #[derive(PartialEq)]
         #events_code_block
 
         /// List of possible errors
-        #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+        #[derive(Clone, Copy, PartialEq, Eq)]
         pub enum Error {
-            /// This can happen when an event is processed which should not come in this stage
-            /// of processing
+            /// When an event is processed which should not come in the current state.
             InvalidEvent,
-            /// This can happen when an event is processed whose guard did not return `true`
+            /// When an event is processed whose guard did not return `true`.
             GuardFailed,
         }
 
-        /// State machine structure definition
-        #[derive(Debug)]
+        /// State machine structure definition.
         pub struct StateMachine<T: StateMachineContext> {
             state: States,
             context: T
         }
 
         impl<T: StateMachineContext> StateMachine<T> {
-            /// Creates a new state machine with the specified starting state
+            /// Creates a new state machine with the specified starting state.
+            #[inline(always)]
             pub fn new(context: T) -> Self {
                 StateMachine {
                     state: States::#starting_state,
@@ -383,32 +384,35 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 }
             }
 
-            /// Returns the current state
-            pub fn state(&self) -> States {
-                self.state
+            /// Returns the current state.
+            #[inline(always)]
+            pub fn state(&self) -> &States {
+                &self.state
             }
 
-            /// Returns the current context as a reference
+            /// Returns the current context.
+            #[inline(always)]
             pub fn context(&self) -> &T {
                 &self.context
             }
 
-            /// Returns the current context as a mutable reference
+            /// Returns the current context as a mutable reference.
+            #[inline(always)]
             pub fn context_mut(&mut self) -> &mut T {
                 &mut self.context
             }
 
-            /// Process an event
+            /// Process an event.
             ///
-            /// It will return `Ok(NextState)` if the transition was successful, or `Err(Error)`
-            /// if there was an error in the transition
-            pub fn process_event(&mut self, event: Events) -> Result<States, Error> {
+            /// It will return `Ok(&NextState)` if the transition was successful, or `Err(Error)`
+            /// if there was an error in the transition.
+            pub fn process_event(&mut self, event: Events) -> Result<&States, Error> {
                 match self.state {
                     #(States::#in_states => match event {
                         #(Events::#events => {
                             #code_blocks
 
-                            Ok(self.state)
+                            Ok(&self.state)
                         }),*
                         _ => Err(Error::InvalidEvent),
                     }),*

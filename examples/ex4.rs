@@ -14,11 +14,11 @@ statemachine! {
 pub struct Context;
 
 impl StateMachineContext for Context {
-    fn guard1(&self, event_data: &u32) -> bool {
+    fn guard1(&mut self, event_data: &u32) -> bool {
         true
     }
 
-    fn guard2(&self, state_data: &i8, event_data: &i32) -> bool {
+    fn guard2(&mut self, state_data: &i8, event_data: &i32) -> bool {
         true
     }
 

@@ -10,9 +10,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+* API documentation should now be correctly generated in a project
+
 ### Added
 
 ### Changes
+
+* Most derives on `States`, `Events` (`Copy`, `Clone`, `Debug`) and trait bounds on
+`StateMachineContext` are removed.
+* All returns of state are now by reference
+* Guards now take self my mutable reference, this to allow for context modifications. Quite common
+when receiving the same event N times can be accepted as a transition. Before one would have to have
+a long list of states to go through.
+* Most function are made `#[inline]`
 
 ## [v0.2.2]
 

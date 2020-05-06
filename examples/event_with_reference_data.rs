@@ -16,14 +16,14 @@ statemachine! {
 pub struct Context;
 
 impl StateMachineContext for Context {
-    fn guard1(&self, event_data: &[u8]) -> bool {
+    fn guard1(&mut self, event_data: &[u8]) -> bool {
         true
     }
 
     fn action1(&mut self, event_data: &[u8]) {
     }
 
-    fn guard2(&self, event_data: &MyReferenceWrapper) -> bool {
+    fn guard2(&mut self, event_data: &MyReferenceWrapper) -> bool {
         true
     }
 
@@ -33,5 +33,5 @@ impl StateMachineContext for Context {
 
 fn main() {
     let mut sm = StateMachine::new(Context);
-    assert_eq!(sm.state(), States::State1);
+    assert!(sm.state() == &States::State1);
 }

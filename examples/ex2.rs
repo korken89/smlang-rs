@@ -18,26 +18,26 @@ impl StateMachineContext for Context {}
 
 fn main() {
     let mut sm = StateMachine::new(Context);
-    assert_eq!(sm.state(), States::State1);
+    assert!(sm.state() == &States::State1);
 
     let r = sm.process_event(Events::Event1);
-    assert_eq!(r, Ok(States::State2));
+    assert!(r == Ok(&States::State2));
 
     let r = sm.process_event(Events::Event2);
-    assert_eq!(r, Ok(States::State3));
+    assert!(r == Ok(&States::State3));
 
     // Go back in the loop a few time
     let r = sm.process_event(Events::Event3);
-    assert_eq!(r, Ok(States::State2));
+    assert!(r == Ok(&States::State2));
 
     let r = sm.process_event(Events::Event2);
-    assert_eq!(r, Ok(States::State3));
+    assert!(r == Ok(&States::State3));
 
     let r = sm.process_event(Events::Event3);
-    assert_eq!(r, Ok(States::State2));
+    assert!(r == Ok(&States::State2));
 
     // Now we cannot use Event1 again, as it is outside the state machine loop
     let r = sm.process_event(Events::Event1);
-    assert_eq!(r, Err(Error::InvalidEvent));
-    assert_eq!(sm.state(), States::State2);
+    assert!(r == Err(Error::InvalidEvent));
+    assert!(sm.state() == &States::State2);
 }

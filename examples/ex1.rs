@@ -17,20 +17,20 @@ impl StateMachineContext for Context {}
 
 fn main() {
     let mut sm = StateMachine::new(Context);
-    assert_eq!(sm.state(), States::State1);
+    assert!(sm.state() == &States::State1);
 
     let r = sm.process_event(Events::Event1);
-    assert_eq!(r, Ok(States::State2));
+    assert!(r == Ok(&States::State2));
 
     let r = sm.process_event(Events::Event2);
-    assert_eq!(r, Ok(States::State3));
+    assert!(r == Ok(&States::State3));
 
     // Now all events will not give any change of state
     let r = sm.process_event(Events::Event1);
-    assert_eq!(r, Err(Error::InvalidEvent));
-    assert_eq!(sm.state(), States::State3);
+    assert!(r == Err(Error::InvalidEvent));
+    assert!(sm.state() == &States::State3);
 
     let r = sm.process_event(Events::Event2);
-    assert_eq!(r, Err(Error::InvalidEvent));
-    assert_eq!(sm.state(), States::State3);
+    assert!(r == Err(Error::InvalidEvent));
+    assert!(sm.state() == &States::State3);
 }

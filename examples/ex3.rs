@@ -14,12 +14,12 @@ statemachine! {
 pub struct Context;
 
 impl StateMachineContext for Context {
-    fn guard(&self) -> bool {
+    fn guard(&mut self) -> bool {
         // Always ok
         true
     }
 
-    fn guard_fail(&self) -> bool {
+    fn guard_fail(&mut self) -> bool {
         // Always fail
         false
     }
@@ -35,13 +35,13 @@ impl StateMachineContext for Context {
 
 fn main() {
     let mut sm = StateMachine::new(Context);
-    assert_eq!(sm.state(), States::State1);
+    assert!(sm.state() == &States::State1);
 
     println!("Before action 1");
 
     // Go through the first guard and action
     let r = sm.process_event(Events::Event1);
-    assert_eq!(r, Ok(States::State2));
+    assert!(r == Ok(&States::State2));
 
     println!("After action 1");
 
@@ -49,10 +49,10 @@ fn main() {
 
     // The action will never run as the guard will fail
     let r = sm.process_event(Events::Event2);
-    assert_eq!(r, Err(Error::GuardFailed));
+    assert!(r == Err(Error::GuardFailed));
 
     println!("After action 2");
 
     // Now we are stuck due to the guard never returning true
-    assert_eq!(sm.state(), States::State2);
+    assert!(sm.state() == &States::State2);
 }

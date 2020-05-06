@@ -4,19 +4,19 @@ use super::statemachine;
 pub struct Context;
 
 impl StateMachineContext for Context {
-    fn guard1(&self) -> bool {
+    fn guard1(&mut self) -> bool {
         println!("Guard 1 ok");
 
         true
     }
 
-    fn guard2(&self) -> bool {
+    fn guard2(&mut self) -> bool {
         println!("Guard 2 ok");
 
         true
     }
 
-    fn guard_fail(&self) -> bool {
+    fn guard_fail(&mut self) -> bool {
         false
     }
 
@@ -39,68 +39,68 @@ statemachine!(
 
 #[test]
 fn starting_state() {
-    let sm = StateMachine::<Context>::new(Context);
-    assert_eq!(sm.state(), States::State1);
+    let sm = StateMachine::new(Context);
+    assert!(sm.state() == &States::State1);
 }
 
 #[test]
 fn transitions() {
-    let mut sm = StateMachine::<Context>::new(Context);
+    let mut sm = StateMachine::new(Context);
 
     let _ = sm.process_event(Events::Event1);
-    assert_eq!(sm.state(), States::State2);
+    assert!(sm.state() == &States::State2);
 
     let _ = sm.process_event(Events::Event1);
-    assert_eq!(sm.state(), States::State2);
+    assert!(sm.state() == &States::State2);
 
     let _ = sm.process_event(Events::Event1);
-    assert_eq!(sm.state(), States::State2);
+    assert!(sm.state() == &States::State2);
 
     let _ = sm.process_event(Events::Event2);
-    assert_eq!(sm.state(), States::State3);
+    assert!(sm.state() == &States::State3);
 
     let _ = sm.process_event(Events::Event1);
-    assert_eq!(sm.state(), States::State3);
+    assert!(sm.state() == &States::State3);
 
     let _ = sm.process_event(Events::Event1);
-    assert_eq!(sm.state(), States::State3);
+    assert!(sm.state() == &States::State3);
 
     let _ = sm.process_event(Events::Event2);
-    assert_eq!(sm.state(), States::State3);
+    assert!(sm.state() == &States::State3);
 
     let _ = sm.process_event(Events::Event2);
-    assert_eq!(sm.state(), States::State3);
+    assert!(sm.state() == &States::State3);
 
     let _ = sm.process_event(Events::Event3);
-    assert_eq!(sm.state(), States::State1);
+    assert!(sm.state() == &States::State1);
 
     let _ = sm.process_event(Events::Event2);
-    assert_eq!(sm.state(), States::State1);
+    assert!(sm.state() == &States::State1);
 
     let _ = sm.process_event(Events::Event1);
-    assert_eq!(sm.state(), States::State2);
+    assert!(sm.state() == &States::State2);
 
     let _ = sm.process_event(Events::Event2);
-    assert_eq!(sm.state(), States::State3);
+    assert!(sm.state() == &States::State3);
 }
 
 #[test]
 fn event_error() {
-    let mut sm = StateMachine::<Context>::new(Context);
-    assert_eq!(sm.state(), States::State1);
+    let mut sm = StateMachine::new(Context);
+    assert!(sm.state() == &States::State1);
 
     let output = sm.process_event(Events::Event3);
-    assert_eq!(output, Err(Error::InvalidEvent));
+    assert!(output == Err(Error::InvalidEvent));
 
     let output = sm.process_event(Events::Event1);
-    assert_eq!(output, Ok(States::State2));
+    assert!(output == Ok(&States::State2));
 }
 
 #[test]
 fn guard_error() {
-    let mut sm = StateMachine::<Context>::new(Context);
+    let mut sm = StateMachine::new(Context);
 
     let _ = sm.process_event(Events::Event1);
     let output = sm.process_event(Events::Event4);
-    assert_eq!(output, Err(Error::GuardFailed));
+    assert!(output == Err(Error::GuardFailed));
 }
