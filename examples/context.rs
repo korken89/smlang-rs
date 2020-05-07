@@ -1,3 +1,9 @@
+//! Context with members example
+//!
+//! An example of using the context structure with members for counting the number of transitions.
+
+#![deny(missing_docs)]
+
 use smlang::statemachine;
 
 statemachine! {
@@ -5,7 +11,9 @@ statemachine! {
     State2 + Event2 / count_transition2 = State1,
 }
 
+/// Context with member
 pub struct Context {
+    /// Number of transitions
     pub num_transitions: usize,
 }
 

@@ -1,5 +1,12 @@
+//! State data example
+//!
+//! An example of using state data together with an action.
+
+#![deny(missing_docs)]
+
 use smlang::statemachine;
 
+/// State data
 #[derive(PartialEq)]
 pub struct MyStateData(pub u32);
 
@@ -9,6 +16,7 @@ statemachine! {
     // ...
 }
 
+/// Context
 pub struct Context;
 
 impl StateMachineContext for Context {

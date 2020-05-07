@@ -214,7 +214,10 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     }
                 };
 
-                guard_list.extend(quote! { fn #guard(&mut self, #state_data #event_data) -> bool; });
+                guard_list.extend(quote! {
+                    #[allow(missing_docs)]
+                    fn #guard(&mut self, #state_data #event_data) -> bool;
+                });
             }
 
             // Create the action traits for user implementation
@@ -267,7 +270,10 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 };
 
                 action_list.extend(
-                    quote! { fn #action(&mut self, #state_data #event_data) -> #return_type; },
+                    quote! {
+                        #[allow(missing_docs)]
+                        fn #action(&mut self, #state_data #event_data) -> #return_type;
+                    }
                 );
             }
         })
@@ -352,10 +358,12 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         }
 
         /// List of auto-generated states.
+        #[allow(missing_docs)]
         #[derive(PartialEq)]
         pub enum States { #(#state_list),* }
 
         /// List of auto-generated events.
+        #[allow(missing_docs)]
         #[derive(PartialEq)]
         #events_code_block
 

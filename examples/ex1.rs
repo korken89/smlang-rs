@@ -3,6 +3,8 @@
 //! A simple example of a state machine which will get stuck in the final state.
 //! A picture depicting the state machine can be found in the README.
 
+#![deny(missing_docs)]
+
 use smlang::statemachine;
 
 statemachine! {
@@ -10,7 +12,7 @@ statemachine! {
     State2 + Event2 = State3,
 }
 
-#[derive(Debug)]
+/// Context
 pub struct Context;
 
 impl StateMachineContext for Context {}

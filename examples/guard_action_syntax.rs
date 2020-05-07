@@ -1,8 +1,16 @@
+//! Guard and action syntax example
+//!
+//! An example of using guards and actions with state and event data.
+
+#![deny(missing_docs)]
+
 use smlang::statemachine;
 
+/// Event data
 #[derive(PartialEq)]
 pub struct MyEventData(pub u32);
 
+/// State data
 #[derive(PartialEq)]
 pub struct MyStateData(pub u32);
 
@@ -12,6 +20,7 @@ statemachine!{
     // ...
 }
 
+/// Context
 pub struct Context;
 
 impl StateMachineContext for Context {

@@ -3,6 +3,8 @@
 //! An example of a state machine which will loop between State 2 and State 3.
 //! A picture depicting the state machine can be found in the README.
 
+#![deny(missing_docs)]
+
 use smlang::statemachine;
 
 statemachine! {
@@ -11,7 +13,7 @@ statemachine! {
     State3 + Event3 = State2,
 }
 
-#[derive(Debug)]
+/// Context
 pub struct Context;
 
 impl StateMachineContext for Context {}

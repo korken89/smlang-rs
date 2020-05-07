@@ -3,6 +3,8 @@
 //! An example of using guards and actions.
 //! A picture depicting the state machine can be found in the README.
 
+#![deny(missing_docs)]
+
 use smlang::statemachine;
 
 statemachine! {
@@ -10,7 +12,7 @@ statemachine! {
     State2 + Event2 [guard_fail] / action2 = State3,
 }
 
-#[derive(Debug)]
+/// Context
 pub struct Context;
 
 impl StateMachineContext for Context {

@@ -1,5 +1,12 @@
+//! Event data example
+//!
+//! An example of using event data together with a guard and action.
+
+#![deny(missing_docs)]
+
 use smlang::statemachine;
 
+/// Event data
 #[derive(PartialEq)]
 pub struct MyEventData(pub u32);
 
@@ -8,6 +15,7 @@ statemachine!{
     // ...
 }
 
+/// Context
 pub struct Context;
 
 impl StateMachineContext for Context {

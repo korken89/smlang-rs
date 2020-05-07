@@ -2,8 +2,11 @@
 //!
 //! A simple example of a state machine which will get events that contain references.
 
+#![deny(missing_docs)]
+
 use smlang::statemachine;
 
+/// Reference wrapper
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct MyReferenceWrapper<'a>(pub &'a u32);
 
@@ -12,7 +15,7 @@ statemachine! {
     State2 + Event2(MyReferenceWrapper<'b>) [guard2] / action2 = State3,
 }
 
-#[derive(Debug)]
+/// Context
 pub struct Context;
 
 impl StateMachineContext for Context {
