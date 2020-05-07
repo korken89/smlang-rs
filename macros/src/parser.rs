@@ -89,7 +89,7 @@ impl ParsedStateMachine {
             );
 
             // Collect state to data mappings and check for definition errors
-            if let Some(state_type) = transition.state_data_type.clone() {
+            if let Some(state_type) = transition.in_state_data_type.clone() {
                 match state_data_type.get(&transition.in_state.to_string()) {
                     None => {
                         state_data_type.insert(transition.in_state.to_string(), state_type);
@@ -98,6 +98,27 @@ impl ParsedStateMachine {
                         if v != &state_type {
                             return Err(parse::Error::new(
                                 transition.in_state.span(),
+                                "This state's type does not match its previous definition.",
+                            ));
+                        }
+                    }
+                }
+            } else if let Some(_) = state_data_type.get(&transition.event.to_string()) {
+                return Err(parse::Error::new(
+                    transition.event.span(),
+                    "This event's type does not match its previous definition.",
+                ));
+            }
+
+            if let Some(state_type) = transition.out_state_data_type.clone() {
+                match state_data_type.get(&transition.out_state.to_string()) {
+                    None => {
+                        state_data_type.insert(transition.out_state.to_string(), state_type);
+                    }
+                    Some(v) => {
+                        if v != &state_type {
+                            return Err(parse::Error::new(
+                                transition.out_state.span(),
                                 "This state's type does not match its previous definition.",
                             ));
                         }
@@ -170,8 +191,11 @@ impl ParsedStateMachine {
             states_events_mapping.insert(transition.in_state.to_string(), HashMap::new());
         }
 
-        // Create states to event mappings
+        // Remove duplicate lifetimes
+        all_event_data_lifetimes.dedup();
+
         for transition in sm.transitions.iter() {
+            // Add transitions
             let p = states_events_mapping
                 .get_mut(&transition.in_state.to_string())
                 .unwrap();
@@ -191,10 +215,22 @@ impl ParsedStateMachine {
                     "State and event combination specified multiple times, remove duplicates",
                 ));
             }
+
+            // Check for actions when states have data a
+            if let Some(_) = state_data_type.get(&transition.out_state.to_string()) {
+                // This transition goes to a state that has data associated, check so it has an
+                // action
+
+                if transition.action.is_none() {
+                    return Err(parse::Error::new(
+                     transition.out_state.span(),
+                     "This state has data associated, but not action is define here to provide it.",
+                 ));
+                }
+            }
         }
 
-        // Remove duplicate lifetimes
-        all_event_data_lifetimes.dedup();
+        // Check so all states with data associated have actions that provide this data
 
         Ok(ParsedStateMachine {
             states,
@@ -213,12 +249,13 @@ impl ParsedStateMachine {
 pub struct StateTransition {
     start: bool,
     in_state: Ident,
-    state_data_type: Option<Type>,
+    in_state_data_type: Option<Type>,
     event: Ident,
     event_data_type: Option<Type>,
     guard: Option<Ident>,
     action: Option<Ident>,
     out_state: Ident,
+    out_state_data_type: Option<Type>,
 }
 
 impl parse::Parse for StateMachine {
@@ -242,13 +279,14 @@ impl parse::Parse for StateMachine {
             // Parse the DSL
             //
             // Transition DSL:
-            // SrcState(OptionalType1) + Event(OptionalType2) [ guard ] / action = DstState
+            // SrcState(OptionalType1) + Event(OptionalType2) [ guard ] / action =
+            // DstState(OptionalType3)
 
             // Input State
             let in_state: Ident = input.parse()?;
 
-            // Possible type on the state
-            let state_data_type = if input.peek(token::Paren) {
+            // Possible type on the input state
+            let in_state_data_type = if input.peek(token::Paren) {
                 let content;
                 parenthesized!(content in input);
                 let input: Type = content.parse()?;
@@ -336,15 +374,43 @@ impl parse::Parse for StateMachine {
 
             let out_state: Ident = input.parse()?;
 
+            // Possible type on the input state
+            let out_state_data_type = if input.peek(token::Paren) {
+                let content;
+                parenthesized!(content in input);
+                let input: Type = content.parse()?;
+
+                // Check so the type is supported
+                match &input {
+                    Type::Array(_)
+                    | Type::Path(_)
+                    | Type::Ptr(_)
+                    | Type::Reference(_)
+                    | Type::Slice(_)
+                    | Type::Tuple(_) => (),
+                    _ => {
+                        return Err(parse::Error::new(
+                            input.span(),
+                            "This is an unsupported type for states.",
+                        ))
+                    }
+                }
+
+                Some(input)
+            } else {
+                None
+            };
+
             statemachine.add_transition(StateTransition {
                 start,
                 in_state,
-                state_data_type,
+                in_state_data_type,
                 event,
                 event_data_type,
                 guard,
                 action,
                 out_state,
+                out_state_data_type,
             });
 
             // No comma at end of line, no more transitions
