@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changes
 
+## [v0.3.1]
+
+### Changes
+
+* Better documentation and examples
+* Graphviz diagrams only generated if feature is enabled
+
 ## [v0.3.0]
 
 ### Fixed
@@ -52,7 +59,8 @@ a long list of states to go through.
 * Change log added
 
 
-[Unreleased]: https://github.com/korken89/smlang-rs/compare/v0.3.0...master
+[Unreleased]: https://github.com/korken89/smlang-rs/compare/v0.3.1...master
+[v0.3.0]: https://github.com/korken89/smlang-rs/compare/v0.3.0...v0.3.1
 [v0.3.0]: https://github.com/korken89/smlang-rs/compare/v0.2.2...v0.3.0
 [v0.2.2]: https://github.com/korken89/smlang-rs/compare/v0.2.1...v0.2.2
 [v0.2.1]: https://github.com/korken89/smlang-rs/compare/v0.2.0...v0.2.1
