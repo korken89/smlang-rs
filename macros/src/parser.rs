@@ -54,12 +54,12 @@ impl ParsedStateMachine {
         if num_start == 0 {
             return Err(parse::Error::new(
                 Span::call_site(),
-                "No starting state defined, indicate the starting state with a *",
+                "No starting state defined, indicate the starting state with a *.",
             ));
         } else if num_start > 1 {
             return Err(parse::Error::new(
                 Span::call_site(),
-                "More than one starting state defined (indicated with *), remove duplicates",
+                "More than one starting state defined (indicated with *), remove duplicates.",
             ));
         }
 
@@ -212,7 +212,7 @@ impl ParsedStateMachine {
             } else {
                 return Err(parse::Error::new(
                     transition.in_state.span(),
-                    "State and event combination specified multiple times, remove duplicates",
+                    "State and event combination specified multiple times, remove duplicates.",
                 ));
             }
 
