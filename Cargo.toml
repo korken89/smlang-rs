@@ -30,4 +30,6 @@ lto = true
 members = ["macros"]
 
 [features]
+default = []
+
 graphviz = ["smlang-macros/graphviz"]
