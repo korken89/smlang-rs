@@ -6,7 +6,7 @@ description = "Procedual macros for the smlang crate"
 keywords = ["dsl", "statemachine"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/korken89/smlang-rs"
-version = "0.1.7"
+version = "0.1.8"
 edition = "2018"
 readme = "../README.md"
 

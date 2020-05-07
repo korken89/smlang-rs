@@ -14,6 +14,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changes
 
+## [v0.3.2]
+
+### Fixed
+
+- Having states with data associated, but no action to set this data, caused arcane errors. This is now fixed.
+
+### Added
+
+- Destination state may now have a type associated with it
+
+### Changes
+
 ## [v0.3.1]
 
 ### Changes
@@ -59,8 +71,9 @@ a long list of states to go through.
 * Change log added
 
 
-[Unreleased]: https://github.com/korken89/smlang-rs/compare/v0.3.1...master
-[v0.3.0]: https://github.com/korken89/smlang-rs/compare/v0.3.0...v0.3.1
+[Unreleased]: https://github.com/korken89/smlang-rs/compare/v0.3.2...master
+[v0.3.2]: https://github.com/korken89/smlang-rs/compare/v0.3.1...v0.3.2
+[v0.3.1]: https://github.com/korken89/smlang-rs/compare/v0.3.0...v0.3.1
 [v0.3.0]: https://github.com/korken89/smlang-rs/compare/v0.2.2...v0.3.0
 [v0.2.2]: https://github.com/korken89/smlang-rs/compare/v0.2.1...v0.2.2
 [v0.2.1]: https://github.com/korken89/smlang-rs/compare/v0.2.0...v0.2.1
