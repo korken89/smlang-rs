@@ -1,0 +1,5 @@
+error: This state has data associated, but not action is define here to provide it.
+ --> $DIR/no_action_with_state_data.rs:6:24
+  |
+6 |     *State1 + Event1 = State2(u32), //~ This state has data associated, but not action is define here to provide it.
+  |                        ^^^^^^
