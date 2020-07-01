@@ -31,4 +31,3 @@ fn main() {
 
     assert!(result == Ok(&States::State2(MyStateData(42))));
 }
-

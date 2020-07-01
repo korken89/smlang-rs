@@ -269,12 +269,10 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     }
                 };
 
-                action_list.extend(
-                    quote! {
-                        #[allow(missing_docs)]
-                        fn #action(&mut self, #state_data #event_data) -> #return_type;
-                    }
-                );
+                action_list.extend(quote! {
+                    #[allow(missing_docs)]
+                    fn #action(&mut self, #state_data #event_data) -> #return_type;
+                });
             }
         })
     }

@@ -42,7 +42,7 @@ fn main() {
 
     let result = sm.process_event(Events::Event1(&[])); // Guard will fail
     assert!(result == Err(Error::GuardFailed));
-    let result = sm.process_event(Events::Event1(&[1,2,3])); // Guard will pass
+    let result = sm.process_event(Events::Event1(&[1, 2, 3])); // Guard will pass
     assert!(result == Ok(&States::State2));
 
     let r = 42;
@@ -52,5 +52,4 @@ fn main() {
     let r = 9001;
     let result = sm.process_event(Events::Event2(MyReferenceWrapper(&r))); // Guard will pass
     assert!(result == Ok(&States::State3));
-
 }

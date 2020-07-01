@@ -14,7 +14,7 @@ pub struct MyEventData(pub u32);
 #[derive(PartialEq)]
 pub struct MyStateData(pub u32);
 
-statemachine!{
+statemachine! {
     *State1 + Event1(MyEventData) [guard1] / action1 = State2,
     State2(MyStateData) + Event2  [guard2] / action2 = State3,
     // ...
@@ -45,6 +45,4 @@ impl StateMachineContext for Context {
     }
 }
 
-fn main() {
-
-}
+fn main() {}

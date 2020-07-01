@@ -10,7 +10,7 @@ use smlang::statemachine;
 #[derive(PartialEq)]
 pub struct MyEventData(pub u32);
 
-statemachine!{
+statemachine! {
     *State1 + Event1(MyEventData) [guard] / action = State2,
     // ...
 }
@@ -37,5 +37,4 @@ fn main() {
     let result = sm.process_event(Events::Event1(MyEventData(42))); // Guard will pass
 
     assert!(result == Ok(&States::State2));
-
 }
