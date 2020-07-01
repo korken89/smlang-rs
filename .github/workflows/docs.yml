@@ -43,5 +43,5 @@ jobs:
         run: cargo doc
 
       - name: Check links
-        run: linkchecker .
+        run: linkchecker README.md CHANGELOG.md src examples tests macros
 
