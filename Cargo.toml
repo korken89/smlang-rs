@@ -14,7 +14,7 @@ readme = "README.md"
 travis-ci = { repository = "korken89/smlang-rs", branch = "master" }
 
 [dependencies]
-smlang-macros = { path = "macros", version = "0.1.9" }
+smlang-macros = { path = "macros", version = "0.1.10" }
 
 [target.'cfg(not(target_os = "none"))'.dev-dependencies]
 trybuild = "1.0"

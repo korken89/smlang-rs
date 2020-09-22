@@ -175,6 +175,15 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         })
         .collect();
 
+    let temporary_context = match &sm.temporary_context_type {
+        Some(tct) => {
+            quote! { temporary_context: #tct, }
+        }
+        None => {
+            quote! {}
+        }
+    };
+
     let mut guard_list = proc_macro2::TokenStream::new();
     let mut action_list = proc_macro2::TokenStream::new();
     for (state, value) in transitions.iter() {
@@ -216,7 +225,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
                 guard_list.extend(quote! {
                     #[allow(missing_docs)]
-                    fn #guard(&mut self, #state_data #event_data) -> bool;
+                    fn #guard(&mut self, #temporary_context #state_data #event_data) -> bool;
                 });
             }
 
@@ -271,11 +280,20 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
                 action_list.extend(quote! {
                     #[allow(missing_docs)]
-                    fn #action(&mut self, #state_data #event_data) -> #return_type;
+                    fn #action(&mut self, #temporary_context #state_data #event_data) -> #return_type;
                 });
             }
         })
     }
+
+    let temporary_context_call = match &sm.temporary_context_type {
+        Some(_) => {
+            quote! { temporary_context, }
+        }
+        None => {
+            quote! {}
+        }
+    };
 
     // Create the code blocks inside the switch cases
     let code_blocks: Vec<Vec<_>> = guards
@@ -298,8 +316,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         if let Some(g) = guard {
                             if let Some(a) = action {
                                 quote! {
-                                    if self.context.#g(#g_a_param) {
-                                        let _data = self.context.#a(#g_a_param);
+                                    if self.context.#g(#temporary_context_call #g_a_param) {
+                                        let _data = self.context.#a(#temporary_context_call #g_a_param);
                                         self.state = States::#out_state;
                                     } else {
                                         return Err(Error::GuardFailed);
@@ -307,7 +325,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                 }
                             } else {
                                 quote! {
-                                    if self.context.#g(#g_a_param) {
+                                    if self.context.#g(#temporary_context_call #g_a_param) {
                                         self.state = States::#out_state;
                                     } else {
                                         return Err(Error::GuardFailed);
@@ -317,7 +335,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         } else {
                             if let Some(a) = action {
                                 quote! {
-                                    let _data = self.context.#a(#g_a_param);
+                                    let _data = self.context.#a(#temporary_context_call #g_a_param);
                                     self.state = States::#out_state;
                                 }
                             } else {
@@ -366,7 +384,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         #events_code_block
 
         /// List of possible errors
-        #[derive(Clone, Copy, PartialEq, Eq)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
         pub enum Error {
             /// When an event is processed which should not come in the current state.
             InvalidEvent,
@@ -412,7 +430,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             ///
             /// It will return `Ok(&NextState)` if the transition was successful, or `Err(Error)`
             /// if there was an error in the transition.
-            pub fn process_event(&mut self, event: Events) -> Result<&States, Error> {
+            pub fn process_event(&mut self, #temporary_context event: Events) -> Result<&States, Error> {
                 match self.state {
                     #(States::#in_states => match event {
                         #(Events::#events => {

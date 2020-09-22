@@ -14,6 +14,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changes
 
+## [v0.3.4]
+
+### Fixed
+
+### Added
+
+- Added syntax and support for a temporary context which is propagated from `process_event`. This
+  allows for usage in systems where the normal context cannot take ownership, such as when having a
+  reference which is only valid during the invocation of the state machine. For an example of this
+  feature see `examples/guard_action_syntax_with_temporary_context.rs`.
+
+### Changes
+
 ## [v0.3.3]
 
 ### Fixed

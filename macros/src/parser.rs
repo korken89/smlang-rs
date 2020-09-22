@@ -7,12 +7,14 @@ use syn::{
 
 #[derive(Debug)]
 pub struct StateMachine {
+    pub temporary_context_type: Option<Type>,
     pub transitions: Vec<StateTransition>,
 }
 
 impl StateMachine {
     pub fn new() -> Self {
         StateMachine {
+            temporary_context_type: None,
             transitions: Vec::new(),
         }
     }
@@ -32,6 +34,7 @@ pub struct EventMapping {
 
 #[derive(Debug)]
 pub struct ParsedStateMachine {
+    pub temporary_context_type: Option<Type>,
     pub states: HashMap<String, Ident>,
     pub starting_state: Ident,
     pub state_data_type: HashMap<String, Type>,
@@ -233,6 +236,7 @@ impl ParsedStateMachine {
         // Check so all states with data associated have actions that provide this data
 
         Ok(ParsedStateMachine {
+            temporary_context_type: sm.temporary_context_type,
             states,
             starting_state,
             state_data_type,
@@ -270,6 +274,32 @@ impl parse::Parse for StateMachine {
 
             // Check for starting state definition
             let start = if let Ok(_) = input.parse::<Token![*]>() {
+                // Check for the temporary context
+                if input.peek(token::Paren) {
+                    let content;
+                    parenthesized!(content in input);
+                    let input: Type = content.parse()?;
+
+                    // Check so the type is supported
+                    match &input {
+                        Type::Array(_)
+                        | Type::Path(_)
+                        | Type::Ptr(_)
+                        | Type::Reference(_)
+                        | Type::Slice(_)
+                        | Type::Tuple(_) => (),
+                        _ => {
+                            return Err(parse::Error::new(
+                                input.span(),
+                                "This is an unsupported type for the temporary state.",
+                            ))
+                        }
+                    }
+
+                    // Store the temporary context type
+                    statemachine.temporary_context_type = Some(input);
+                }
+
                 true
             } else {
                 false
