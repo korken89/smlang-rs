@@ -184,6 +184,9 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         }
     };
 
+    // Keep track of already added actions not to duplicate definitions
+    let mut action_set: Vec<syn::Ident> = Vec::new();
+
     let mut guard_list = proc_macro2::TokenStream::new();
     let mut action_list = proc_macro2::TokenStream::new();
     for (state, value) in transitions.iter() {
@@ -245,7 +248,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     })
                 };
 
-                let action = if let Some(lifetimes) = sm.event_data_lifetimes.get(event) {
+                let action_with_lifetimes = if let Some(lifetimes) = sm.event_data_lifetimes.get(event) {
                     let lifetimes = &lifetimes;
                     quote! {
                         #action<#(#lifetimes),*>
@@ -278,10 +281,14 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     }
                 };
 
-                action_list.extend(quote! {
-                    #[allow(missing_docs)]
-                    fn #action(&mut self, #temporary_context #state_data #event_data) -> #return_type;
-                });
+                // Only add the action if it hasn't been added before
+                if action_set.iter().find(|a| a == &action).is_none() {
+                    action_set.push(action.clone());
+                    action_list.extend(quote! {
+                        #[allow(missing_docs)]
+                        fn #action_with_lifetimes(&mut self, #temporary_context #state_data #event_data) -> #return_type;
+                    });
+                }
             }
         })
     }
