@@ -56,7 +56,9 @@ fn main() {
     let mut val = 0;
 
     // This invocation will go through 1 guard and one action.
-    let r = sm.process_event(&mut val, Events::Event1(MyEventData(1))).unwrap();
+    let r = sm
+        .process_event(&mut val, Events::Event1(MyEventData(1)))
+        .unwrap();
 
     assert!(r == &States::State2(MyStateData(1)));
     assert_eq!(val, 2);
