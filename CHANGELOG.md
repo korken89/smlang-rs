@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changes
 
+## [v0.3.5]
+
+### Fixed
+
+- No longer needed to define each action, the same action can now be reused.
+
+### Added
+
 ## [v0.3.4]
 
 ### Fixed
@@ -90,7 +98,9 @@ a long list of states to go through.
 * Change log added
 
 
-[Unreleased]: https://github.com/korken89/smlang-rs/compare/v0.3.3...master
+[Unreleased]: https://github.com/korken89/smlang-rs/compare/v0.3.5...master
+[v0.3.5]: https://github.com/korken89/smlang-rs/compare/v0.3.4...v0.3.5
+[v0.3.4]: https://github.com/korken89/smlang-rs/compare/v0.3.3...v0.3.4
 [v0.3.3]: https://github.com/korken89/smlang-rs/compare/v0.3.2...v0.3.3
 [v0.3.2]: https://github.com/korken89/smlang-rs/compare/v0.3.1...v0.3.2
 [v0.3.1]: https://github.com/korken89/smlang-rs/compare/v0.3.0...v0.3.1
