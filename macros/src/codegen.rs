@@ -186,6 +186,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     // Keep track of already added actions not to duplicate definitions
     let mut action_set: Vec<syn::Ident> = Vec::new();
+    let mut guard_set: Vec<syn::Ident> = Vec::new();
 
     let mut guard_list = proc_macro2::TokenStream::new();
     let mut action_list = proc_macro2::TokenStream::new();
@@ -193,7 +194,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         value.iter().for_each(|(event, value)| {
             // Create the guard traits for user implementation
             if let Some(guard) = &value.guard {
-                let guard = if let Some(lifetimes) = sm.event_data_lifetimes.get(event) {
+                let guard_with_lifetimes = if let Some(lifetimes) = sm.event_data_lifetimes.get(event) {
                     let lifetimes = &lifetimes;
                     quote! {
                         #guard<#(#lifetimes),*>
@@ -226,10 +227,14 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     }
                 };
 
-                guard_list.extend(quote! {
-                    #[allow(missing_docs)]
-                    fn #guard(&mut self, #temporary_context #state_data #event_data) -> bool;
-                });
+                // Only add the guard if it hasn't been added before
+                if guard_set.iter().find(|a| a == &guard).is_none() {
+                    guard_set.push(guard.clone());
+                    guard_list.extend(quote! {
+                        #[allow(missing_docs)]
+                        fn #guard_with_lifetimes(&mut self, #temporary_context #state_data #event_data) -> bool;
+                    });
+                }
             }
 
             // Create the action traits for user implementation
