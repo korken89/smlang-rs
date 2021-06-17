@@ -87,7 +87,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         }
                         Some(_) => {
                             quote! {
-                                #value(ref event_data)
+                                #value(ref mut event_data)
                             }
                         }
                     }
@@ -442,7 +442,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             ///
             /// It will return `Ok(&NextState)` if the transition was successful, or `Err(Error)`
             /// if there was an error in the transition.
-            pub fn process_event(&mut self, #temporary_context event: Events) -> Result<&States, Error> {
+            pub fn process_event(&mut self, #temporary_context mut event: Events) -> Result<&States, Error> {
                 match self.state {
                     #(States::#in_states => match event {
                         #(Events::#events => {
