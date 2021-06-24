@@ -270,7 +270,7 @@ impl parse::Parse for StateTransition {
     fn parse(input: parse::ParseStream) -> syn::Result<Self> {
         // Check for starting state definition
         let start = input.parse::<Token![*]>().is_ok();
-        
+
         // Parse the DSL
         //
         // Transition DSL:
@@ -433,12 +433,12 @@ impl parse::Parse for StateMachine {
 
                             let transition: StateTransition = content.parse()?;
                             statemachine.add_transition(transition);
-                            
+
                             // No comma at end of line, no more transitions
                             if content.is_empty() {
                                 break;
                             }
-                            
+
                             if let Err(_) = content.parse::<Token![,]>() {
                                 break;
                             };
@@ -464,13 +464,13 @@ impl parse::Parse for StateMachine {
                             ))
                         }
                     }
-                    
+
                     statemachine.guard_error = Some(guard_error);
                 }
                 "temporary_context" => {
                     input.parse::<Token![:]>()?;
                     let temporary_context_type: Type = input.parse()?;
-    
+
                     // Check so the type is supported
                     match &temporary_context_type {
                         Type::Array(_)
@@ -486,7 +486,7 @@ impl parse::Parse for StateMachine {
                             ))
                         }
                     }
-    
+
                     // Store the temporary context type
                     statemachine.temporary_context_type = Some(temporary_context_type);
 
@@ -498,7 +498,6 @@ impl parse::Parse for StateMachine {
                     ))
                 }
             }
-            
 
             // No comma at end of line, no more transitions
             if input.is_empty() {

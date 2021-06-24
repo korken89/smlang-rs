@@ -391,7 +391,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     let guard_failed = if let Some(ref guard_error) = sm.guard_error {
         quote! { GuardFailed(#guard_error) }
-
     } else {
         quote! { GuardFailed(()) }
     };

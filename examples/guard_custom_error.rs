@@ -6,14 +6,12 @@
 
 use smlang::statemachine;
 
-
 /// Custom guard errors
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GuardError {
     /// This is a custom guard error variant
-    Custom
+    Custom,
 }
-
 
 /// Event data
 #[derive(PartialEq)]
