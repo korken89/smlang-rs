@@ -11,17 +11,19 @@ use smlang::statemachine;
 pub struct MyEventData(pub u32);
 
 statemachine! {
-    *State1 + Event1(&'a mut MyEventData) [guard] / action = State2,
-    // ...
+    transitions: {
+        *State1 + Event1(&'a mut MyEventData) [guard] / action = State2,
+        // ...
+    }
 }
 
 /// Context
 pub struct Context;
 
 impl StateMachineContext for Context {
-    fn guard(&mut self, event_data: &mut MyEventData) -> bool {
+    fn guard(&mut self, event_data: &mut MyEventData) -> Result<(), ()> {
         event_data.0 = 55;
-        true
+        Ok(())
     }
 
     fn action(&mut self, event_data: &mut MyEventData) {

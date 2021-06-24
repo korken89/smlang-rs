@@ -7,8 +7,10 @@
 use smlang::statemachine;
 
 statemachine! {
-    *State1 + Event1 / count_transition1 = State2,
-    State2 + Event2 / count_transition2 = State1,
+    transitions: {
+        *State1 + Event1 / count_transition1 = State2,
+        State2 + Event2 / count_transition2 = State1,
+    }
 }
 
 /// Context with member

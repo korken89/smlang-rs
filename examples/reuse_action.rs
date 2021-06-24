@@ -7,9 +7,11 @@
 use smlang::statemachine;
 
 statemachine! {
-    *State1 + Event1 / action = State2,
-    State1 + Event2 / action = State3,
-    State2 + Event2 = State1,
+    transitions: {
+        *State1 + Event1 / action = State2,
+        State1 + Event2 / action = State3,
+        State2 + Event2 = State1,
+    }
 }
 
 /// Action will increment our context

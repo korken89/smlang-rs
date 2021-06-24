@@ -8,8 +8,10 @@
 use smlang::statemachine;
 
 statemachine! {
-    *State1 + Event1 = State2,
-    State2 + Event2 = State3,
+    transitions: {
+        *State1 + Event1 = State2,
+        State2 + Event2 = State3,
+    },
 }
 
 /// Context
