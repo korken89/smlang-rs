@@ -1,13 +1,14 @@
 use proc_macro2::Span;
 use std::collections::HashMap;
 use syn::{
-    bracketed, parenthesized, parse, spanned::Spanned, token, GenericArgument, Ident, Lifetime,
-    PathArguments, Token, Type,
+    braced, bracketed, parenthesized, parse, spanned::Spanned, token, GenericArgument, Ident,
+    Lifetime, PathArguments, Token, Type,
 };
 
 #[derive(Debug)]
 pub struct StateMachine {
     pub temporary_context_type: Option<Type>,
+    pub guard_error: Option<Type>,
     pub transitions: Vec<StateTransition>,
 }
 
@@ -15,6 +16,7 @@ impl StateMachine {
     pub fn new() -> Self {
         StateMachine {
             temporary_context_type: None,
+            guard_error: None,
             transitions: Vec::new(),
         }
     }
@@ -35,6 +37,7 @@ pub struct EventMapping {
 #[derive(Debug)]
 pub struct ParsedStateMachine {
     pub temporary_context_type: Option<Type>,
+    pub guard_error: Option<Type>,
     pub states: HashMap<String, Ident>,
     pub starting_state: Ident,
     pub state_data_type: HashMap<String, Type>,
@@ -237,6 +240,7 @@ impl ParsedStateMachine {
 
         Ok(ParsedStateMachine {
             temporary_context_type: sm.temporary_context_type,
+            guard_error: sm.guard_error,
             states,
             starting_state,
             state_data_type,
@@ -262,6 +266,150 @@ pub struct StateTransition {
     out_state_data_type: Option<Type>,
 }
 
+impl parse::Parse for StateTransition {
+    fn parse(input: parse::ParseStream) -> syn::Result<Self> {
+        // Check for starting state definition
+        let start = input.parse::<Token![*]>().is_ok();
+
+        // Parse the DSL
+        //
+        // Transition DSL:
+        // SrcState(OptionalType1) + Event(OptionalType2) [ guard ] / action =
+        // DstState(OptionalType3)
+
+        // Input State
+        let in_state: Ident = input.parse()?;
+
+        // Possible type on the input state
+        let in_state_data_type = if input.peek(token::Paren) {
+            let content;
+            parenthesized!(content in input);
+            let input: Type = content.parse()?;
+
+            // Check if this is the starting state, it cannot have data as there is no
+            // supported way of propagating it (for now)
+            if start {
+                return Err(parse::Error::new(
+                    input.span(),
+                    "The starting state cannot have data associated with it.",
+                ));
+            }
+
+            // Check so the type is supported
+            match &input {
+                Type::Array(_)
+                | Type::Path(_)
+                | Type::Ptr(_)
+                | Type::Reference(_)
+                | Type::Slice(_)
+                | Type::Tuple(_) => (),
+                _ => {
+                    return Err(parse::Error::new(
+                        input.span(),
+                        "This is an unsupported type for states.",
+                    ))
+                }
+            }
+
+            Some(input)
+        } else {
+            None
+        };
+
+        // Event
+        input.parse::<Token![+]>()?;
+        let event: Ident = input.parse()?;
+
+        // Possible type on the event
+        let event_data_type = if input.peek(token::Paren) {
+            let content;
+            parenthesized!(content in input);
+            let input: Type = content.parse()?;
+
+            // Check so the type is supported
+            match &input {
+                Type::Array(_)
+                | Type::Path(_)
+                | Type::Ptr(_)
+                | Type::Reference(_)
+                | Type::Slice(_)
+                | Type::Tuple(_) => (),
+                _ => {
+                    return Err(parse::Error::new(
+                        input.span(),
+                        "This is an unsupported type for events.",
+                    ))
+                }
+            }
+
+            Some(input)
+        } else {
+            None
+        };
+
+        // Possible guard
+        let guard = if input.peek(token::Bracket) {
+            let content;
+            bracketed!(content in input);
+            let guard: Ident = content.parse()?;
+            Some(guard)
+        } else {
+            None
+        };
+
+        // Possible action
+        let action = if let Ok(_) = input.parse::<Token![/]>() {
+            let action: Ident = input.parse()?;
+            Some(action)
+        } else {
+            None
+        };
+
+        input.parse::<Token![=]>()?;
+
+        let out_state: Ident = input.parse()?;
+
+        // Possible type on the input state
+        let out_state_data_type = if input.peek(token::Paren) {
+            let content;
+            parenthesized!(content in input);
+            let input: Type = content.parse()?;
+
+            // Check so the type is supported
+            match &input {
+                Type::Array(_)
+                | Type::Path(_)
+                | Type::Ptr(_)
+                | Type::Reference(_)
+                | Type::Slice(_)
+                | Type::Tuple(_) => (),
+                _ => {
+                    return Err(parse::Error::new(
+                        input.span(),
+                        "This is an unsupported type for states.",
+                    ))
+                }
+            }
+
+            Some(input)
+        } else {
+            None
+        };
+
+        Ok(StateTransition {
+            start,
+            in_state,
+            in_state_data_type,
+            event,
+            event_data_type,
+            guard,
+            action,
+            out_state,
+            out_state_data_type,
+        })
+    }
+}
+
 impl parse::Parse for StateMachine {
     fn parse(input: parse::ParseStream) -> parse::Result<Self> {
         let mut statemachine = StateMachine::new();
@@ -272,16 +420,37 @@ impl parse::Parse for StateMachine {
                 break;
             }
 
-            // Check for starting state definition
-            let start = if let Ok(_) = input.parse::<Token![*]>() {
-                // Check for the temporary context
-                if input.peek(token::Paren) {
-                    let content;
-                    parenthesized!(content in input);
-                    let input: Type = content.parse()?;
+            match input.parse::<Ident>()?.to_string().as_str() {
+                "transitions" => {
+                    input.parse::<Token![:]>()?;
+                    if input.peek(token::Brace) {
+                        let content;
+                        braced!(content in input);
+                        loop {
+                            if content.is_empty() {
+                                break;
+                            }
+
+                            let transition: StateTransition = content.parse()?;
+                            statemachine.add_transition(transition);
+
+                            // No comma at end of line, no more transitions
+                            if content.is_empty() {
+                                break;
+                            }
+
+                            if let Err(_) = content.parse::<Token![,]>() {
+                                break;
+                            };
+                        }
+                    }
+                }
+                "guard_error" => {
+                    input.parse::<Token![:]>()?;
+                    let guard_error: Type = input.parse()?;
 
                     // Check so the type is supported
-                    match &input {
+                    match &guard_error {
                         Type::Array(_)
                         | Type::Path(_)
                         | Type::Ptr(_)
@@ -290,158 +459,45 @@ impl parse::Parse for StateMachine {
                         | Type::Tuple(_) => (),
                         _ => {
                             return Err(parse::Error::new(
-                                input.span(),
+                                guard_error.span(),
+                                "This is an unsupported type for guard error.",
+                            ))
+                        }
+                    }
+
+                    statemachine.guard_error = Some(guard_error);
+                }
+                "temporary_context" => {
+                    input.parse::<Token![:]>()?;
+                    let temporary_context_type: Type = input.parse()?;
+
+                    // Check so the type is supported
+                    match &temporary_context_type {
+                        Type::Array(_)
+                        | Type::Path(_)
+                        | Type::Ptr(_)
+                        | Type::Reference(_)
+                        | Type::Slice(_)
+                        | Type::Tuple(_) => (),
+                        _ => {
+                            return Err(parse::Error::new(
+                                temporary_context_type.span(),
                                 "This is an unsupported type for the temporary state.",
                             ))
                         }
                     }
 
                     // Store the temporary context type
-                    statemachine.temporary_context_type = Some(input);
+                    statemachine.temporary_context_type = Some(temporary_context_type);
+
                 }
-
-                true
-            } else {
-                false
-            };
-
-            //
-            // Parse the DSL
-            //
-            // Transition DSL:
-            // SrcState(OptionalType1) + Event(OptionalType2) [ guard ] / action =
-            // DstState(OptionalType3)
-
-            // Input State
-            let in_state: Ident = input.parse()?;
-
-            // Possible type on the input state
-            let in_state_data_type = if input.peek(token::Paren) {
-                let content;
-                parenthesized!(content in input);
-                let input: Type = content.parse()?;
-
-                // Check if this is the starting state, it cannot have data as there is no
-                // supported way of propagating it (for now)
-                if start {
+                keyword => {
                     return Err(parse::Error::new(
                         input.span(),
-                        "The starting state cannot have data associated with it.",
-                    ));
+                        format!("Unknown keyword {}. Support keywords: [\"transitions\", \"temporary_context\", \"guard_error\"]", keyword)
+                    ))
                 }
-
-                // Check so the type is supported
-                match &input {
-                    Type::Array(_)
-                    | Type::Path(_)
-                    | Type::Ptr(_)
-                    | Type::Reference(_)
-                    | Type::Slice(_)
-                    | Type::Tuple(_) => (),
-                    _ => {
-                        return Err(parse::Error::new(
-                            input.span(),
-                            "This is an unsupported type for states.",
-                        ))
-                    }
-                }
-
-                Some(input)
-            } else {
-                None
-            };
-
-            // Event
-            input.parse::<Token![+]>()?;
-            let event: Ident = input.parse()?;
-
-            // Possible type on the event
-            let event_data_type = if input.peek(token::Paren) {
-                let content;
-                parenthesized!(content in input);
-                let input: Type = content.parse()?;
-
-                // Check so the type is supported
-                match &input {
-                    Type::Array(_)
-                    | Type::Path(_)
-                    | Type::Ptr(_)
-                    | Type::Reference(_)
-                    | Type::Slice(_)
-                    | Type::Tuple(_) => (),
-                    _ => {
-                        return Err(parse::Error::new(
-                            input.span(),
-                            "This is an unsupported type for events.",
-                        ))
-                    }
-                }
-
-                Some(input)
-            } else {
-                None
-            };
-
-            // Possible guard
-            let guard = if input.peek(token::Bracket) {
-                let content;
-                bracketed!(content in input);
-                let guard: Ident = content.parse()?;
-                Some(guard)
-            } else {
-                None
-            };
-
-            // Possible action
-            let action = if let Ok(_) = input.parse::<Token![/]>() {
-                let action: Ident = input.parse()?;
-                Some(action)
-            } else {
-                None
-            };
-
-            input.parse::<Token![=]>()?;
-
-            let out_state: Ident = input.parse()?;
-
-            // Possible type on the input state
-            let out_state_data_type = if input.peek(token::Paren) {
-                let content;
-                parenthesized!(content in input);
-                let input: Type = content.parse()?;
-
-                // Check so the type is supported
-                match &input {
-                    Type::Array(_)
-                    | Type::Path(_)
-                    | Type::Ptr(_)
-                    | Type::Reference(_)
-                    | Type::Slice(_)
-                    | Type::Tuple(_) => (),
-                    _ => {
-                        return Err(parse::Error::new(
-                            input.span(),
-                            "This is an unsupported type for states.",
-                        ))
-                    }
-                }
-
-                Some(input)
-            } else {
-                None
-            };
-
-            statemachine.add_transition(StateTransition {
-                start,
-                in_state,
-                in_state_data_type,
-                event,
-                event_data_type,
-                guard,
-                action,
-                out_state,
-                out_state_data_type,
-            });
+            }
 
             // No comma at end of line, no more transitions
             if input.is_empty() {

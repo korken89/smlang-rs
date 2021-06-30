@@ -8,22 +8,24 @@
 use smlang::statemachine;
 
 statemachine! {
-    *State1 + Event1 [guard] / action1 = State2,
-    State2 + Event2 [guard_fail] / action2 = State3,
+    transitions: {
+        *State1 + Event1 [guard] / action1 = State2,
+        State2 + Event2 [guard_fail] / action2 = State3,
+    }
 }
 
 /// Context
 pub struct Context;
 
 impl StateMachineContext for Context {
-    fn guard(&mut self) -> bool {
+    fn guard(&mut self) -> Result<(), ()> {
         // Always ok
-        true
+        Ok(())
     }
 
-    fn guard_fail(&mut self) -> bool {
+    fn guard_fail(&mut self) -> Result<(), ()> {
         // Always fail
-        false
+        Err(())
     }
 
     fn action1(&mut self) {
@@ -51,7 +53,7 @@ fn main() {
 
     // The action will never run as the guard will fail
     let r = sm.process_event(Events::Event2);
-    assert!(r == Err(Error::GuardFailed));
+    assert!(r == Err(Error::GuardFailed(())));
 
     println!("After action 2");
 

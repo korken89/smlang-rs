@@ -15,9 +15,12 @@ pub struct MyEventData(pub u32);
 pub struct MyStateData(pub u32);
 
 statemachine! {
-    *(&mut u16) State1 + Event1(MyEventData) [guard1] / action1 = State2,
-    State2(MyStateData) + Event2  [guard2] / action2 = State3,
-    // ...
+    temporary_context: &mut u16,
+    transitions: {
+        *State1 + Event1(MyEventData) [guard1] / action1 = State2,
+        State2(MyStateData) + Event2  [guard2] / action2 = State3,
+        // ...
+    },
 }
 
 /// Context
@@ -25,10 +28,10 @@ pub struct Context;
 
 impl StateMachineContext for Context {
     // Guard1 has access to the data from Event1
-    fn guard1(&mut self, temp_context: &mut u16, _event_data: &MyEventData) -> bool {
+    fn guard1(&mut self, temp_context: &mut u16, _event_data: &MyEventData) -> Result<(), ()> {
         *temp_context += 1;
 
-        true
+        Ok(())
     }
 
     // Action1 has access to the data from Event1, and need to return the state data for State2
@@ -39,10 +42,10 @@ impl StateMachineContext for Context {
     }
 
     // Guard2 has access to the data from State2
-    fn guard2(&mut self, temp_context: &mut u16, _state_data: &MyStateData) -> bool {
+    fn guard2(&mut self, temp_context: &mut u16, _state_data: &MyStateData) -> Result<(), ()> {
         *temp_context += 1;
 
-        true
+        Ok(())
     }
 
     // Action2 has access to the data from State2

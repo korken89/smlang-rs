@@ -11,9 +11,11 @@ use smlang::statemachine;
 pub struct MyStateData(pub u32);
 
 statemachine! {
-    *State1 + Event1 / action = State2,
-    State2(MyStateData) + Event2 = State1,
-    // ...
+    transitions: {
+        *State1 + Event1 / action = State2,
+        State2(MyStateData) + Event2 = State1,
+        // ...
+    }
 }
 
 /// Context
