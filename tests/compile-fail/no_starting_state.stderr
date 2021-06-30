@@ -1,10 +1,13 @@
-error: expected `:`
-  --> $DIR/no_starting_state.rs:6:17
+error: No starting state defined, indicate the starting state with a *.
+  --> $DIR/no_starting_state.rs:5:1
    |
-6  |       transitions {
-   |  _________________^
+5  | / statemachine! {
+6  | |     transitions: {
 7  | |         //~ ERROR No starting state defined, indicate the starting state with a *
 8  | |         State1 + Event1 = State2,
 9  | |         State2 + Event2 = State3,
 10 | |     }
-   | |_____^
+11 | | }
+   | |_^
+   |
+   = note: this error originates in a macro (in Nightly builds, run with -Z macro-backtrace for more info)
