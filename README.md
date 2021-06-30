@@ -14,8 +14,10 @@ The DSL is defined as follows:
 
 ```rust
 statemachine!{
-    *SrcState1 + Event1 [ guard1 ] / action1 = DstState2, // * denotes starting state
-    SrcState2 + Event2 [ guard2 ] / action2 = DstState1,
+    transitions: {
+        *SrcState1 + Event1 [ guard1 ] / action1 = DstState2, // * denotes starting state
+        SrcState2 + Event2 [ guard2 ] / action2 = DstState1,
+    }
     // ...
 }
 ```
@@ -31,7 +33,9 @@ The `StateMachineContext` is generated from the `statemachine!` proc-macro and i
 
 ```rust
 statemachine!{
-    State1 + Event1 = State2,
+    transitions: {
+        State1 + Event1 = State2,
+    }
     // ...
 }
 
@@ -56,7 +60,9 @@ Any stat may have some data associated with it (except the starting state), whic
 pub struct MyStateData(pub u32);
 
 statemachine!{
-    State1(MyStateData) + Event1 = State2,
+    transitions: {
+        State1(MyStateData) + Event1 = State2,
+    }
     // ...
 }
 ```
@@ -71,7 +77,9 @@ Data may be passed along with an event into the `guard` and `action`:
 pub struct MyEventData(pub u32);
 
 statemachine!{
-    State1 + Event1(MyEventData) [guard] = State2,
+    transitions: {
+        State1 + Event1(MyEventData) [guard] = State2,
+    }
     // ...
 }
 ```
@@ -82,8 +90,10 @@ Event data may also have associated lifetimes which the `statemachine!` macro wi
 pub struct MyEventData<'a>(pub &'a u32);
 
 statemachine!{
-    State1 + Event1(MyEventData<'a>) [guard1] = State2,
-    State1 + Event2(&'a [u8]) [guard2] = State3,
+    transitions: {
+        State1 + Event1(MyEventData<'a>) [guard1] = State2,
+        State1 + Event2(&'a [u8]) [guard2] = State3,
+    }
     // ...
 }
 ```
@@ -106,8 +116,10 @@ DSL implementation:
 
 ```rust
 statemachine!{
-    *State1 + Event1 = State2,
-    State2 + Event2 = State3,
+    transitions: {
+        *State1 + Event1 = State2,
+        State2 + Event2 = State3,
+    }
 }
 ```
 
@@ -121,9 +133,11 @@ DSL implementation:
 
 ```rust
 statemachine!{
-    *State1 + Event1 = State2,
-    State2 + Event2 = State3,
-    State3 + Event3 = State2,
+    transitions: {
+        *State1 + Event1 = State2,
+        State2 + Event2 = State3,
+        State3 + Event3 = State2,
+    }
 }
 ```
 
@@ -137,7 +151,9 @@ DSL implementation:
 
 ```rust
 statemachine!{
-    *State1 + Event1 [guard] / action = State2,
+    transitions: {
+        *State1 + Event1 [guard] / action = State2,
+    }
 }
 ```
 
@@ -148,6 +164,7 @@ This example is available in `ex3.rs`.
 List of contributors in alphabetical order:
 
 * Emil Fresk ([@korken89](https://github.com/korken89))
+* Mathias Koch ([@MathiasKoch](https://github.com/MathiasKoch))
 
 ---
 

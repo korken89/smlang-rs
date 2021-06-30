@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- Introduce a new named syntax, supporting `guard_error`, `transitions` and `temporary_context`
+- The ability to define custom guard errors
+
 ### Changes
 
 ## [v0.3.5]
