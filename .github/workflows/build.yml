@@ -85,14 +85,3 @@ jobs:
     steps:
       - name: Mark the job as a success
         run: exit 0
-  ci-failure:
-    name: ci
-    if: github.event_name == 'push' && !success()
-    needs:
-      - check
-      - test
-      - fmt
-    runs-on: ubuntu-latest
-    steps:
-      - name: Mark the job as a failure
-        run: exit 1
