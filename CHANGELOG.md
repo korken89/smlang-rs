@@ -12,10 +12,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+### Changes
+
+## [v0.4.0]
+
+### Added
+
 - Introduce a new named syntax, supporting `guard_error`, `transitions` and `temporary_context`
 - The ability to define custom guard errors
-
-### Changes
 
 ## [v0.3.5]
 
@@ -101,7 +105,8 @@ a long list of states to go through.
 * Change log added
 
 
-[Unreleased]: https://github.com/korken89/smlang-rs/compare/v0.3.5...master
+[Unreleased]: https://github.com/korken89/smlang-rs/compare/v0.4.0...master
+[v0.4.0]: https://github.com/korken89/smlang-rs/compare/v0.3.5...v0.4.0
 [v0.3.5]: https://github.com/korken89/smlang-rs/compare/v0.3.4...v0.3.5
 [v0.3.4]: https://github.com/korken89/smlang-rs/compare/v0.3.3...v0.3.4
 [v0.3.3]: https://github.com/korken89/smlang-rs/compare/v0.3.2...v0.3.3
