@@ -10,4 +10,4 @@ error: No starting state defined, indicate the starting state with a *.
 11 | | }
    | |_^
    |
-   = note: this error originates in a macro (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the macro `statemachine` (in Nightly builds, run with -Z macro-backtrace for more info)
