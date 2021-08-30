@@ -8,9 +8,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.4.1]
+
 ### Fixed
 
 ### Added
+
+- Initial state can be specified at runtime.
 
 ### Changes
 
@@ -105,7 +109,8 @@ a long list of states to go through.
 * Change log added
 
 
-[Unreleased]: https://github.com/korken89/smlang-rs/compare/v0.4.0...master
+[Unreleased]: https://github.com/korken89/smlang-rs/compare/v0.4.1...master
+[v0.4.1]: https://github.com/korken89/smlang-rs/compare/v0.4.0...v0.4.1
 [v0.4.0]: https://github.com/korken89/smlang-rs/compare/v0.3.5...v0.4.0
 [v0.3.5]: https://github.com/korken89/smlang-rs/compare/v0.3.4...v0.3.5
 [v0.3.4]: https://github.com/korken89/smlang-rs/compare/v0.3.3...v0.3.4

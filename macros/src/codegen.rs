@@ -438,7 +438,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     context
                 }
             }
-            
+
             /// Creates a new state machine with an initial state.
             #[inline(always)]
             pub fn new_with_state(context: T, initial_state: States) -> Self {
@@ -447,7 +447,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     context
                 }
             }
-            
+
             /// Returns the current state.
             #[inline(always)]
             pub fn state(&self) -> &States {
