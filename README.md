@@ -54,7 +54,7 @@ See example `examples/context.rs` for a usage example.
 
 ### State data
 
-Any stat may have some data associated with it (except the starting state), which means that this data is only exists while in this state.
+Any state may have some data associated with it (except the starting state), which means that this data is only exists while in this state.
 
 ```rust
 pub struct MyStateData(pub u32);
