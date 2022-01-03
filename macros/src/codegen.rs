@@ -380,12 +380,29 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     let events_code_block = if sm.event_data_lifetimes.is_empty() {
         quote! {
             pub enum Events { #(#event_list),* }
+
+            /// Manually define PartialEq for Events based on variant only to address issue-#21
+            impl PartialEq for Events {
+                fn eq(&self, other: &Self) -> bool {
+                    use core::mem::discriminant;
+                    discriminant(self) == discriminant(other)
+                }
+            }
+
         }
     } else {
         let event_lifetimes = &sm.all_event_data_lifetimes;
 
         quote! {
             pub enum Events<#(#event_lifetimes),*> { #(#event_list),* }
+
+            /// Manually define PartialEq for Events based on variant only to address issue-#21
+            impl<#(#event_lifetimes),*> PartialEq for Events<#(#event_lifetimes),*> {
+                fn eq(&'_ self, other: &'_ Self) -> bool {
+                    use core::mem::discriminant;
+                    discriminant(self) == discriminant(other)
+                }
+            }
         }
     };
 
@@ -406,12 +423,18 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
         /// List of auto-generated states.
         #[allow(missing_docs)]
-        #[derive(PartialEq)]
         pub enum States { #(#state_list),* }
+
+        /// Manually define PartialEq for States based on variant only to address issue-#21
+        impl PartialEq for States {
+            fn eq(&self, other: &Self) -> bool {
+                use core::mem::discriminant;
+                discriminant(self) == discriminant(other)
+            }
+        }
 
         /// List of auto-generated events.
         #[allow(missing_docs)]
-        #[derive(PartialEq)]
         #events_code_block
 
         /// List of possible errors
