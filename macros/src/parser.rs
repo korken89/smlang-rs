@@ -5,6 +5,8 @@ use syn::{
     Lifetime, PathArguments, Token, Type,
 };
 
+pub type Lifetimes = Vec<Lifetime>;
+
 #[derive(Debug)]
 pub struct StateMachine {
     pub temporary_context_type: Option<Type>,
@@ -43,9 +45,41 @@ pub struct ParsedStateMachine {
     pub state_data_type: HashMap<String, Type>,
     pub events: HashMap<String, Ident>,
     pub event_data_type: HashMap<String, Type>,
-    pub all_event_data_lifetimes: Vec<Lifetime>,
-    pub event_data_lifetimes: HashMap<String, Vec<Lifetime>>,
+    pub all_event_data_lifetimes: Lifetimes,
+    pub event_data_lifetimes: HashMap<String, Lifetimes>,
     pub states_events_mapping: HashMap<String, HashMap<String, EventMapping>>,
+}
+
+// helper function for extracting a vector of lifetimes from a Type
+fn get_lifetimes(data_type: &Type) -> Result<Lifetimes, parse::Error> {
+    let mut lifetimes = Lifetimes::new();
+    match data_type {
+        Type::Reference(tr) => {
+            if let Some(lifetime) = &tr.lifetime {
+                lifetimes.push(lifetime.clone());
+            } else {
+                return Err(parse::Error::new(
+                    data_type.span(),
+                    "This event's data lifetime is not defined, consider adding a lifetime.",
+                ));
+            }
+            Ok(lifetimes)
+        }
+        Type::Path(tp) => {
+            let punct = &tp.path.segments;
+            for p in punct.iter() {
+                if let PathArguments::AngleBracketed(abga) = &p.arguments {
+                    for arg in &abga.args {
+                        if let GenericArgument::Lifetime(lifetime) = &arg {
+                            lifetimes.push(lifetime.clone());
+                        }
+                    }
+                }
+            }
+            Ok(lifetimes)
+        }
+        _ => Ok(lifetimes),
+    }
 }
 
 impl ParsedStateMachine {
@@ -144,32 +178,7 @@ impl ParsedStateMachine {
             if let Some(event_type) = transition.event_data_type.clone() {
                 match event_data_type.get(&transition.event.to_string()) {
                     None => {
-                        let mut lifetimes = Vec::new();
-                        match &event_type {
-                            Type::Reference(tr) => {
-                                if let Some(lifetime) = &tr.lifetime {
-                                    lifetimes.push(lifetime.clone());
-                                } else {
-                                    return Err(parse::Error::new(
-                                    transition.event_data_type.span(),
-                                    "This event's data lifetime is not defined, consider adding a lifetime.",
-                                ));
-                                }
-                            }
-                            Type::Path(tp) => {
-                                let punct = &tp.path.segments;
-                                for p in punct.iter() {
-                                    if let PathArguments::AngleBracketed(abga) = &p.arguments {
-                                        for arg in &abga.args {
-                                            if let GenericArgument::Lifetime(lifetime) = &arg {
-                                                lifetimes.push(lifetime.clone());
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            _ => (),
-                        }
+                        let mut lifetimes = get_lifetimes(&event_type)?;
                         event_data_type.insert(transition.event.to_string(), event_type);
                         if !lifetimes.is_empty() {
                             event_data_lifetimes
