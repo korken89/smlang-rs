@@ -5,6 +5,7 @@ use syn::{
     Lifetime, PathArguments, Token, Type,
 };
 
+pub type DataTypes = HashMap<String, Type>;
 pub type Lifetimes = Vec<Lifetime>;
 
 #[derive(Debug)]
@@ -37,6 +38,23 @@ pub struct EventMapping {
 }
 
 #[derive(Debug)]
+pub struct DataDefinitions {
+    pub data_types: DataTypes,
+    pub all_lifetimes: Lifetimes,
+    pub lifetimes: HashMap<String, Lifetimes>,
+}
+
+impl DataDefinitions {
+    fn new() -> Self {
+        Self {
+            data_types: DataTypes::new(),
+            all_lifetimes: Lifetimes::new(),
+            lifetimes: HashMap::new(),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct ParsedStateMachine {
     pub temporary_context_type: Option<Type>,
     pub guard_error: Option<Type>,
@@ -44,9 +62,7 @@ pub struct ParsedStateMachine {
     pub starting_state: Ident,
     pub state_data_type: HashMap<String, Type>,
     pub events: HashMap<String, Ident>,
-    pub event_data_type: HashMap<String, Type>,
-    pub all_event_data_lifetimes: Lifetimes,
-    pub event_data_lifetimes: HashMap<String, Lifetimes>,
+    pub event_data: DataDefinitions,
     pub states_events_mapping: HashMap<String, HashMap<String, EventMapping>>,
 }
 
@@ -115,9 +131,7 @@ impl ParsedStateMachine {
         let mut states = HashMap::new();
         let mut state_data_type = HashMap::new();
         let mut events = HashMap::new();
-        let mut event_data_type = HashMap::new();
-        let mut all_event_data_lifetimes = Vec::new();
-        let mut event_data_lifetimes = HashMap::new();
+        let mut event_data = DataDefinitions::new();
         let mut states_events_mapping = HashMap::<String, HashMap<String, EventMapping>>::new();
 
         for transition in sm.transitions.iter() {
@@ -176,15 +190,18 @@ impl ParsedStateMachine {
 
             // Collect event to data mappings and check for definition errors
             if let Some(event_type) = transition.event_data_type.clone() {
-                match event_data_type.get(&transition.event.to_string()) {
+                match event_data.data_types.get(&transition.event.to_string()) {
                     None => {
                         let mut lifetimes = get_lifetimes(&event_type)?;
-                        event_data_type.insert(transition.event.to_string(), event_type);
+                        event_data
+                            .data_types
+                            .insert(transition.event.to_string(), event_type);
                         if !lifetimes.is_empty() {
-                            event_data_lifetimes
+                            event_data
+                                .lifetimes
                                 .insert(transition.event.to_string(), lifetimes.clone());
                         }
-                        all_event_data_lifetimes.append(&mut lifetimes);
+                        event_data.all_lifetimes.append(&mut lifetimes);
                     }
                     Some(v) => {
                         if v != &event_type {
@@ -195,7 +212,7 @@ impl ParsedStateMachine {
                         }
                     }
                 }
-            } else if let Some(_) = event_data_type.get(&transition.event.to_string()) {
+            } else if let Some(_) = event_data.data_types.get(&transition.event.to_string()) {
                 return Err(parse::Error::new(
                     transition.event.span(),
                     "This event's type does not match its previous definition.",
@@ -207,7 +224,7 @@ impl ParsedStateMachine {
         }
 
         // Remove duplicate lifetimes
-        all_event_data_lifetimes.dedup();
+        event_data.all_lifetimes.dedup();
 
         for transition in sm.transitions.iter() {
             // Add transitions
@@ -254,9 +271,7 @@ impl ParsedStateMachine {
             starting_state,
             state_data_type,
             events,
-            event_data_type,
-            all_event_data_lifetimes,
-            event_data_lifetimes,
+            event_data,
             states_events_mapping,
         })
     }

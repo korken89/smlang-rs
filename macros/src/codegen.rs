@@ -35,18 +35,20 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     // Extract events
     let event_list: Vec<_> = event_list
         .iter()
-        .map(|value| match sm.event_data_type.get(&value.to_string()) {
-            None => {
-                quote! {
-                    #value
+        .map(
+            |value| match sm.event_data.data_types.get(&value.to_string()) {
+                None => {
+                    quote! {
+                        #value
+                    }
                 }
-            }
-            Some(t) => {
-                quote! {
-                    #value(#t)
+                Some(t) => {
+                    quote! {
+                        #value(#t)
+                    }
                 }
-            }
-        })
+            },
+        )
         .collect();
 
     let transitions = &sm.states_events_mapping;
@@ -79,7 +81,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 .map(|(name, value)| {
                     let value = &value.event;
 
-                    match sm.event_data_type.get(name) {
+                    match sm.event_data.data_types.get(name) {
                         None => {
                             quote! {
                                 #value
@@ -124,7 +126,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
                     match (
                         sm.state_data_type.get(state_name),
-                        sm.event_data_type.get(name),
+                        sm.event_data.data_types.get(name),
                     ) {
                         (None, None) => {
                             quote! {}
@@ -194,7 +196,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         value.iter().for_each(|(event, value)| {
             // Create the guard traits for user implementation
             if let Some(guard) = &value.guard {
-                let guard_with_lifetimes = if let Some(lifetimes) = sm.event_data_lifetimes.get(event) {
+                let guard_with_lifetimes = if let Some(lifetimes) = sm.event_data.lifetimes.get(event) {
                     let lifetimes = &lifetimes;
                     quote! {
                         #guard<#(#lifetimes),*>
@@ -213,7 +215,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         quote! {}
                     }
                 };
-                let event_data = match sm.event_data_type.get(event) {
+                let event_data = match sm.event_data.data_types.get(event) {
                     Some(et) => match et {
                         Type::Reference(_) => {
                             quote! { event_data: #et }
@@ -260,7 +262,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     })
                 };
 
-                let action_with_lifetimes = if let Some(lifetimes) = sm.event_data_lifetimes.get(event) {
+                let action_with_lifetimes = if let Some(lifetimes) = sm.event_data.lifetimes.get(event) {
                     let lifetimes = &lifetimes;
                     quote! {
                         #action<#(#lifetimes),*>
@@ -279,7 +281,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         quote! {}
                     }
                 };
-                let event_data = match sm.event_data_type.get(event) {
+                let event_data = match sm.event_data.data_types.get(event) {
                     Some(et) => match et {
                         Type::Reference(_) => {
                             quote! { event_data: #et }
@@ -377,12 +379,12 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     let starting_state = &sm.starting_state;
 
-    let events_code_block = if sm.event_data_lifetimes.is_empty() {
+    let events_code_block = if sm.event_data.lifetimes.is_empty() {
         quote! {
             pub enum Events { #(#event_list),* }
         }
     } else {
-        let event_lifetimes = &sm.all_event_data_lifetimes;
+        let event_lifetimes = &sm.event_data.all_lifetimes;
 
         quote! {
             pub enum Events<#(#event_lifetimes),*> { #(#event_list),* }
