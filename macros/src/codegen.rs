@@ -202,6 +202,24 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         };
 
         value.iter().for_each(|(event, value)| {
+
+            // get output state lifetimes
+            let state_lifetimes = if let Some(lifetimes) = sm.state_data.lifetimes.get(&value.out_state.to_string()) {
+                lifetimes.clone()
+            } else {
+                Lifetimes::new()
+            };
+
+            // get the event lifetimes
+            let mut lifetimes = if let Some(lifetimes) = sm.event_data.lifetimes.get(event) {
+                lifetimes.clone()
+            } else {
+                Lifetimes::new()
+            };
+
+            // combine the state data and event data lifetimes
+            lifetimes.append(&mut state_lifetimes.clone());
+
             // Create the guard traits for user implementation
             if let Some(guard) = &value.guard {
                 let guard_with_lifetimes = if let Some(lifetimes) = sm.event_data.lifetimes.get(event) {
