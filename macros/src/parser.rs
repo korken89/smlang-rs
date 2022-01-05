@@ -118,6 +118,38 @@ fn add_new_data_type(
     Ok(())
 }
 
+// helper function for collecting data types and adding them to a data descriptions struct
+fn collect_data_type(
+    key: String,
+    data_type: Option<Type>,
+    definitions: &mut DataDefinitions,
+) -> Result<(), parse::Error> {
+    // check to see if there was every a previous data-type associated with this transition
+    let prev = definitions.data_types.get(&key);
+
+    // if there was a previous data definition for this key, may sure it is consistent
+    if let Some(prev) = prev {
+        if let Some(ref data_type) = data_type {
+            if prev != &data_type.clone() {
+                return Err(parse::Error::new(
+                    data_type.span(),
+                    "This event's type does not match its previous definition.",
+                ));
+            }
+        } else {
+            return Err(parse::Error::new(
+                data_type.span(),
+                "This event's type does not match its previous definition.",
+            ));
+        }
+    }
+
+    if let Some(data_type) = data_type {
+        add_new_data_type(key, data_type, definitions)?;
+    }
+    Ok(())
+}
+
 impl ParsedStateMachine {
     pub fn new(sm: StateMachine) -> parse::Result<Self> {
         // Check the initial state definition
@@ -206,33 +238,15 @@ impl ParsedStateMachine {
             }
 
             // Collect events
-            events.insert(transition.event.to_string(), transition.event.clone());
+            let event_name = transition.event.to_string();
+            events.insert(event_name.clone(), transition.event.clone());
 
             // Collect event to data mappings and check for definition errors
-            if let Some(event_type) = transition.event_data_type.clone() {
-                match event_data.data_types.get(&transition.event.to_string()) {
-                    None => {
-                        add_new_data_type(
-                            transition.event.to_string(),
-                            event_type,
-                            &mut event_data,
-                        )?;
-                    }
-                    Some(v) => {
-                        if v != &event_type {
-                            return Err(parse::Error::new(
-                                transition.event.span(),
-                                "This event's type does not match its previous definition.",
-                            ));
-                        }
-                    }
-                }
-            } else if let Some(_) = event_data.data_types.get(&transition.event.to_string()) {
-                return Err(parse::Error::new(
-                    transition.event.span(),
-                    "This event's type does not match its previous definition.",
-                ));
-            }
+            collect_data_type(
+                event_name.clone(),
+                transition.event_data_type.clone(),
+                &mut event_data,
+            )?;
 
             // Setup the states to events mapping
             states_events_mapping.insert(transition.in_state.to_string(), HashMap::new());
