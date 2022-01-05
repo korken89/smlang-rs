@@ -98,6 +98,26 @@ fn get_lifetimes(data_type: &Type) -> Result<Lifetimes, parse::Error> {
     }
 }
 
+// helper function for adding a new data type to a data descriptions struct
+fn add_new_data_type(
+    key: String,
+    data_type: Type,
+    definitions: &mut DataDefinitions,
+) -> Result<(), parse::Error> {
+    // retrieve any lifetimes used in this data-type
+    let mut lifetimes = get_lifetimes(&data_type)?;
+
+    // add the data to the collection
+    definitions.data_types.insert(key.clone(), data_type);
+
+    // if any new lifetimes were used in the type definition, we add those as well
+    if !lifetimes.is_empty() {
+        definitions.lifetimes.insert(key, lifetimes.clone());
+        definitions.all_lifetimes.append(&mut lifetimes);
+    }
+    Ok(())
+}
+
 impl ParsedStateMachine {
     pub fn new(sm: StateMachine) -> parse::Result<Self> {
         // Check the initial state definition
@@ -192,16 +212,11 @@ impl ParsedStateMachine {
             if let Some(event_type) = transition.event_data_type.clone() {
                 match event_data.data_types.get(&transition.event.to_string()) {
                     None => {
-                        let mut lifetimes = get_lifetimes(&event_type)?;
-                        event_data
-                            .data_types
-                            .insert(transition.event.to_string(), event_type);
-                        if !lifetimes.is_empty() {
-                            event_data
-                                .lifetimes
-                                .insert(transition.event.to_string(), lifetimes.clone());
-                        }
-                        event_data.all_lifetimes.append(&mut lifetimes);
+                        add_new_data_type(
+                            transition.event.to_string(),
+                            event_type,
+                            &mut event_data,
+                        )?;
                     }
                     Some(v) => {
                         if v != &event_type {
