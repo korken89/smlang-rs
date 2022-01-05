@@ -195,6 +195,12 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     let mut guard_list = proc_macro2::TokenStream::new();
     let mut action_list = proc_macro2::TokenStream::new();
     for (state, value) in transitions.iter() {
+        // create the state data token stream
+        let state_data = match sm.state_data.data_types.get(state) {
+            Some(st) => quote! { state_data: &#st, },
+            None => quote! {},
+        };
+
         value.iter().for_each(|(event, value)| {
             // Create the guard traits for user implementation
             if let Some(guard) = &value.guard {
@@ -209,14 +215,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     }
                 };
 
-                let state_data = match sm.state_data.data_types.get(state) {
-                    Some(st) => {
-                        quote! { state_data: &#st, }
-                    }
-                    None => {
-                        quote! {}
-                    }
-                };
                 let event_data = match sm.event_data.data_types.get(event) {
                     Some(et) => match et {
                         Type::Reference(_) => {
