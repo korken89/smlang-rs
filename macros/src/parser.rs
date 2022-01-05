@@ -60,7 +60,7 @@ pub struct ParsedStateMachine {
     pub guard_error: Option<Type>,
     pub states: HashMap<String, Ident>,
     pub starting_state: Ident,
-    pub state_data_type: HashMap<String, Type>,
+    pub state_data: DataDefinitions,
     pub events: HashMap<String, Ident>,
     pub event_data: DataDefinitions,
     pub states_events_mapping: HashMap<String, HashMap<String, EventMapping>>,
@@ -181,61 +181,29 @@ impl ParsedStateMachine {
             .clone();
 
         let mut states = HashMap::new();
-        let mut state_data_type = HashMap::new();
+        let mut state_data = DataDefinitions::new();
         let mut events = HashMap::new();
         let mut event_data = DataDefinitions::new();
         let mut states_events_mapping = HashMap::<String, HashMap<String, EventMapping>>::new();
 
         for transition in sm.transitions.iter() {
             // Collect states
-            states.insert(transition.in_state.to_string(), transition.in_state.clone());
-            states.insert(
-                transition.out_state.to_string(),
-                transition.out_state.clone(),
-            );
+            let in_state_name = transition.in_state.to_string();
+            let out_state_name = transition.out_state.to_string();
+            states.insert(in_state_name.clone(), transition.in_state.clone());
+            states.insert(out_state_name.clone(), transition.out_state.clone());
 
             // Collect state to data mappings and check for definition errors
-            if let Some(state_type) = transition.in_state_data_type.clone() {
-                match state_data_type.get(&transition.in_state.to_string()) {
-                    None => {
-                        state_data_type.insert(transition.in_state.to_string(), state_type);
-                    }
-                    Some(v) => {
-                        if v != &state_type {
-                            return Err(parse::Error::new(
-                                transition.in_state.span(),
-                                "This state's type does not match its previous definition.",
-                            ));
-                        }
-                    }
-                }
-            } else if let Some(_) = state_data_type.get(&transition.event.to_string()) {
-                return Err(parse::Error::new(
-                    transition.event.span(),
-                    "This event's type does not match its previous definition.",
-                ));
-            }
-
-            if let Some(state_type) = transition.out_state_data_type.clone() {
-                match state_data_type.get(&transition.out_state.to_string()) {
-                    None => {
-                        state_data_type.insert(transition.out_state.to_string(), state_type);
-                    }
-                    Some(v) => {
-                        if v != &state_type {
-                            return Err(parse::Error::new(
-                                transition.out_state.span(),
-                                "This state's type does not match its previous definition.",
-                            ));
-                        }
-                    }
-                }
-            } else if let Some(_) = state_data_type.get(&transition.event.to_string()) {
-                return Err(parse::Error::new(
-                    transition.event.span(),
-                    "This event's type does not match its previous definition.",
-                ));
-            }
+            collect_data_type(
+                in_state_name.clone(),
+                transition.in_state_data_type.clone(),
+                &mut state_data,
+            )?;
+            collect_data_type(
+                out_state_name.clone(),
+                transition.out_state_data_type.clone(),
+                &mut state_data,
+            )?;
 
             // Collect events
             let event_name = transition.event.to_string();
@@ -253,6 +221,7 @@ impl ParsedStateMachine {
         }
 
         // Remove duplicate lifetimes
+        state_data.all_lifetimes.dedup();
         event_data.all_lifetimes.dedup();
 
         for transition in sm.transitions.iter() {
@@ -278,7 +247,7 @@ impl ParsedStateMachine {
             }
 
             // Check for actions when states have data a
-            if let Some(_) = state_data_type.get(&transition.out_state.to_string()) {
+            if let Some(_) = state_data.data_types.get(&transition.out_state.to_string()) {
                 // This transition goes to a state that has data associated, check so it has an
                 // action
 
@@ -298,7 +267,7 @@ impl ParsedStateMachine {
             guard_error: sm.guard_error,
             states,
             starting_state,
-            state_data_type,
+            state_data,
             events,
             event_data,
             states_events_mapping,
