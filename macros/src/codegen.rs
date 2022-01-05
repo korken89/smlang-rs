@@ -397,12 +397,20 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     let starting_state = &sm.starting_state;
 
-    // create token-streams for lifetimes
+    // create token-streams for state data lifetimes
+    let state_lifetimes_code = if sm.state_data.lifetimes.is_empty() {
+        quote! {}
+    } else {
+        let state_lifetimes = &sm.state_data.all_lifetimes;
+        quote! {#(#state_lifetimes),* ,}
+    };
+
+    // create token-streams for event data lifetimes
     let event_lifetimes_code = if sm.event_data.lifetimes.is_empty() {
         quote! {}
     } else {
         let event_lifetimes = &sm.event_data.all_lifetimes;
-        quote! {<#(#event_lifetimes),* ,>}
+        quote! {#(#event_lifetimes),* ,}
     };
 
     let guard_failed = if let Some(ref guard_error) = sm.guard_error {
@@ -423,12 +431,12 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         /// List of auto-generated states.
         #[allow(missing_docs)]
         #[derive(PartialEq)]
-        pub enum States { #(#state_list),* }
+        pub enum States <#state_lifetimes_code> { #(#state_list),* }
 
         /// List of auto-generated events.
         #[allow(missing_docs)]
         #[derive(PartialEq)]
-        pub enum Events #event_lifetimes_code { #(#event_list),* }
+        pub enum Events <#event_lifetimes_code> { #(#event_list),* }
 
         /// List of possible errors
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -440,8 +448,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         }
 
         /// State machine structure definition.
-        pub struct StateMachine<T: StateMachineContext> {
-            state: States,
+        pub struct StateMachine<#state_lifetimes_code T: StateMachineContext> {
+            state: States <#state_lifetimes_code>,
             context: T
         }
 
@@ -457,7 +465,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
             /// Creates a new state machine with an initial state.
             #[inline(always)]
-            pub fn new_with_state(context: T, initial_state: States) -> Self {
+            pub fn new_with_state(context: T, initial_state: States <#state_lifetimes_code>) -> Self {
                 StateMachine {
                     state: initial_state,
                     context
