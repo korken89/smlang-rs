@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 - Changelog enforcer added to CI
+- State data now supports lifetimes ([issue-26](https://github.com/korken89/smlang-rs/issues/26))
+- New example [dominos.rs](https://github.com/korken89/smlang-rs/blob/master/examples/dominos.rs) illustrating a method of event propagation ([issue-17](https://github.com/korken89/smlang-rs/issues/17))
+
+### Fixed
+- PartialEq for States and Events based on discriminant only ([issue-21](https://github.com/korken89/smlang-rs/issues/21))
 
 ## [v0.4.2]
 
