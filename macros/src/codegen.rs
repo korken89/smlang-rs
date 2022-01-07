@@ -280,14 +280,13 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     })
                 };
 
-                let action_with_lifetimes = if let Some(lifetimes) = sm.event_data.lifetimes.get(event) {
-                    let lifetimes = &lifetimes;
+                let action_with_lifetimes = if lifetimes.is_empty() {
                     quote! {
-                        #action<#(#lifetimes),*>
+                        #action
                     }
                 } else {
                     quote! {
-                        #action
+                        #action<#(#lifetimes),*>
                     }
                 };
 
