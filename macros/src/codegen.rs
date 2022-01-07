@@ -429,13 +429,27 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
         /// List of auto-generated states.
         #[allow(missing_docs)]
-        #[derive(PartialEq)]
         pub enum States <#state_lifetimes_code> { #(#state_list),* }
+
+        /// Manually define PartialEq for States based on variant only to address issue-#21
+        impl<#state_lifetimes_code> PartialEq for States <#state_lifetimes_code> {
+            fn eq(&self, other: &Self) -> bool {
+                use core::mem::discriminant;
+                discriminant(self) == discriminant(other)
+            }
+        }
 
         /// List of auto-generated events.
         #[allow(missing_docs)]
-        #[derive(PartialEq)]
         pub enum Events <#event_lifetimes_code> { #(#event_list),* }
+
+        /// Manually define PartialEq for Events based on variant only to address issue-#21
+        impl<#event_lifetimes_code> PartialEq for Events <#event_lifetimes_code> {
+            fn eq(&self, other: &Self) -> bool {
+                use core::mem::discriminant;
+                discriminant(self) == discriminant(other)
+            }
+        }
 
         /// List of possible errors
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
