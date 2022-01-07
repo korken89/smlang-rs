@@ -452,7 +452,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             context: T
         }
 
-        impl<T: StateMachineContext> StateMachine<T> {
+        impl<#state_lifetimes_code T: StateMachineContext> StateMachine<#state_lifetimes_code T> {
             /// Creates a new state machine with the specified starting state.
             #[inline(always)]
             pub fn new(context: T) -> Self {
