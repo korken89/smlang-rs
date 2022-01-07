@@ -156,7 +156,7 @@ impl ParsedStateMachine {
         let num_start: usize = sm
             .transitions
             .iter()
-            .map(|sm| if sm.start { 1 } else { 0 })
+            .map(|sm| if sm.in_state.start { 1 } else { 0 })
             .sum();
 
         if num_start == 0 {
@@ -175,9 +175,10 @@ impl ParsedStateMachine {
         let starting_state = sm
             .transitions
             .iter()
-            .find(|sm| sm.start)
+            .find(|sm| sm.in_state.start)
             .unwrap()
             .in_state
+            .ident
             .clone();
 
         let mut states = HashMap::new();
@@ -188,15 +189,15 @@ impl ParsedStateMachine {
 
         for transition in sm.transitions.iter() {
             // Collect states
-            let in_state_name = transition.in_state.to_string();
+            let in_state_name = transition.in_state.ident.to_string();
             let out_state_name = transition.out_state.to_string();
-            states.insert(in_state_name.clone(), transition.in_state.clone());
+            states.insert(in_state_name.clone(), transition.in_state.ident.clone());
             states.insert(out_state_name.clone(), transition.out_state.clone());
 
             // Collect state to data mappings and check for definition errors
             collect_data_type(
                 in_state_name.clone(),
-                transition.in_state_data_type.clone(),
+                transition.in_state.data_type.clone(),
                 &mut state_data,
             )?;
             collect_data_type(
@@ -217,7 +218,7 @@ impl ParsedStateMachine {
             )?;
 
             // Setup the states to events mapping
-            states_events_mapping.insert(transition.in_state.to_string(), HashMap::new());
+            states_events_mapping.insert(transition.in_state.ident.to_string(), HashMap::new());
         }
 
         // Remove duplicate lifetimes
@@ -227,7 +228,7 @@ impl ParsedStateMachine {
         for transition in sm.transitions.iter() {
             // Add transitions
             let p = states_events_mapping
-                .get_mut(&transition.in_state.to_string())
+                .get_mut(&transition.in_state.ident.to_string())
                 .unwrap();
 
             if let None = p.get(&transition.event.to_string()) {
@@ -241,7 +242,7 @@ impl ParsedStateMachine {
                 p.insert(transition.event.to_string(), mapping);
             } else {
                 return Err(parse::Error::new(
-                    transition.in_state.span(),
+                    transition.in_state.ident.span(),
                     "State and event combination specified multiple times, remove duplicates.",
                 ));
             }
@@ -276,34 +277,22 @@ impl ParsedStateMachine {
 }
 
 #[derive(Debug)]
-pub struct StateTransition {
+pub struct InputState {
     start: bool,
-    in_state: Ident,
-    in_state_data_type: Option<Type>,
-    event: Ident,
-    event_data_type: Option<Type>,
-    guard: Option<Ident>,
-    action: Option<Ident>,
-    out_state: Ident,
-    out_state_data_type: Option<Type>,
+    ident: Ident,
+    data_type: Option<Type>,
 }
 
-impl parse::Parse for StateTransition {
+impl parse::Parse for InputState {
     fn parse(input: parse::ParseStream) -> syn::Result<Self> {
         // Check for starting state definition
         let start = input.parse::<Token![*]>().is_ok();
 
-        // Parse the DSL
-        //
-        // Transition DSL:
-        // SrcState(OptionalType1) + Event(OptionalType2) [ guard ] / action =
-        // DstState(OptionalType3)
-
         // Input State
-        let in_state: Ident = input.parse()?;
+        let ident: Ident = input.parse()?;
 
         // Possible type on the input state
-        let in_state_data_type = if input.peek(token::Paren) {
+        let data_type = if input.peek(token::Paren) {
             let content;
             parenthesized!(content in input);
             let input: Type = content.parse()?;
@@ -337,6 +326,41 @@ impl parse::Parse for StateTransition {
         } else {
             None
         };
+
+        Ok(Self {
+            start,
+            ident,
+            data_type,
+        })
+    }
+}
+
+// #[derive(Debug)]
+// pub struct PatternedTransition {
+//     in_states: Vec<InputState>,
+//     event: Ident,
+//     event_data_type: Option<Type>,
+//     guard: Option<Ident>,
+//     action: Option<Ident>,
+//     out_state: Ident,
+//     out_state_data_type: Option<Type>,
+// }
+
+#[derive(Debug)]
+pub struct StateTransition {
+    in_state: InputState,
+    event: Ident,
+    event_data_type: Option<Type>,
+    guard: Option<Ident>,
+    action: Option<Ident>,
+    out_state: Ident,
+    out_state_data_type: Option<Type>,
+}
+
+impl parse::Parse for StateTransition {
+    fn parse(input: parse::ParseStream) -> syn::Result<Self> {
+        // Input state
+        let in_state: InputState = input.parse()?;
 
         // Event
         input.parse::<Token![+]>()?;
@@ -391,7 +415,7 @@ impl parse::Parse for StateTransition {
 
         let out_state: Ident = input.parse()?;
 
-        // Possible type on the input state
+        // Possible type on the output state
         let out_state_data_type = if input.peek(token::Paren) {
             let content;
             parenthesized!(content in input);
@@ -419,9 +443,7 @@ impl parse::Parse for StateTransition {
         };
 
         Ok(StateTransition {
-            start,
             in_state,
-            in_state_data_type,
             event,
             event_data_type,
             guard,
