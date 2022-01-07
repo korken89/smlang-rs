@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Changelog enforcer added to CI
+
 ## [v0.4.2]
 
 ### Fixed
