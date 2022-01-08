@@ -5,6 +5,9 @@ use syn::{
     Lifetime, PathArguments, Token, Type,
 };
 
+pub type DataTypes = HashMap<String, Type>;
+pub type Lifetimes = Vec<Lifetime>;
+
 #[derive(Debug)]
 pub struct StateMachine {
     pub temporary_context_type: Option<Type>,
@@ -35,17 +38,116 @@ pub struct EventMapping {
 }
 
 #[derive(Debug)]
+pub struct DataDefinitions {
+    pub data_types: DataTypes,
+    pub all_lifetimes: Lifetimes,
+    pub lifetimes: HashMap<String, Lifetimes>,
+}
+
+impl DataDefinitions {
+    fn new() -> Self {
+        Self {
+            data_types: DataTypes::new(),
+            all_lifetimes: Lifetimes::new(),
+            lifetimes: HashMap::new(),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct ParsedStateMachine {
     pub temporary_context_type: Option<Type>,
     pub guard_error: Option<Type>,
     pub states: HashMap<String, Ident>,
     pub starting_state: Ident,
-    pub state_data_type: HashMap<String, Type>,
+    pub state_data: DataDefinitions,
     pub events: HashMap<String, Ident>,
-    pub event_data_type: HashMap<String, Type>,
-    pub all_event_data_lifetimes: Vec<Lifetime>,
-    pub event_data_lifetimes: HashMap<String, Vec<Lifetime>>,
+    pub event_data: DataDefinitions,
     pub states_events_mapping: HashMap<String, HashMap<String, EventMapping>>,
+}
+
+// helper function for extracting a vector of lifetimes from a Type
+fn get_lifetimes(data_type: &Type) -> Result<Lifetimes, parse::Error> {
+    let mut lifetimes = Lifetimes::new();
+    match data_type {
+        Type::Reference(tr) => {
+            if let Some(lifetime) = &tr.lifetime {
+                lifetimes.push(lifetime.clone());
+            } else {
+                return Err(parse::Error::new(
+                    data_type.span(),
+                    "This event's data lifetime is not defined, consider adding a lifetime.",
+                ));
+            }
+            Ok(lifetimes)
+        }
+        Type::Path(tp) => {
+            let punct = &tp.path.segments;
+            for p in punct.iter() {
+                if let PathArguments::AngleBracketed(abga) = &p.arguments {
+                    for arg in &abga.args {
+                        if let GenericArgument::Lifetime(lifetime) = &arg {
+                            lifetimes.push(lifetime.clone());
+                        }
+                    }
+                }
+            }
+            Ok(lifetimes)
+        }
+        _ => Ok(lifetimes),
+    }
+}
+
+// helper function for adding a new data type to a data descriptions struct
+fn add_new_data_type(
+    key: String,
+    data_type: Type,
+    definitions: &mut DataDefinitions,
+) -> Result<(), parse::Error> {
+    // retrieve any lifetimes used in this data-type
+    let mut lifetimes = get_lifetimes(&data_type)?;
+
+    // add the data to the collection
+    definitions.data_types.insert(key.clone(), data_type);
+
+    // if any new lifetimes were used in the type definition, we add those as well
+    if !lifetimes.is_empty() {
+        definitions.lifetimes.insert(key, lifetimes.clone());
+        definitions.all_lifetimes.append(&mut lifetimes);
+    }
+    Ok(())
+}
+
+// helper function for collecting data types and adding them to a data descriptions struct
+fn collect_data_type(
+    key: String,
+    data_type: Option<Type>,
+    definitions: &mut DataDefinitions,
+) -> Result<(), parse::Error> {
+    // check to see if there was every a previous data-type associated with this transition
+    let prev = definitions.data_types.get(&key);
+
+    // if there was a previous data definition for this key, may sure it is consistent
+    if let Some(prev) = prev {
+        if let Some(ref data_type) = data_type {
+            if prev != &data_type.clone() {
+                return Err(parse::Error::new(
+                    data_type.span(),
+                    "This event's type does not match its previous definition.",
+                ));
+            }
+        } else {
+            return Err(parse::Error::new(
+                data_type.span(),
+                "This event's type does not match its previous definition.",
+            ));
+        }
+    }
+
+    if let Some(data_type) = data_type {
+        add_new_data_type(key, data_type, definitions)?;
+    }
+    Ok(())
 }
 
 impl ParsedStateMachine {
@@ -79,126 +181,48 @@ impl ParsedStateMachine {
             .clone();
 
         let mut states = HashMap::new();
-        let mut state_data_type = HashMap::new();
+        let mut state_data = DataDefinitions::new();
         let mut events = HashMap::new();
-        let mut event_data_type = HashMap::new();
-        let mut all_event_data_lifetimes = Vec::new();
-        let mut event_data_lifetimes = HashMap::new();
+        let mut event_data = DataDefinitions::new();
         let mut states_events_mapping = HashMap::<String, HashMap<String, EventMapping>>::new();
 
         for transition in sm.transitions.iter() {
             // Collect states
-            states.insert(transition.in_state.to_string(), transition.in_state.clone());
-            states.insert(
-                transition.out_state.to_string(),
-                transition.out_state.clone(),
-            );
+            let in_state_name = transition.in_state.to_string();
+            let out_state_name = transition.out_state.to_string();
+            states.insert(in_state_name.clone(), transition.in_state.clone());
+            states.insert(out_state_name.clone(), transition.out_state.clone());
 
             // Collect state to data mappings and check for definition errors
-            if let Some(state_type) = transition.in_state_data_type.clone() {
-                match state_data_type.get(&transition.in_state.to_string()) {
-                    None => {
-                        state_data_type.insert(transition.in_state.to_string(), state_type);
-                    }
-                    Some(v) => {
-                        if v != &state_type {
-                            return Err(parse::Error::new(
-                                transition.in_state.span(),
-                                "This state's type does not match its previous definition.",
-                            ));
-                        }
-                    }
-                }
-            } else if let Some(_) = state_data_type.get(&transition.event.to_string()) {
-                return Err(parse::Error::new(
-                    transition.event.span(),
-                    "This event's type does not match its previous definition.",
-                ));
-            }
-
-            if let Some(state_type) = transition.out_state_data_type.clone() {
-                match state_data_type.get(&transition.out_state.to_string()) {
-                    None => {
-                        state_data_type.insert(transition.out_state.to_string(), state_type);
-                    }
-                    Some(v) => {
-                        if v != &state_type {
-                            return Err(parse::Error::new(
-                                transition.out_state.span(),
-                                "This state's type does not match its previous definition.",
-                            ));
-                        }
-                    }
-                }
-            } else if let Some(_) = state_data_type.get(&transition.event.to_string()) {
-                return Err(parse::Error::new(
-                    transition.event.span(),
-                    "This event's type does not match its previous definition.",
-                ));
-            }
+            collect_data_type(
+                in_state_name.clone(),
+                transition.in_state_data_type.clone(),
+                &mut state_data,
+            )?;
+            collect_data_type(
+                out_state_name.clone(),
+                transition.out_state_data_type.clone(),
+                &mut state_data,
+            )?;
 
             // Collect events
-            events.insert(transition.event.to_string(), transition.event.clone());
+            let event_name = transition.event.to_string();
+            events.insert(event_name.clone(), transition.event.clone());
 
             // Collect event to data mappings and check for definition errors
-            if let Some(event_type) = transition.event_data_type.clone() {
-                match event_data_type.get(&transition.event.to_string()) {
-                    None => {
-                        let mut lifetimes = Vec::new();
-                        match &event_type {
-                            Type::Reference(tr) => {
-                                if let Some(lifetime) = &tr.lifetime {
-                                    lifetimes.push(lifetime.clone());
-                                } else {
-                                    return Err(parse::Error::new(
-                                    transition.event_data_type.span(),
-                                    "This event's data lifetime is not defined, consider adding a lifetime.",
-                                ));
-                                }
-                            }
-                            Type::Path(tp) => {
-                                let punct = &tp.path.segments;
-                                for p in punct.iter() {
-                                    if let PathArguments::AngleBracketed(abga) = &p.arguments {
-                                        for arg in &abga.args {
-                                            if let GenericArgument::Lifetime(lifetime) = &arg {
-                                                lifetimes.push(lifetime.clone());
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            _ => (),
-                        }
-                        event_data_type.insert(transition.event.to_string(), event_type);
-                        if !lifetimes.is_empty() {
-                            event_data_lifetimes
-                                .insert(transition.event.to_string(), lifetimes.clone());
-                        }
-                        all_event_data_lifetimes.append(&mut lifetimes);
-                    }
-                    Some(v) => {
-                        if v != &event_type {
-                            return Err(parse::Error::new(
-                                transition.event.span(),
-                                "This event's type does not match its previous definition.",
-                            ));
-                        }
-                    }
-                }
-            } else if let Some(_) = event_data_type.get(&transition.event.to_string()) {
-                return Err(parse::Error::new(
-                    transition.event.span(),
-                    "This event's type does not match its previous definition.",
-                ));
-            }
+            collect_data_type(
+                event_name.clone(),
+                transition.event_data_type.clone(),
+                &mut event_data,
+            )?;
 
             // Setup the states to events mapping
             states_events_mapping.insert(transition.in_state.to_string(), HashMap::new());
         }
 
         // Remove duplicate lifetimes
-        all_event_data_lifetimes.dedup();
+        state_data.all_lifetimes.dedup();
+        event_data.all_lifetimes.dedup();
 
         for transition in sm.transitions.iter() {
             // Add transitions
@@ -223,7 +247,7 @@ impl ParsedStateMachine {
             }
 
             // Check for actions when states have data a
-            if let Some(_) = state_data_type.get(&transition.out_state.to_string()) {
+            if let Some(_) = state_data.data_types.get(&transition.out_state.to_string()) {
                 // This transition goes to a state that has data associated, check so it has an
                 // action
 
@@ -243,11 +267,9 @@ impl ParsedStateMachine {
             guard_error: sm.guard_error,
             states,
             starting_state,
-            state_data_type,
+            state_data,
             events,
-            event_data_type,
-            all_event_data_lifetimes,
-            event_data_lifetimes,
+            event_data,
             states_events_mapping,
         })
     }

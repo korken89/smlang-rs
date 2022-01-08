@@ -14,18 +14,20 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     let state_list: Vec<_> = state_list
         .iter()
-        .map(|value| match sm.state_data_type.get(&value.to_string()) {
-            None => {
-                quote! {
-                    #value
+        .map(
+            |value| match sm.state_data.data_types.get(&value.to_string()) {
+                None => {
+                    quote! {
+                        #value
+                    }
                 }
-            }
-            Some(t) => {
-                quote! {
-                    #value(#t)
+                Some(t) => {
+                    quote! {
+                        #value(#t)
+                    }
                 }
-            }
-        })
+            },
+        )
         .collect();
 
     // Extract events
@@ -35,18 +37,20 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     // Extract events
     let event_list: Vec<_> = event_list
         .iter()
-        .map(|value| match sm.event_data_type.get(&value.to_string()) {
-            None => {
-                quote! {
-                    #value
+        .map(
+            |value| match sm.event_data.data_types.get(&value.to_string()) {
+                None => {
+                    quote! {
+                        #value
+                    }
                 }
-            }
-            Some(t) => {
-                quote! {
-                    #value(#t)
+                Some(t) => {
+                    quote! {
+                        #value(#t)
+                    }
                 }
-            }
-        })
+            },
+        )
         .collect();
 
     let transitions = &sm.states_events_mapping;
@@ -56,7 +60,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         .map(|(name, _)| {
             let state_name = sm.states.get(name).unwrap();
 
-            match sm.state_data_type.get(name) {
+            match sm.state_data.data_types.get(name) {
                 None => {
                     quote! {
                         #state_name
@@ -79,7 +83,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 .map(|(name, value)| {
                     let value = &value.event;
 
-                    match sm.event_data_type.get(name) {
+                    match sm.event_data.data_types.get(name) {
                         None => {
                             quote! {
                                 #value
@@ -123,8 +127,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     // let event_name = &value.event;
 
                     match (
-                        sm.state_data_type.get(state_name),
-                        sm.event_data_type.get(name),
+                        sm.state_data.data_types.get(state_name),
+                        sm.event_data.data_types.get(name),
                     ) {
                         (None, None) => {
                             quote! {}
@@ -158,7 +162,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 .map(|(_, value)| {
                     let out_state = &value.out_state;
 
-                    match sm.state_data_type.get(&out_state.to_string()) {
+                    match sm.state_data.data_types.get(&out_state.to_string()) {
                         None => {
                             quote! {
                                 #out_state
@@ -191,10 +195,34 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     let mut guard_list = proc_macro2::TokenStream::new();
     let mut action_list = proc_macro2::TokenStream::new();
     for (state, value) in transitions.iter() {
+        // create the state data token stream
+        let state_data = match sm.state_data.data_types.get(state) {
+            Some(st) => quote! { state_data: &#st, },
+            None => quote! {},
+        };
+
         value.iter().for_each(|(event, value)| {
+
+            // get output state lifetimes
+            let state_lifetimes = if let Some(lifetimes) = sm.state_data.lifetimes.get(&value.out_state.to_string()) {
+                lifetimes.clone()
+            } else {
+                Lifetimes::new()
+            };
+
+            // get the event lifetimes
+            let mut lifetimes = if let Some(lifetimes) = sm.event_data.lifetimes.get(event) {
+                lifetimes.clone()
+            } else {
+                Lifetimes::new()
+            };
+
+            // combine the state data and event data lifetimes
+            lifetimes.append(&mut state_lifetimes.clone());
+
             // Create the guard traits for user implementation
             if let Some(guard) = &value.guard {
-                let guard_with_lifetimes = if let Some(lifetimes) = sm.event_data_lifetimes.get(event) {
+                let guard_with_lifetimes = if let Some(lifetimes) = sm.event_data.lifetimes.get(event) {
                     let lifetimes = &lifetimes;
                     quote! {
                         #guard<#(#lifetimes),*>
@@ -205,15 +233,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     }
                 };
 
-                let state_data = match sm.state_data_type.get(state) {
-                    Some(st) => {
-                        quote! { state_data: &#st, }
-                    }
-                    None => {
-                        quote! {}
-                    }
-                };
-                let event_data = match sm.event_data_type.get(event) {
+                let event_data = match sm.event_data.data_types.get(event) {
                     Some(et) => match et {
                         Type::Reference(_) => {
                             quote! { event_data: #et }
@@ -247,7 +267,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             // Create the action traits for user implementation
             if let Some(action) = &value.action {
                 let return_type = if let Some(output_data) =
-                    sm.state_data_type.get(&value.out_state.to_string())
+                    sm.state_data.data_types.get(&value.out_state.to_string())
                 {
                     output_data.clone()
                 } else {
@@ -260,18 +280,17 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     })
                 };
 
-                let action_with_lifetimes = if let Some(lifetimes) = sm.event_data_lifetimes.get(event) {
-                    let lifetimes = &lifetimes;
-                    quote! {
-                        #action<#(#lifetimes),*>
-                    }
-                } else {
+                let action_with_lifetimes = if lifetimes.is_empty() {
                     quote! {
                         #action
                     }
+                } else {
+                    quote! {
+                        #action<#(#lifetimes),*>
+                    }
                 };
 
-                let state_data = match sm.state_data_type.get(state) {
+                let state_data = match sm.state_data.data_types.get(state) {
                     Some(st) => {
                         quote! { state_data: &#st, }
                     }
@@ -279,7 +298,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         quote! {}
                     }
                 };
-                let event_data = match sm.event_data_type.get(event) {
+                let event_data = match sm.event_data.data_types.get(event) {
                     Some(et) => match et {
                         Type::Reference(_) => {
                             quote! { event_data: #et }
@@ -377,33 +396,20 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     let starting_state = &sm.starting_state;
 
-    let events_code_block = if sm.event_data_lifetimes.is_empty() {
-        quote! {
-            pub enum Events { #(#event_list),* }
-
-            /// Manually define PartialEq for Events based on variant only to address issue-#21
-            impl PartialEq for Events {
-                fn eq(&self, other: &Self) -> bool {
-                    use core::mem::discriminant;
-                    discriminant(self) == discriminant(other)
-                }
-            }
-
-        }
+    // create token-streams for state data lifetimes
+    let state_lifetimes_code = if sm.state_data.lifetimes.is_empty() {
+        quote! {}
     } else {
-        let event_lifetimes = &sm.all_event_data_lifetimes;
+        let state_lifetimes = &sm.state_data.all_lifetimes;
+        quote! {#(#state_lifetimes),* ,}
+    };
 
-        quote! {
-            pub enum Events<#(#event_lifetimes),*> { #(#event_list),* }
-
-            /// Manually define PartialEq for Events based on variant only to address issue-#21
-            impl<#(#event_lifetimes),*> PartialEq for Events<#(#event_lifetimes),*> {
-                fn eq(&'_ self, other: &'_ Self) -> bool {
-                    use core::mem::discriminant;
-                    discriminant(self) == discriminant(other)
-                }
-            }
-        }
+    // create token-streams for event data lifetimes
+    let event_lifetimes_code = if sm.event_data.lifetimes.is_empty() {
+        quote! {}
+    } else {
+        let event_lifetimes = &sm.event_data.all_lifetimes;
+        quote! {#(#event_lifetimes),* ,}
     };
 
     let guard_failed = if let Some(ref guard_error) = sm.guard_error {
@@ -423,10 +429,10 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
         /// List of auto-generated states.
         #[allow(missing_docs)]
-        pub enum States { #(#state_list),* }
+        pub enum States <#state_lifetimes_code> { #(#state_list),* }
 
         /// Manually define PartialEq for States based on variant only to address issue-#21
-        impl PartialEq for States {
+        impl<#state_lifetimes_code> PartialEq for States <#state_lifetimes_code> {
             fn eq(&self, other: &Self) -> bool {
                 use core::mem::discriminant;
                 discriminant(self) == discriminant(other)
@@ -435,7 +441,15 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
         /// List of auto-generated events.
         #[allow(missing_docs)]
-        #events_code_block
+        pub enum Events <#event_lifetimes_code> { #(#event_list),* }
+
+        /// Manually define PartialEq for Events based on variant only to address issue-#21
+        impl<#event_lifetimes_code> PartialEq for Events <#event_lifetimes_code> {
+            fn eq(&self, other: &Self) -> bool {
+                use core::mem::discriminant;
+                discriminant(self) == discriminant(other)
+            }
+        }
 
         /// List of possible errors
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -447,12 +461,12 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         }
 
         /// State machine structure definition.
-        pub struct StateMachine<T: StateMachineContext> {
-            state: States,
+        pub struct StateMachine<#state_lifetimes_code T: StateMachineContext> {
+            state: States <#state_lifetimes_code>,
             context: T
         }
 
-        impl<T: StateMachineContext> StateMachine<T> {
+        impl<#state_lifetimes_code T: StateMachineContext> StateMachine<#state_lifetimes_code T> {
             /// Creates a new state machine with the specified starting state.
             #[inline(always)]
             pub fn new(context: T) -> Self {
@@ -464,7 +478,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
             /// Creates a new state machine with an initial state.
             #[inline(always)]
-            pub fn new_with_state(context: T, initial_state: States) -> Self {
+            pub fn new_with_state(context: T, initial_state: States <#state_lifetimes_code>) -> Self {
                 StateMachine {
                     state: initial_state,
                     context
