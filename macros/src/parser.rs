@@ -280,8 +280,7 @@ impl ParsedStateMachine {
         event_data.all_lifetimes.dedup();
 
         for transition in sm.transitions.iter() {
-            // if input state is a wildcard, we need to add this transition for all states except
-            // the output state
+            // if input state is a wildcard, we need to add this transition for all states
             if transition.in_state.wildcard {
                 for (name, in_state) in &states {
                     // create a new input state from wildcard
