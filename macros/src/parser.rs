@@ -284,11 +284,6 @@ impl ParsedStateMachine {
             // the output state
             if transition.in_state.wildcard {
                 for (name, in_state) in &states {
-                    // Skip the output state
-                    if in_state.to_string() == transition.out_state.to_string() {
-                        continue;
-                    }
-
                     // create a new input state from wildcard
                     let in_state = InputState {
                         start: false,
