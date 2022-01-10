@@ -5,35 +5,35 @@
 
 use smlang::statemachine;
 
-statemachine! {
-    transitions: {
-        *Idle + Charge = Charging,
-        Idle + Discharge = Discharging,
-        Charging + ChargeComplete = Charged,
-        Discharging + DischargeComplete = Discharged,
-        Charged + Discharge = Discharging,
-        Dischaged + Charge = Charging,
-        Charging + Discharge = Discharging,
-        Discharging + Charge = Charging,
-        Idle + FaultDetected = Fault,
-        Charging + FaultDetected = Fault,
-        Discharging + FaultDetected = Fault,
-        Charged + FaultDetected = Fault,
-        Discharged + FaultDetected = Fault,
-        Fault + FaultCleard = Idle,
-    },
-}
-
 // statemachine! {
 //     transitions: {
-//         *Idle | Discharging | Discharged + Charge = Charging,
-//         Idle | Charging | Charged + Discharge = Discharging,
+//         *Idle + Charge = Charging,
+//         Idle + Discharge = Discharging,
 //         Charging + ChargeComplete = Charged,
 //         Discharging + DischargeComplete = Discharged,
-//         _ + FaultDetected = Fault,
+//         Charged + Discharge = Discharging,
+//         Dischaged + Charge = Charging,
+//         Charging + Discharge = Discharging,
+//         Discharging + Charge = Charging,
+//         Idle + FaultDetected = Fault,
+//         Charging + FaultDetected = Fault,
+//         Discharging + FaultDetected = Fault,
+//         Charged + FaultDetected = Fault,
+//         Discharged + FaultDetected = Fault,
 //         Fault + FaultCleard = Idle,
 //     },
 // }
+
+statemachine! {
+    transitions: {
+        *Idle | Discharging | Discharged + Charge = Charging,
+        Idle | Charging | Charged + Discharge = Discharging,
+        Charging + ChargeComplete = Charged,
+        Discharging + DischargeComplete = Discharged,
+        _ + FaultDetected = Fault,
+        Fault + FaultCleard = Idle,
+    },
+}
 
 /// Context
 pub struct Context;
