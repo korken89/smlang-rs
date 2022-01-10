@@ -24,8 +24,19 @@ impl StateMachine {
         }
     }
 
-    pub fn add_transition(&mut self, transition: StateTransition) {
-        self.transitions.push(transition);
+    pub fn add_transitions(&mut self, transitions: StateTransitions) {
+        for in_state in transitions.in_states {
+            let transition = StateTransition {
+                in_state,
+                event: transitions.event.clone(),
+                event_data_type: transitions.event_data_type.clone(),
+                guard: transitions.guard.clone(),
+                action: transitions.action.clone(),
+                out_state: transitions.out_state.clone(),
+                out_state_data_type: transitions.out_state_data_type.clone(),
+            };
+            self.transitions.push(transition);
+        }
     }
 }
 
@@ -276,7 +287,7 @@ impl ParsedStateMachine {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct InputState {
     start: bool,
     ident: Ident,
@@ -335,17 +346,6 @@ impl parse::Parse for InputState {
     }
 }
 
-// #[derive(Debug)]
-// pub struct PatternedTransition {
-//     in_states: Vec<InputState>,
-//     event: Ident,
-//     event_data_type: Option<Type>,
-//     guard: Option<Ident>,
-//     action: Option<Ident>,
-//     out_state: Ident,
-//     out_state_data_type: Option<Type>,
-// }
-
 #[derive(Debug)]
 pub struct StateTransition {
     in_state: InputState,
@@ -357,10 +357,28 @@ pub struct StateTransition {
     out_state_data_type: Option<Type>,
 }
 
-impl parse::Parse for StateTransition {
+#[derive(Debug)]
+pub struct StateTransitions {
+    in_states: Vec<InputState>,
+    event: Ident,
+    event_data_type: Option<Type>,
+    guard: Option<Ident>,
+    action: Option<Ident>,
+    out_state: Ident,
+    out_state_data_type: Option<Type>,
+}
+
+impl parse::Parse for StateTransitions {
     fn parse(input: parse::ParseStream) -> syn::Result<Self> {
-        // Input state
-        let in_state: InputState = input.parse()?;
+        // parse the input pattern
+        let mut in_states = Vec::new();
+        loop {
+            let in_state: InputState = input.parse()?;
+            in_states.push(in_state);
+            if let Err(_) = input.parse::<Token![|]>() {
+                break;
+            };
+        }
 
         // Event
         input.parse::<Token![+]>()?;
@@ -442,8 +460,8 @@ impl parse::Parse for StateTransition {
             None
         };
 
-        Ok(StateTransition {
-            in_state,
+        Ok(Self {
+            in_states,
             event,
             event_data_type,
             guard,
@@ -475,8 +493,8 @@ impl parse::Parse for StateMachine {
                                 break;
                             }
 
-                            let transition: StateTransition = content.parse()?;
-                            statemachine.add_transition(transition);
+                            let transitions: StateTransitions = content.parse()?;
+                            statemachine.add_transitions(transitions);
 
                             // No comma at end of line, no more transitions
                             if content.is_empty() {
