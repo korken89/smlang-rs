@@ -7,6 +7,7 @@ use syn::{
 
 pub type DataTypes = HashMap<String, Type>;
 pub type Lifetimes = Vec<Lifetime>;
+pub type TransitionMap = HashMap<String, HashMap<String, EventMapping>>;
 
 #[derive(Debug)]
 pub struct StateMachine {
@@ -161,6 +162,47 @@ fn collect_data_type(
     Ok(())
 }
 
+// helper function for adding a transition to a transition event map
+fn add_transition(
+    transition: &StateTransition,
+    transition_map: &mut TransitionMap,
+    state_data: &DataDefinitions,
+) -> Result<(), parse::Error> {
+    let p = transition_map
+        .get_mut(&transition.in_state.ident.to_string())
+        .unwrap();
+
+    if !p.contains_key(&transition.event.to_string()) {
+        let mapping = EventMapping {
+            event: transition.event.clone(),
+            guard: transition.guard.clone(),
+            action: transition.action.clone(),
+            out_state: transition.out_state.clone(),
+        };
+
+        p.insert(transition.event.to_string(), mapping);
+    } else {
+        return Err(parse::Error::new(
+            transition.in_state.ident.span(),
+            "State and event combination specified multiple times, remove duplicates.",
+        ));
+    }
+
+    // Check for actions when states have data a
+    if let Some(_) = state_data.data_types.get(&transition.out_state.to_string()) {
+        // This transition goes to a state that has data associated, check so it has an
+        // action
+
+        if transition.action.is_none() {
+            return Err(parse::Error::new(
+                transition.out_state.span(),
+                "This state has data associated, but not action is define here to provide it.",
+            ));
+        }
+    }
+    Ok(())
+}
+
 impl ParsedStateMachine {
     pub fn new(sm: StateMachine) -> parse::Result<Self> {
         // Check the initial state definition
@@ -196,21 +238,21 @@ impl ParsedStateMachine {
         let mut state_data = DataDefinitions::new();
         let mut events = HashMap::new();
         let mut event_data = DataDefinitions::new();
-        let mut states_events_mapping = HashMap::<String, HashMap<String, EventMapping>>::new();
+        let mut states_events_mapping = TransitionMap::new();
 
         for transition in sm.transitions.iter() {
             // Collect states
             let in_state_name = transition.in_state.ident.to_string();
             let out_state_name = transition.out_state.to_string();
-            states.insert(in_state_name.clone(), transition.in_state.ident.clone());
+            if !transition.in_state.wildcard {
+                states.insert(in_state_name.clone(), transition.in_state.ident.clone());
+                collect_data_type(
+                    in_state_name.clone(),
+                    transition.in_state.data_type.clone(),
+                    &mut state_data,
+                )?;
+            }
             states.insert(out_state_name.clone(), transition.out_state.clone());
-
-            // Collect state to data mappings and check for definition errors
-            collect_data_type(
-                in_state_name.clone(),
-                transition.in_state.data_type.clone(),
-                &mut state_data,
-            )?;
             collect_data_type(
                 out_state_name.clone(),
                 transition.out_state_data_type.clone(),
@@ -220,16 +262,17 @@ impl ParsedStateMachine {
             // Collect events
             let event_name = transition.event.to_string();
             events.insert(event_name.clone(), transition.event.clone());
-
-            // Collect event to data mappings and check for definition errors
             collect_data_type(
                 event_name.clone(),
                 transition.event_data_type.clone(),
                 &mut event_data,
             )?;
 
-            // Setup the states to events mapping
-            states_events_mapping.insert(transition.in_state.ident.to_string(), HashMap::new());
+            // add input and output states to the mapping HashMap
+            if !transition.in_state.wildcard {
+                states_events_mapping.insert(transition.in_state.ident.to_string(), HashMap::new());
+            }
+            states_events_mapping.insert(transition.out_state.to_string(), HashMap::new());
         }
 
         // Remove duplicate lifetimes
@@ -237,42 +280,47 @@ impl ParsedStateMachine {
         event_data.all_lifetimes.dedup();
 
         for transition in sm.transitions.iter() {
-            // Add transitions
-            let p = states_events_mapping
-                .get_mut(&transition.in_state.ident.to_string())
-                .unwrap();
+            // if input state is a wildcard, we need to add this transition for all states except
+            // the output state
+            if transition.in_state.wildcard {
+                for (name, in_state) in &states {
+                    // Skip the output state
+                    if in_state.to_string() == transition.out_state.to_string() {
+                        continue;
+                    }
 
-            if let None = p.get(&transition.event.to_string()) {
-                let mapping = EventMapping {
-                    event: transition.event.clone(),
-                    guard: transition.guard.clone(),
-                    action: transition.action.clone(),
-                    out_state: transition.out_state.clone(),
-                };
+                    // create a new input state from wildcard
+                    let in_state = InputState {
+                        start: false,
+                        wildcard: false,
+                        ident: in_state.clone(),
+                        data_type: state_data.data_types.get(name).cloned(),
+                    };
 
-                p.insert(transition.event.to_string(), mapping);
-            } else {
-                return Err(parse::Error::new(
-                    transition.in_state.ident.span(),
-                    "State and event combination specified multiple times, remove duplicates.",
-                ));
-            }
+                    // create the transition
+                    let wildcard_transition = StateTransition {
+                        in_state,
+                        event: transition.event.clone(),
+                        event_data_type: transition.event_data_type.clone(),
+                        guard: transition.guard.clone(),
+                        action: transition.action.clone(),
+                        out_state: transition.out_state.clone(),
+                        out_state_data_type: transition.out_state_data_type.clone(),
+                    };
 
-            // Check for actions when states have data a
-            if let Some(_) = state_data.data_types.get(&transition.out_state.to_string()) {
-                // This transition goes to a state that has data associated, check so it has an
-                // action
-
-                if transition.action.is_none() {
-                    return Err(parse::Error::new(
-                     transition.out_state.span(),
-                     "This state has data associated, but not action is define here to provide it.",
-                 ));
+                    // add the wildcard transition to the transition map
+                    // TODO:  Need to work on the span of this error, as it is being caused by the wildcard
+                    // but won't show up at that line
+                    add_transition(
+                        &wildcard_transition,
+                        &mut states_events_mapping,
+                        &state_data,
+                    )?;
                 }
+            } else {
+                add_transition(transition, &mut states_events_mapping, &state_data)?;
             }
         }
-
-        // Check so all states with data associated have actions that provide this data
 
         Ok(ParsedStateMachine {
             temporary_context_type: sm.temporary_context_type,
@@ -290,6 +338,7 @@ impl ParsedStateMachine {
 #[derive(Debug, Clone)]
 pub struct InputState {
     start: bool,
+    wildcard: bool,
     ident: Ident,
     data_type: Option<Type>,
 }
@@ -299,8 +348,16 @@ impl parse::Parse for InputState {
         // Check for starting state definition
         let start = input.parse::<Token![*]>().is_ok();
 
+        // check to see if this is a wildcard state, which is denoted with "underscore"
+        let underscore = input.parse::<Token![_]>();
+        let wildcard = underscore.is_ok();
+
         // Input State
-        let ident: Ident = input.parse()?;
+        let ident: Ident = if let Ok(underscore) = underscore {
+            underscore.into()
+        } else {
+            input.parse()?
+        };
 
         // Possible type on the input state
         let data_type = if input.peek(token::Paren) {
@@ -314,6 +371,14 @@ impl parse::Parse for InputState {
                 return Err(parse::Error::new(
                     input.span(),
                     "The starting state cannot have data associated with it.",
+                ));
+            }
+
+            // Wilcards should not have data associated, as data will already be defined
+            if wildcard {
+                return Err(parse::Error::new(
+                    input.span(),
+                    "Wildcard states cannot have data associated with it.",
                 ));
             }
 
@@ -340,6 +405,7 @@ impl parse::Parse for InputState {
 
         Ok(Self {
             start,
+            wildcard,
             ident,
             data_type,
         })
@@ -378,6 +444,18 @@ impl parse::Parse for StateTransitions {
             if let Err(_) = input.parse::<Token![|]>() {
                 break;
             };
+        }
+
+        // Make sure that if a wildcard is used, it is the only input state
+        if in_states.len() > 1 {
+            for in_state in &in_states {
+                if in_state.wildcard {
+                    return Err(parse::Error::new(
+                        in_state.ident.span(),
+                        "Wildcards already include all states, so should not be used with input state patterns.",
+                    ));
+                }
+            }
         }
 
         // Event
