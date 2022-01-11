@@ -1,5 +1,5 @@
 use super::input_state::InputState;
-
+use super::output_state::OutputState;
 use syn::{bracketed, parenthesized, parse, spanned::Spanned, token, Ident, Token, Type};
 
 #[derive(Debug)]
@@ -9,8 +9,7 @@ pub struct StateTransition {
     pub event_data_type: Option<Type>,
     pub guard: Option<Ident>,
     pub action: Option<Ident>,
-    pub out_state: Ident,
-    pub out_state_data_type: Option<Type>,
+    pub out_state: OutputState,
 }
 
 #[derive(Debug)]
@@ -20,8 +19,7 @@ pub struct StateTransitions {
     pub event_data_type: Option<Type>,
     pub guard: Option<Ident>,
     pub action: Option<Ident>,
-    pub out_state: Ident,
-    pub out_state_data_type: Option<Type>,
+    pub out_state: OutputState,
 }
 
 impl parse::Parse for StateTransitions {
@@ -99,34 +97,7 @@ impl parse::Parse for StateTransitions {
 
         input.parse::<Token![=]>()?;
 
-        let out_state: Ident = input.parse()?;
-
-        // Possible type on the output state
-        let out_state_data_type = if input.peek(token::Paren) {
-            let content;
-            parenthesized!(content in input);
-            let input: Type = content.parse()?;
-
-            // Check so the type is supported
-            match &input {
-                Type::Array(_)
-                | Type::Path(_)
-                | Type::Ptr(_)
-                | Type::Reference(_)
-                | Type::Slice(_)
-                | Type::Tuple(_) => (),
-                _ => {
-                    return Err(parse::Error::new(
-                        input.span(),
-                        "This is an unsupported type for states.",
-                    ))
-                }
-            }
-
-            Some(input)
-        } else {
-            None
-        };
+        let out_state: OutputState = input.parse()?;
 
         Ok(Self {
             in_states,
@@ -135,7 +106,6 @@ impl parse::Parse for StateTransitions {
             guard,
             action,
             out_state,
-            out_state_data_type,
         })
     }
 }

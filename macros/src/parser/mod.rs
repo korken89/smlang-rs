@@ -1,6 +1,7 @@
 pub mod data;
 pub mod event;
 pub mod input_state;
+pub mod output_state;
 pub mod state_machine;
 pub mod transition;
 
@@ -44,7 +45,7 @@ fn add_transition(
             event: transition.event.clone(),
             guard: transition.guard.clone(),
             action: transition.action.clone(),
-            out_state: transition.out_state.clone(),
+            out_state: transition.out_state.ident.clone(),
         };
 
         p.insert(transition.event.to_string(), mapping);
@@ -56,13 +57,16 @@ fn add_transition(
     }
 
     // Check for actions when states have data a
-    if let Some(_) = state_data.data_types.get(&transition.out_state.to_string()) {
+    if let Some(_) = state_data
+        .data_types
+        .get(&transition.out_state.ident.to_string())
+    {
         // This transition goes to a state that has data associated, check so it has an
         // action
 
         if transition.action.is_none() {
             return Err(parse::Error::new(
-                transition.out_state.span(),
+                transition.out_state.ident.span(),
                 "This state has data associated, but not action is define here to provide it.",
             ));
         }
@@ -110,15 +114,15 @@ impl ParsedStateMachine {
         for transition in sm.transitions.iter() {
             // Collect states
             let in_state_name = transition.in_state.ident.to_string();
-            let out_state_name = transition.out_state.to_string();
+            let out_state_name = transition.out_state.ident.to_string();
             if !transition.in_state.wildcard {
                 states.insert(in_state_name.clone(), transition.in_state.ident.clone());
                 state_data.collect(in_state_name.clone(), transition.in_state.data_type.clone())?;
             }
-            states.insert(out_state_name.clone(), transition.out_state.clone());
+            states.insert(out_state_name.clone(), transition.out_state.ident.clone());
             state_data.collect(
                 out_state_name.clone(),
-                transition.out_state_data_type.clone(),
+                transition.out_state.data_type.clone(),
             )?;
 
             // Collect events
@@ -130,7 +134,7 @@ impl ParsedStateMachine {
             if !transition.in_state.wildcard {
                 states_events_mapping.insert(transition.in_state.ident.to_string(), HashMap::new());
             }
-            states_events_mapping.insert(transition.out_state.to_string(), HashMap::new());
+            states_events_mapping.insert(transition.out_state.ident.to_string(), HashMap::new());
         }
 
         // Remove duplicate lifetimes
@@ -157,7 +161,6 @@ impl ParsedStateMachine {
                         guard: transition.guard.clone(),
                         action: transition.action.clone(),
                         out_state: transition.out_state.clone(),
-                        out_state_data_type: transition.out_state_data_type.clone(),
                     };
 
                     // add the wildcard transition to the transition map

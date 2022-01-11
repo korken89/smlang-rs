@@ -26,7 +26,6 @@ impl StateMachine {
                 guard: transitions.guard.clone(),
                 action: transitions.action.clone(),
                 out_state: transitions.out_state.clone(),
-                out_state_data_type: transitions.out_state_data_type.clone(),
             };
             self.transitions.push(transition);
         }
