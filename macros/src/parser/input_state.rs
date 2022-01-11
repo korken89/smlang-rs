@@ -106,4 +106,48 @@ mod tests {
             State1(!)
         };
     }
+
+    #[test]
+    fn wildcard() {
+        let wildcard: InputState = parse_quote! {
+            _
+        };
+
+        assert!(wildcard.wildcard);
+        assert!(!wildcard.start);
+        assert!(wildcard.data_type.is_none());
+    }
+
+    #[test]
+    fn start() {
+        let start: InputState = parse_quote! {
+            *Start
+        };
+
+        assert!(start.start);
+        assert!(!start.wildcard);
+        assert!(start.data_type.is_none());
+    }
+
+    #[test]
+    fn state_without_data() {
+        let state: InputState = parse_quote! {
+            State
+        };
+
+        assert!(!state.start);
+        assert!(!state.wildcard);
+        assert!(state.data_type.is_none());
+    }
+
+    #[test]
+    fn state_with_data() {
+        let state: InputState = parse_quote! {
+            State(u8)
+        };
+
+        assert!(!state.start);
+        assert!(!state.wildcard);
+        assert!(state.data_type.is_some());
+    }
 }
