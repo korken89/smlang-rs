@@ -14,7 +14,7 @@ use syn::parse_macro_input;
 #[proc_macro]
 pub fn statemachine(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Parse the syntax into structures
-    let input = parse_macro_input!(input as parser::StateMachine);
+    let input = parse_macro_input!(input as parser::state_machine::StateMachine);
 
     // Validate syntax
     match parser::ParsedStateMachine::new(input) {
