@@ -40,15 +40,15 @@ fn add_transition(
         .get_mut(&transition.in_state.ident.to_string())
         .unwrap();
 
-    if !p.contains_key(&transition.event.to_string()) {
+    if !p.contains_key(&transition.event.ident.to_string()) {
         let mapping = EventMapping {
-            event: transition.event.clone(),
+            event: transition.event.ident.clone(),
             guard: transition.guard.clone(),
             action: transition.action.clone(),
             out_state: transition.out_state.ident.clone(),
         };
 
-        p.insert(transition.event.to_string(), mapping);
+        p.insert(transition.event.ident.to_string(), mapping);
     } else {
         return Err(parse::Error::new(
             transition.in_state.ident.span(),
@@ -126,9 +126,9 @@ impl ParsedStateMachine {
             )?;
 
             // Collect events
-            let event_name = transition.event.to_string();
-            events.insert(event_name.clone(), transition.event.clone());
-            event_data.collect(event_name.clone(), transition.event_data_type.clone())?;
+            let event_name = transition.event.ident.to_string();
+            events.insert(event_name.clone(), transition.event.ident.clone());
+            event_data.collect(event_name.clone(), transition.event.data_type.clone())?;
 
             // add input and output states to the mapping HashMap
             if !transition.in_state.wildcard {
@@ -157,7 +157,6 @@ impl ParsedStateMachine {
                     let wildcard_transition = StateTransition {
                         in_state,
                         event: transition.event.clone(),
-                        event_data_type: transition.event_data_type.clone(),
                         guard: transition.guard.clone(),
                         action: transition.action.clone(),
                         out_state: transition.out_state.clone(),

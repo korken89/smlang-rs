@@ -22,7 +22,6 @@ impl StateMachine {
             let transition = StateTransition {
                 in_state,
                 event: transitions.event.clone(),
-                event_data_type: transitions.event_data_type.clone(),
                 guard: transitions.guard.clone(),
                 action: transitions.action.clone(),
                 out_state: transitions.out_state.clone(),

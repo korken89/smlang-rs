@@ -1,4 +1,4 @@
-use syn::{parenthesized, parse, spanned::Spanned, token, Ident, Type};
+use syn::{parenthesized, parse, spanned::Spanned, token, Ident, Token, Type};
 
 #[derive(Debug, Clone)]
 pub struct OutputState {
@@ -8,6 +8,7 @@ pub struct OutputState {
 
 impl parse::Parse for OutputState {
     fn parse(input: parse::ParseStream) -> syn::Result<Self> {
+        input.parse::<Token![=]>()?;
         let ident: Ident = input.parse()?;
 
         // Possible type on the output state

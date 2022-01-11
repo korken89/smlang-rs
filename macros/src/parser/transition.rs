@@ -1,12 +1,12 @@
+use super::event::Event;
 use super::input_state::InputState;
 use super::output_state::OutputState;
-use syn::{bracketed, parenthesized, parse, spanned::Spanned, token, Ident, Token, Type};
+use syn::{bracketed, parse, token, Ident, Token};
 
 #[derive(Debug)]
 pub struct StateTransition {
     pub in_state: InputState,
-    pub event: Ident,
-    pub event_data_type: Option<Type>,
+    pub event: Event,
     pub guard: Option<Ident>,
     pub action: Option<Ident>,
     pub out_state: OutputState,
@@ -15,8 +15,7 @@ pub struct StateTransition {
 #[derive(Debug)]
 pub struct StateTransitions {
     pub in_states: Vec<InputState>,
-    pub event: Ident,
-    pub event_data_type: Option<Type>,
+    pub event: Event,
     pub guard: Option<Ident>,
     pub action: Option<Ident>,
     pub out_state: OutputState,
@@ -47,35 +46,7 @@ impl parse::Parse for StateTransitions {
         }
 
         // Event
-        input.parse::<Token![+]>()?;
-        let event: Ident = input.parse()?;
-
-        // Possible type on the event
-        let event_data_type = if input.peek(token::Paren) {
-            let content;
-            parenthesized!(content in input);
-            let input: Type = content.parse()?;
-
-            // Check so the type is supported
-            match &input {
-                Type::Array(_)
-                | Type::Path(_)
-                | Type::Ptr(_)
-                | Type::Reference(_)
-                | Type::Slice(_)
-                | Type::Tuple(_) => (),
-                _ => {
-                    return Err(parse::Error::new(
-                        input.span(),
-                        "This is an unsupported type for events.",
-                    ))
-                }
-            }
-
-            Some(input)
-        } else {
-            None
-        };
+        let event: Event = input.parse()?;
 
         // Possible guard
         let guard = if input.peek(token::Bracket) {
@@ -95,14 +66,11 @@ impl parse::Parse for StateTransitions {
             None
         };
 
-        input.parse::<Token![=]>()?;
-
         let out_state: OutputState = input.parse()?;
 
         Ok(Self {
             in_states,
             event,
-            event_data_type,
             guard,
             action,
             out_state,
