@@ -4,7 +4,7 @@ pub mod input_state;
 pub mod state_machine;
 pub mod transition;
 
-use data::{DataDefinitions, Lifetimes};
+use data::DataDefinitions;
 use event::EventMapping;
 use state_machine::StateMachine;
 
@@ -12,7 +12,7 @@ use input_state::InputState;
 use proc_macro2::Span;
 
 use std::collections::HashMap;
-use syn::{parse, spanned::Spanned, GenericArgument, Ident, PathArguments, Type};
+use syn::{parse, Ident, Type};
 use transition::StateTransition;
 
 pub type TransitionMap = HashMap<String, HashMap<String, EventMapping>>;
@@ -27,90 +27,6 @@ pub struct ParsedStateMachine {
     pub events: HashMap<String, Ident>,
     pub event_data: DataDefinitions,
     pub states_events_mapping: HashMap<String, HashMap<String, EventMapping>>,
-}
-
-// helper function for extracting a vector of lifetimes from a Type
-fn get_lifetimes(data_type: &Type) -> Result<Lifetimes, parse::Error> {
-    let mut lifetimes = Lifetimes::new();
-    match data_type {
-        Type::Reference(tr) => {
-            if let Some(lifetime) = &tr.lifetime {
-                lifetimes.push(lifetime.clone());
-            } else {
-                return Err(parse::Error::new(
-                    data_type.span(),
-                    "This event's data lifetime is not defined, consider adding a lifetime.",
-                ));
-            }
-            Ok(lifetimes)
-        }
-        Type::Path(tp) => {
-            let punct = &tp.path.segments;
-            for p in punct.iter() {
-                if let PathArguments::AngleBracketed(abga) = &p.arguments {
-                    for arg in &abga.args {
-                        if let GenericArgument::Lifetime(lifetime) = &arg {
-                            lifetimes.push(lifetime.clone());
-                        }
-                    }
-                }
-            }
-            Ok(lifetimes)
-        }
-        _ => Ok(lifetimes),
-    }
-}
-
-// helper function for adding a new data type to a data descriptions struct
-fn add_new_data_type(
-    key: String,
-    data_type: Type,
-    definitions: &mut DataDefinitions,
-) -> Result<(), parse::Error> {
-    // retrieve any lifetimes used in this data-type
-    let mut lifetimes = get_lifetimes(&data_type)?;
-
-    // add the data to the collection
-    definitions.data_types.insert(key.clone(), data_type);
-
-    // if any new lifetimes were used in the type definition, we add those as well
-    if !lifetimes.is_empty() {
-        definitions.lifetimes.insert(key, lifetimes.clone());
-        definitions.all_lifetimes.append(&mut lifetimes);
-    }
-    Ok(())
-}
-
-// helper function for collecting data types and adding them to a data descriptions struct
-fn collect_data_type(
-    key: String,
-    data_type: Option<Type>,
-    definitions: &mut DataDefinitions,
-) -> Result<(), parse::Error> {
-    // check to see if there was every a previous data-type associated with this transition
-    let prev = definitions.data_types.get(&key);
-
-    // if there was a previous data definition for this key, may sure it is consistent
-    if let Some(prev) = prev {
-        if let Some(ref data_type) = data_type {
-            if prev != &data_type.clone() {
-                return Err(parse::Error::new(
-                    data_type.span(),
-                    "This event's type does not match its previous definition.",
-                ));
-            }
-        } else {
-            return Err(parse::Error::new(
-                data_type.span(),
-                "This event's type does not match its previous definition.",
-            ));
-        }
-    }
-
-    if let Some(data_type) = data_type {
-        add_new_data_type(key, data_type, definitions)?;
-    }
-    Ok(())
 }
 
 // helper function for adding a transition to a transition event map
@@ -197,27 +113,18 @@ impl ParsedStateMachine {
             let out_state_name = transition.out_state.to_string();
             if !transition.in_state.wildcard {
                 states.insert(in_state_name.clone(), transition.in_state.ident.clone());
-                collect_data_type(
-                    in_state_name.clone(),
-                    transition.in_state.data_type.clone(),
-                    &mut state_data,
-                )?;
+                state_data.collect(in_state_name.clone(), transition.in_state.data_type.clone())?;
             }
             states.insert(out_state_name.clone(), transition.out_state.clone());
-            collect_data_type(
+            state_data.collect(
                 out_state_name.clone(),
                 transition.out_state_data_type.clone(),
-                &mut state_data,
             )?;
 
             // Collect events
             let event_name = transition.event.to_string();
             events.insert(event_name.clone(), transition.event.clone());
-            collect_data_type(
-                event_name.clone(),
-                transition.event_data_type.clone(),
-                &mut event_data,
-            )?;
+            event_data.collect(event_name.clone(), transition.event_data_type.clone())?;
 
             // add input and output states to the mapping HashMap
             if !transition.in_state.wildcard {
