@@ -1,7 +1,7 @@
 [package]
 name = "smlang-macros"
 categories = ["embedded", "no-std"]
-authors = ["Emil Fresk <emil.fresk@gmail.com>"]
+authors = ["Emil Fresk <emil.fresk@gmail.com>", "Donny Zimmanck <dzimmanck@gmail.com>"]
 description = "Procedual macros for the smlang crate"
 keywords = ["dsl", "statemachine"]
 license = "MIT OR Apache-2.0"
