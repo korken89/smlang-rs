@@ -1,6 +1,7 @@
 // Move guards to return a Result
 
-use crate::parser::*;
+use crate::parser::data::Lifetimes;
+use crate::parser::ParsedStateMachine;
 use proc_macro2;
 use proc_macro2::Span;
 use quote::quote;
