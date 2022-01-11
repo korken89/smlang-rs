@@ -1,6 +1,7 @@
 //! Pattern Matching State Machine
 //!
-//! A simple state machine
+//! This demonstrates the use of input state pattern matching so that states that share a common
+//! transition to the same output state can be described more succinctly
 #![deny(missing_docs)]
 
 use smlang::statemachine;
@@ -24,6 +25,7 @@ use smlang::statemachine;
 //     },
 // }
 
+// A simple charge/discharge state machine that has a dedicated "Fault" state
 statemachine! {
     transitions: {
         *Idle | Discharging | Discharged + Charge = Charging,
