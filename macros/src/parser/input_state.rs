@@ -76,3 +76,34 @@ impl parse::Parse for InputState {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use syn::parse_quote;
+
+    #[test]
+    #[should_panic(expected = "The starting state cannot have data associated with it.")]
+    fn input_state_with_data() {
+        let _: InputState = parse_quote! {
+            *Start(u8)
+        };
+    }
+
+    #[test]
+    #[should_panic(expected = "Wildcard states cannot have data associated with it.")]
+    fn wildcard_with_data() {
+        let _: InputState = parse_quote! {
+            _(u8)
+        };
+    }
+
+    #[test]
+    #[should_panic(expected = "This is an unsupported type for states.")]
+    fn unsupported_type() {
+        let _: InputState = parse_quote! {
+            State1(!)
+        };
+    }
+}
