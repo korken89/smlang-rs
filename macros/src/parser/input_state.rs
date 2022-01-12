@@ -84,6 +84,14 @@ mod tests {
     use syn::parse_quote;
 
     #[test]
+    #[should_panic(expected = "You can't use a wildcard as the starting state.")]
+    fn wildcard_used_as_start() {
+        let _: InputState = parse_quote! {
+            *_
+        };
+    }
+
+    #[test]
     #[should_panic(expected = "The starting state cannot have data associated with it.")]
     fn input_state_with_data() {
         let _: InputState = parse_quote! {
