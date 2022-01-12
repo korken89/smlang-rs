@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 - PartialEq for States and Events based on discriminant only ([issue-21](https://github.com/korken89/smlang-rs/issues/21))
+- Updated the CI badges ([issue-30](https://github.com/korken89/smlang-rs/issues/30))
 
 ## [v0.4.2]
 
