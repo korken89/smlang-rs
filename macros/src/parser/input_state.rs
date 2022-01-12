@@ -17,6 +17,14 @@ impl parse::Parse for InputState {
         let underscore = input.parse::<Token![_]>();
         let wildcard = underscore.is_ok();
 
+        // wildcards can't be used as starting states
+        if start && wildcard {
+            return Err(parse::Error::new(
+                input.span(),
+                "Wildcards can't be used as the starting state.",
+            ));
+        }
+
         // Input State
         let ident: Ident = if let Ok(underscore) = underscore {
             underscore.into()
@@ -84,7 +92,7 @@ mod tests {
     use syn::parse_quote;
 
     #[test]
-    #[should_panic(expected = "You can't use a wildcard as the starting state.")]
+    #[should_panic(expected = "Wildcards can't be used as the starting state.")]
     fn wildcard_used_as_start() {
         let _: InputState = parse_quote! {
             *_
