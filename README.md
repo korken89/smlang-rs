@@ -26,6 +26,44 @@ Where `guard` and `action` are optional and can be left out. A `guard` is a func
 
 > This implies that any state machine must be written as a list of transitions.
 
+The DSL supports wildcards and pattern matching for input states similar to rust pattern matching:
+
+```rust
+statemachine!{
+    transitions: {
+        *State1 | State3 + ToState2 = State2,
+        State1 | State2 + ToState3 = State3,
+        _ + ToState4 = State4,
+        State4 + ToState1 = State1,
+    }
+    // ...
+}
+```
+
+Which is equivalent to:
+
+```rust
+statemachine!{
+    transitions: {
+        *State1 + ToState2 = State2,
+        State3 + ToState2 = State2,
+
+        State1 + ToState3 = State3,
+        State2 + ToState3 = State3,
+
+        State1 + ToState4 = State4,
+        State2 + ToState4 = State4,
+        State3 + ToState4 = State4,
+        State4 + ToState4 = State4,
+
+        State4 + ToState1 = State1,
+    }
+    // ...
+}
+```
+
+See example `examples/input_state_pattern_match.rs` for a usage example.
+
 ### State machine context
 
 The state machine needs a context to be defined.
@@ -54,7 +92,7 @@ See example `examples/context.rs` for a usage example.
 
 ### State data
 
-Any state may have some data associated with it (except the starting state), which means that this data is only exists while in this state.
+Any state may have some data associated with it (except the starting state):
 
 ```rust
 pub struct MyStateData(pub u32);
@@ -68,6 +106,23 @@ statemachine!{
 ```
 
 See example `examples/state_with_data.rs` for a usage example.
+
+State data may also have associated lifetimes which the `statemachine!` macro will pick up and add the `States` enum and `StateMachine` structure. This means the following will also work:
+
+```rust
+pub struct MyStateData<'a>(&'a u32);
+
+statemachine! {
+    transitions: {
+        *State1 + Event1 / action = State2,
+        State2(MyStateData<'a>) + Event2 = State1,
+        // ...
+    }
+    // ...
+}
+```
+
+See example `examples/state_with_reference_data.rs` for a usage example.
 
 ### Event data
 
@@ -84,7 +139,7 @@ statemachine!{
 }
 ```
 
-Event data may also have associated lifetimes which the `statemachine!` macro will pick up and add the `Events` structure. This means the following will also work:
+Event data may also have associated lifetimes which the `statemachine!` macro will pick up and add the `Events` enum. This means the following will also work:
 
 ```rust
 pub struct MyEventData<'a>(pub &'a u32);
