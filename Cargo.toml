@@ -1,7 +1,7 @@
 [package]
 name = "smlang"
 categories = ["embedded", "no-std"]
-authors = ["Emil Fresk <emil.fresk@gmail.com>"]
+authors = ["Emil Fresk <emil.fresk@gmail.com>", "Donny Zimmanck <dzimmanck@gmail.com>"]
 description = "A no-std state machine language DSL"
 keywords = ["dsl", "statemachine"]
 license = "MIT OR Apache-2.0"

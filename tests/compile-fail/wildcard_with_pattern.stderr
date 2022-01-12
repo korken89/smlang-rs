@@ -1,0 +1,5 @@
+error: Wildcards already include all states, so should not be used with input state patterns.
+ --> tests/compile-fail/wildcard_with_pattern.rs:8:9
+  |
+8 |         _ | State2 + Event2 = State1, //~ Wildcards already include all states, so should not be used with input state patterns.
+  |         ^
