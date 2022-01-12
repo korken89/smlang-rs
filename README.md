@@ -165,6 +165,7 @@ List of contributors in alphabetical order:
 
 * Emil Fresk ([@korken89](https://github.com/korken89))
 * Mathias Koch ([@MathiasKoch](https://github.com/MathiasKoch))
+* Donny Zimmanck ([@dzimmanck](https://github.com/dzimmanck))
 
 ---
 
