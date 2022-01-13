@@ -122,7 +122,7 @@ a long list of states to go through.
 * Change log added
 
 
-[Unreleased]: https://github.com/korken89/smlang-rs/compare/v0.4.2...master
+[v0.5.0]: https://github.com/korken89/smlang-rs/compare/v0.4.2...v0.5.0
 [v0.4.2]: https://github.com/korken89/smlang-rs/compare/v0.4.1...v0.4.2
 [v0.4.1]: https://github.com/korken89/smlang-rs/compare/v0.4.0...v0.4.1
 [v0.4.0]: https://github.com/korken89/smlang-rs/compare/v0.3.5...v0.4.0
