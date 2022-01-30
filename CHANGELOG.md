@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+* Attempts to use actions and guards with inconsistent input, event, and output state data will be
+flagged as compiler errors.
 
 ### Added
 
