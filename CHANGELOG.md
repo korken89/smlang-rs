@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+* [#36](https://github.com/korken89/smlang-rs/issues/36) Attempts to use actions and guards with
+  inconsistent input, event, and output state data will be flagged as compiler errors.
 
 ### Added
 

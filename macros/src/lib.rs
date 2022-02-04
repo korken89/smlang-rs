@@ -6,6 +6,7 @@ mod codegen;
 #[cfg(feature = "graphviz")]
 mod diagramgen;
 mod parser;
+mod validation;
 
 use syn::parse_macro_input;
 
@@ -49,6 +50,11 @@ pub fn statemachine(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                     }
                     Err(_) => panic!("'dot' failed to run. Are you sure graphviz is installed?"),
                 }
+            }
+
+            // Validate the parsed state machine before generating code.
+            if let Err(e) = validation::validate(&sm) {
+                return e.to_compile_error().into();
             }
 
             codegen::generate_code(&sm).into()
