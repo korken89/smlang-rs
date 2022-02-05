@@ -6,12 +6,12 @@ description = "A no-std state machine language DSL"
 keywords = ["dsl", "statemachine"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/korken89/smlang-rs"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2018"
 readme = "README.md"
 
 [dependencies]
-smlang-macros = { path = "macros", version = "0.5.0" }
+smlang-macros = { path = "macros", version = "0.5.1" }
 
 [target.'cfg(not(target_os = "none"))'.dev-dependencies]
 trybuild = "1.0"

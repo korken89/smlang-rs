@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+
+### Added
+
+## [v0.5.1]
+
+### Fixed
 * [#36](https://github.com/korken89/smlang-rs/issues/36) Attempts to use actions and guards with
   inconsistent input, event, and output state data will be flagged as compiler errors.
 
@@ -128,7 +134,8 @@ a long list of states to go through.
 * Support for data in states
 * Change log added
 
-[Unreleased]: https://github.com/korken89/smlang-rs/compare/v0.5.0...master
+[Unreleased]: https://github.com/korken89/smlang-rs/compare/v0.5.1...master
+[v0.5.1]: https://github.com/korken89/smlang-rs/compare/v0.5.0...v0.5.1
 [v0.5.0]: https://github.com/korken89/smlang-rs/compare/v0.4.2...v0.5.0
 [v0.4.2]: https://github.com/korken89/smlang-rs/compare/v0.4.1...v0.4.2
 [v0.4.1]: https://github.com/korken89/smlang-rs/compare/v0.4.0...v0.4.1
