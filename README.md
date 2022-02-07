@@ -93,7 +93,7 @@ See example `examples/context.rs` for a usage example.
 
 ### State data
 
-Any state may have some data associated with it (except the starting state):
+Any state may have some data associated with it:
 
 ```rust
 pub struct MyStateData(pub u32);
@@ -107,6 +107,25 @@ statemachine!{
 ```
 
 See example `examples/state_with_data.rs` for a usage example.
+
+If the starting state contains data, this data must be provided after the context when creating a new machine.
+
+```rust
+pub struct MyStateData(pub u32);
+
+statemachine!{
+    transitions: {
+        State2 + Event2 / action = State1(MyStateData),
+        *State1(MyStateData) + Event1 = State2,
+        // ...
+    }
+    // ...
+}
+
+// ...
+
+let mut sm = StateMachine::new(Context, MyStateData(42));
+```
 
 State data may also have associated lifetimes which the `statemachine!` macro will pick up and add the `States` enum and `StateMachine` structure. This means the following will also work:
 
