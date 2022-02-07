@@ -91,11 +91,14 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "The starting state cannot have data associated with it.")]
     fn input_state_with_data() {
-        let _: InputState = parse_quote! {
+        let state: InputState = parse_quote! {
             *Start(u8)
         };
+
+        assert!(state.start);
+        assert!(!state.wildcard);
+        assert!(state.data_type.is_some());
     }
 
     #[test]
