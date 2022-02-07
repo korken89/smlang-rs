@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- Starting state can now contain data ([issue-34](https://github.com/korken89/smlang-rs/issues/34))
+
 ## [v0.5.1]
 
 ### Fixed
