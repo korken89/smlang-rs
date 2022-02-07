@@ -38,15 +38,6 @@ impl parse::Parse for InputState {
             parenthesized!(content in input);
             let input: Type = content.parse()?;
 
-            // Check if this is the starting state, it cannot have data as there is no
-            // supported way of propagating it (for now)
-            if start {
-                return Err(parse::Error::new(
-                    input.span(),
-                    "The starting state cannot have data associated with it.",
-                ));
-            }
-
             // Wilcards should not have data associated, as data will already be defined
             if wildcard {
                 return Err(parse::Error::new(
