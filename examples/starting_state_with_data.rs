@@ -12,8 +12,8 @@ pub struct MyStateData(pub u32);
 
 statemachine! {
     transitions: {
-        *State1(MyStateData) + Event1 = State2,
         State2 + Event2 / action = State1,
+        *State1(MyStateData) + Event1 = State2,
         // ...
     }
 }
