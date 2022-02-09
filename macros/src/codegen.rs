@@ -397,6 +397,28 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     let starting_state = &sm.starting_state;
 
+    // create a token stream for creating a new machine.  If the starting state contains data, then
+    // add a second argument to pass this initial data
+    let starting_state_name = starting_state.to_string();
+    let new_sm_code = match sm.state_data.data_types.get(&starting_state_name) {
+        Some(st) => quote! {
+            pub fn new(context: T, state_data: #st ) -> Self {
+                StateMachine {
+                    state: States::#starting_state (state_data),
+                    context
+                }
+            }
+        },
+        None => quote! {
+            pub fn new(context: T ) -> Self {
+                StateMachine {
+                    state: States::#starting_state,
+                    context
+                }
+            }
+        },
+    };
+
     // create token-streams for state data lifetimes
     let state_lifetimes_code = if sm.state_data.lifetimes.is_empty() {
         quote! {}
@@ -470,12 +492,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         impl<#state_lifetimes_code T: StateMachineContext> StateMachine<#state_lifetimes_code T> {
             /// Creates a new state machine with the specified starting state.
             #[inline(always)]
-            pub fn new(context: T) -> Self {
-                StateMachine {
-                    state: States::#starting_state,
-                    context
-                }
-            }
+            #new_sm_code
 
             /// Creates a new state machine with an initial state.
             #[inline(always)]

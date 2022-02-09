@@ -38,15 +38,6 @@ impl parse::Parse for InputState {
             parenthesized!(content in input);
             let input: Type = content.parse()?;
 
-            // Check if this is the starting state, it cannot have data as there is no
-            // supported way of propagating it (for now)
-            if start {
-                return Err(parse::Error::new(
-                    input.span(),
-                    "The starting state cannot have data associated with it.",
-                ));
-            }
-
             // Wilcards should not have data associated, as data will already be defined
             if wildcard {
                 return Err(parse::Error::new(
@@ -100,11 +91,14 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "The starting state cannot have data associated with it.")]
     fn input_state_with_data() {
-        let _: InputState = parse_quote! {
+        let state: InputState = parse_quote! {
             *Start(u8)
         };
+
+        assert!(state.start);
+        assert!(!state.wildcard);
+        assert!(state.data_type.is_some());
     }
 
     #[test]
