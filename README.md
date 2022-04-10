@@ -182,6 +182,7 @@ See example `examples/guard_action_syntax.rs` for a usage-example.
 ## State Machine Examples
 
 Here are some examples of state machines converted from UML to the State Machine Language DSL. Runnable versions of each example is available in the `examples` folder.
+The `.png`s are generated with the `graphviz` feature.
 
 ### Linear state machine
 
