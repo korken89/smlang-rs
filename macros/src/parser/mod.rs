@@ -21,7 +21,7 @@ pub type TransitionMap = HashMap<String, HashMap<String, EventMapping>>;
 #[derive(Debug)]
 pub struct ParsedStateMachine {
     pub temporary_context_type: Option<Type>,
-    pub guard_error: Option<Type>,
+    pub custom_guard_error: bool,
     pub states: HashMap<String, Ident>,
     pub starting_state: Ident,
     pub state_data: DataDefinitions,
@@ -178,7 +178,7 @@ impl ParsedStateMachine {
 
         Ok(ParsedStateMachine {
             temporary_context_type: sm.temporary_context_type,
-            guard_error: sm.guard_error,
+            custom_guard_error: sm.custom_guard_error,
             states,
             starting_state,
             state_data,
