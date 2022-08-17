@@ -426,7 +426,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     let guard_error = if sm.custom_guard_error {
         quote! {
             /// The error type returned by guard functions.
-            type GuardError;
+            type GuardError: core::fmt::Debug;
         }
     } else {
         quote! {}
