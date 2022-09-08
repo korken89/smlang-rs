@@ -48,64 +48,64 @@ fn main() {
     assert!(sm.state() == &States::Idle);
 
     let r = sm.process_event(Events::Charge);
-    assert!(r == Ok(&States::Charging));
+    assert!(matches!(r, Ok(&States::Charging)));
 
     let r = sm.process_event(Events::Discharge);
-    assert!(r == Ok(&States::Discharging));
+    assert!(matches!(r, Ok(&States::Discharging)));
 
     let r = sm.process_event(Events::Charge);
-    assert!(r == Ok(&States::Charging));
+    assert!(matches!(r, Ok(&States::Charging)));
 
     let r = sm.process_event(Events::ChargeComplete);
-    assert!(r == Ok(&States::Charged));
+    assert!(matches!(r, Ok(&States::Charged)));
 
     let r = sm.process_event(Events::Charge);
-    assert!(r == Err(Error::InvalidEvent));
+    assert!(matches!(r, Err(Error::InvalidEvent)));
     assert!(sm.state() == &States::Charged);
 
     let r = sm.process_event(Events::Discharge);
-    assert!(r == Ok(&States::Discharging));
+    assert!(matches!(r, Ok(&States::Discharging)));
 
     let r = sm.process_event(Events::DischargeComplete);
-    assert!(r == Ok(&States::Discharged));
+    assert!(matches!(r, Ok(&States::Discharged)));
 
     let r = sm.process_event(Events::Discharge);
-    assert!(r == Err(Error::InvalidEvent));
+    assert!(matches!(r, Err(Error::InvalidEvent)));
     assert!(sm.state() == &States::Discharged);
 
     sm = StateMachine::new_with_state(Context, States::Idle);
     let r = sm.process_event(Events::FaultDetected);
-    assert!(r == Ok(&States::Fault));
+    assert!(matches!(r, Ok(&States::Fault)));
 
     sm = StateMachine::new_with_state(Context, States::Charging);
     let r = sm.process_event(Events::FaultDetected);
-    assert!(r == Ok(&States::Fault));
+    assert!(matches!(r, Ok(&States::Fault)));
 
     sm = StateMachine::new_with_state(Context, States::Charged);
     let r = sm.process_event(Events::FaultDetected);
-    assert!(r == Ok(&States::Fault));
+    assert!(matches!(r, Ok(&States::Fault)));
 
     sm = StateMachine::new_with_state(Context, States::Discharging);
     let r = sm.process_event(Events::FaultDetected);
-    assert!(r == Ok(&States::Fault));
+    assert!(matches!(r, Ok(&States::Fault)));
 
     sm = StateMachine::new_with_state(Context, States::Discharged);
     let r = sm.process_event(Events::FaultDetected);
-    assert!(r == Ok(&States::Fault));
+    assert!(matches!(r, Ok(&States::Fault)));
 
     let r = sm.process_event(Events::Charge);
-    assert!(r == Err(Error::InvalidEvent));
+    assert!(matches!(r, Err(Error::InvalidEvent)));
     assert!(sm.state() == &States::Fault);
 
     let r = sm.process_event(Events::Discharge);
-    assert!(r == Err(Error::InvalidEvent));
+    assert!(matches!(r, Err(Error::InvalidEvent)));
     assert!(sm.state() == &States::Fault);
 
     let r = sm.process_event(Events::ChargeComplete);
-    assert!(r == Err(Error::InvalidEvent));
+    assert!(matches!(r, Err(Error::InvalidEvent)));
     assert!(sm.state() == &States::Fault);
 
     let r = sm.process_event(Events::DischargeComplete);
-    assert!(r == Err(Error::InvalidEvent));
+    assert!(matches!(r, Err(Error::InvalidEvent)));
     assert!(sm.state() == &States::Fault);
 }

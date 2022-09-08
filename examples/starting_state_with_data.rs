@@ -32,5 +32,5 @@ fn main() {
     let _ = sm.process_event(Events::Event1);
     let result = sm.process_event(Events::Event2);
 
-    assert!(result == Ok(&States::State1(MyStateData(42))));
+    assert!(matches!(result, Ok(&States::State1(MyStateData(42)))));
 }

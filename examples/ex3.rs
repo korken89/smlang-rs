@@ -45,7 +45,7 @@ fn main() {
 
     // Go through the first guard and action
     let r = sm.process_event(Events::Event1);
-    assert!(r == Ok(&States::State2));
+    assert!(matches!(r, Ok(&States::State2)));
 
     println!("After action 1");
 
@@ -53,7 +53,7 @@ fn main() {
 
     // The action will never run as the guard will fail
     let r = sm.process_event(Events::Event2);
-    assert!(r == Err(Error::GuardFailed(())));
+    assert!(matches!(r, Err(Error::GuardFailed(()))));
 
     println!("After action 2");
 

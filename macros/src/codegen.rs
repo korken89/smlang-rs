@@ -440,7 +440,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         quote! {Error}
     };
 
-
     // Build the states and events output
     quote! {
         /// This trait outlines the guards and actions that need to be implemented for the state
