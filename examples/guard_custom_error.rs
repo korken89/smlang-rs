@@ -57,4 +57,10 @@ impl StateMachineContext for Context {
     }
 }
 
-fn main() {}
+fn main() {
+    let mut sm = StateMachine::new(Context {});
+
+    let r = sm.process_event(Events::Event1(MyEventData(1)));
+
+    assert!(matches!(r, Err(Error::GuardFailed(GuardError::Custom))));
+}
