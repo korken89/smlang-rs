@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
-- Updated the link checker in the Github actions to use lynchee.
+- Updated the link checker in the Github actions to use [lychee](https://github.com/lycheeverse/lychee).
 
 ### Added
 
