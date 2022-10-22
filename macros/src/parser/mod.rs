@@ -144,7 +144,18 @@ impl ParsedStateMachine {
         for transition in sm.transitions.iter() {
             // if input state is a wildcard, we need to add this transition for all states
             if transition.in_state.wildcard {
+                let mut transition_added = false;
+
                 for (name, in_state) in &states {
+                    // skip already set input state
+                    let p = states_events_mapping
+                        .get_mut(&in_state.to_string())
+                        .unwrap();
+
+                    if p.contains_key(&transition.event.ident.to_string()) {
+                        continue;
+                    }
+
                     // create a new input state from wildcard
                     let in_state = InputState {
                         start: false,
@@ -170,6 +181,17 @@ impl ParsedStateMachine {
                         &mut states_events_mapping,
                         &state_data,
                     )?;
+
+                    transition_added = true;
+                }
+
+                // No transitions were added by expanding the wildcard,
+                // so emit an error to the user
+                if !transition_added {
+                    return Err(parse::Error::new(
+                        transition.in_state.ident.span(),
+                        "Wildcard has no effect",
+                    ));
                 }
             } else {
                 add_transition(transition, &mut states_events_mapping, &state_data)?;
