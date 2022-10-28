@@ -41,7 +41,3 @@ jobs:
 
       - name: Build docs
         run: cargo doc
-
-      - name: Check links
-        run: linkchecker README.md CHANGELOG.md src examples tests macros
-
