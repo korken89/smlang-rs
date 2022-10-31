@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+- Updated the link checker in the Github actions to use [lychee](https://github.com/lycheeverse/lychee).
+
 ### Added
 
 - Starting state can now contain data ([issue-34](https://github.com/korken89/smlang-rs/issues/34))
