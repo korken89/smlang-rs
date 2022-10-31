@@ -24,17 +24,17 @@ fn main() {
     assert!(sm.state() == &States::State1);
 
     let r = sm.process_event(Events::Event1);
-    assert!(r == Ok(&States::State2));
+    assert!(matches!(r, Ok(&States::State2)));
 
     let r = sm.process_event(Events::Event2);
-    assert!(r == Ok(&States::State3));
+    assert!(matches!(r, Ok(&States::State3)));
 
     // Now all events will not give any change of state
     let r = sm.process_event(Events::Event1);
-    assert!(r == Err(Error::InvalidEvent));
-    assert!(sm.state() == &States::State3);
+    assert!(matches!(r, Err(Error::InvalidEvent)));
+    assert!(matches!(sm.state(), &States::State3));
 
     let r = sm.process_event(Events::Event2);
-    assert!(r == Err(Error::InvalidEvent));
+    assert!(matches!(r, Err(Error::InvalidEvent)));
     assert!(sm.state() == &States::State3);
 }

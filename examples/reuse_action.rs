@@ -30,15 +30,15 @@ fn main() {
 
     // triggers action
     let r = sm.process_event(Events::Event1);
-    assert!(r == Ok(&States::State2));
+    assert!(matches!(r, Ok(&States::State2)));
     assert!(sm.context.0 == 1);
 
     let r = sm.process_event(Events::Event2);
-    assert!(r == Ok(&States::State1));
+    assert!(matches!(r, Ok(&States::State1)));
     assert!(sm.context.0 == 1);
 
     // triggers the same action
     let r = sm.process_event(Events::Event2);
-    assert!(r == Ok(&States::State3));
+    assert!(matches!(r, Ok(&States::State3)));
     assert!(sm.context.0 == 2);
 }

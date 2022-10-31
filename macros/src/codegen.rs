@@ -248,8 +248,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     }
                 };
 
-                let guard_error = if let Some(ref guard_error) = sm.guard_error {
-                    quote! { #guard_error }
+                let guard_error = if sm.custom_guard_error {
+                    quote! { Self::GuardError }
 
                 } else {
                     quote! { () }
@@ -355,26 +355,14 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         if let Some(g) = guard {
                             if let Some(a) = action {
                                 quote! {
-                                    match self.context.#g(#temporary_context_call #g_a_param) {
-                                        Ok(()) => {
-                                            let _data = self.context.#a(#temporary_context_call #g_a_param);
-                                            self.state = States::#out_state;
-                                        },
-                                        Err(e) => {
-                                            return Err(Error::GuardFailed(e));
-                                        }
-                                    }
+                                    self.context.#g(#temporary_context_call #g_a_param).map_err(Error::GuardFailed)?;
+                                    let _data = self.context.#a(#temporary_context_call #g_a_param);
+                                    self.state = States::#out_state;
                                 }
                             } else {
                                 quote! {
-                                    match self.context.#g(#temporary_context_call #g_a_param) {
-                                        Ok(()) => {
-                                            self.state = States::#out_state;
-                                        },
-                                        Err(e) => {
-                                            return Err(Error::GuardFailed(e));
-                                        }
-                                    }
+                                    self.context.#g(#temporary_context_call #g_a_param).map_err(Error::GuardFailed)?;
+                                    self.state = States::#out_state;
                                 }
                             }
                         } else {
@@ -435,10 +423,21 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         quote! {#(#event_lifetimes),* ,}
     };
 
-    let guard_failed = if let Some(ref guard_error) = sm.guard_error {
-        quote! { GuardFailed(#guard_error) }
+    let guard_error = if sm.custom_guard_error {
+        quote! {
+            /// The error type returned by guard functions.
+            type GuardError: core::fmt::Debug;
+        }
     } else {
-        quote! { GuardFailed(()) }
+        quote! {}
+    };
+
+    let error_type = if sm.custom_guard_error {
+        quote! {
+            Error<<T as StateMachineContext>::GuardError>
+        }
+    } else {
+        quote! {Error}
     };
 
     // Build the states and events output
@@ -446,6 +445,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         /// This trait outlines the guards and actions that need to be implemented for the state
         /// machine.
         pub trait StateMachineContext {
+            #guard_error
             #guard_list
             #action_list
         }
@@ -475,12 +475,12 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         }
 
         /// List of possible errors
-        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-        pub enum Error {
+        #[derive(Debug)]
+        pub enum Error<T=()> {
             /// When an event is processed which should not come in the current state.
             InvalidEvent,
             /// When an event is processed whose guard did not return `true`.
-            #guard_failed,
+            GuardFailed(T),
         }
 
         /// State machine structure definition.
@@ -525,7 +525,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             ///
             /// It will return `Ok(&NextState)` if the transition was successful, or `Err(Error)`
             /// if there was an error in the transition.
-            pub fn process_event(&mut self, #temporary_context mut event: Events) -> Result<&States, Error> {
+            pub fn process_event(&mut self, #temporary_context mut event: Events) -> Result<&States, #error_type> {
                 match self.state {
                     #(States::#in_states => match event {
                         #(Events::#events => {

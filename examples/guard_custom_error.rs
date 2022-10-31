@@ -27,13 +27,15 @@ statemachine! {
         State2(MyStateData) + Event2  [guard2] / action2 = State3,
         // ...
     },
-    guard_error: GuardError,
+    custom_guard_error: true,
 }
 
 /// Context
 pub struct Context;
 
 impl StateMachineContext for Context {
+    type GuardError = GuardError;
+
     // Guard1 has access to the data from Event1
     fn guard1(&mut self, _event_data: &MyEventData) -> Result<(), GuardError> {
         Err(GuardError::Custom)
@@ -55,4 +57,10 @@ impl StateMachineContext for Context {
     }
 }
 
-fn main() {}
+fn main() {
+    let mut sm = StateMachine::new(Context {});
+
+    let r = sm.process_event(Events::Event1(MyEventData(1)));
+
+    assert!(matches!(r, Err(Error::GuardFailed(GuardError::Custom))));
+}

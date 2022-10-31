@@ -4,7 +4,7 @@ use syn::{braced, parse, spanned::Spanned, token, Ident, Token, Type};
 #[derive(Debug)]
 pub struct StateMachine {
     pub temporary_context_type: Option<Type>,
-    pub guard_error: Option<Type>,
+    pub custom_guard_error: bool,
     pub transitions: Vec<StateTransition>,
 }
 
@@ -12,7 +12,7 @@ impl StateMachine {
     pub fn new() -> Self {
         StateMachine {
             temporary_context_type: None,
-            guard_error: None,
+            custom_guard_error: false,
             transitions: Vec::new(),
         }
     }
@@ -66,27 +66,13 @@ impl parse::Parse for StateMachine {
                         }
                     }
                 }
-                "guard_error" => {
+                "custom_guard_error" => {
                     input.parse::<Token![:]>()?;
-                    let guard_error: Type = input.parse()?;
-
-                    // Check so the type is supported
-                    match &guard_error {
-                        Type::Array(_)
-                        | Type::Path(_)
-                        | Type::Ptr(_)
-                        | Type::Reference(_)
-                        | Type::Slice(_)
-                        | Type::Tuple(_) => (),
-                        _ => {
-                            return Err(parse::Error::new(
-                                guard_error.span(),
-                                "This is an unsupported type for guard error.",
-                            ))
-                        }
+                    let custom_guard_error: syn::LitBool = input.parse()?;
+                    if custom_guard_error.value {
+                        statemachine.custom_guard_error = true
                     }
 
-                    statemachine.guard_error = Some(guard_error);
                 }
                 "temporary_context" => {
                     input.parse::<Token![:]>()?;
@@ -115,7 +101,7 @@ impl parse::Parse for StateMachine {
                 keyword => {
                     return Err(parse::Error::new(
                         input.span(),
-                        format!("Unknown keyword {}. Support keywords: [\"transitions\", \"temporary_context\", \"guard_error\"]", keyword)
+                        format!("Unknown keyword {}. Support keywords: [\"transitions\", \"temporary_context\", \"custom_guard_error\"]", keyword)
                     ))
                 }
             }
