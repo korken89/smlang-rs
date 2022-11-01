@@ -1,0 +1,5 @@
+error: Wildcard has no effect
+ --> tests/compile-fail/wildcard_no_effect.rs:9:9
+  |
+9 |         _ + Event1 = State3, //~ Wildcard has no effect
+  |         ^

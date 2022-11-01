@@ -1,0 +1,5 @@
+error: State and event combination specified multiple times, remove duplicates.
+ --> tests/compile-fail/wildcard_before_input_state.rs:8:10
+  |
+8 |         *State1 + Event1 = State2,
+  |          ^^^^^^
