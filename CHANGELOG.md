@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+### Fixed
+
+### Changed
+
+
+## [v0.6.0] - 2022-11-02
+
 ### Fixed
 
 - Updated the link checker in the Github actions to use [lychee](https://github.com/lycheeverse/lychee).
@@ -143,7 +152,8 @@ a long list of states to go through.
 * Support for data in states
 * Change log added
 
-[Unreleased]: https://github.com/korken89/smlang-rs/compare/v0.5.1...master
+[Unreleased]: https://github.com/korken89/smlang-rs/compare/v0.6.0...master
+[v0.6.0]: https://github.com/korken89/smlang-rs/compare/v0.5.1...v0.6.0
 [v0.5.1]: https://github.com/korken89/smlang-rs/compare/v0.5.0...v0.5.1
 [v0.5.0]: https://github.com/korken89/smlang-rs/compare/v0.4.2...v0.5.0
 [v0.4.2]: https://github.com/korken89/smlang-rs/compare/v0.4.1...v0.4.2
