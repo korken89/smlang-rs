@@ -35,7 +35,7 @@ impl StateMachineContext for Context {
     }
 
     // Action1 has access to the data from Event1, and need to return the state data for State2
-    fn action1(&mut self, temp_context: &mut u16, _event_data: &MyEventData) -> MyStateData {
+    fn action1(&mut self, temp_context: &mut u16, _event_data: MyEventData) -> MyStateData {
         *temp_context += 1;
 
         MyStateData(1)
@@ -49,7 +49,7 @@ impl StateMachineContext for Context {
     }
 
     // Action2 has access to the data from State2
-    fn action2(&mut self, temp_context: &mut u16, _state_data: &MyStateData) {
+    fn action2(&mut self, temp_context: &mut u16, _state_data: MyStateData) {
         *temp_context += 1;
     }
 }
