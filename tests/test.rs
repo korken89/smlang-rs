@@ -23,8 +23,8 @@ fn wildcard_after_input_state() {
     let mut sm = StateMachine::new(Context);
 
     sm.process_event(Events::Event1).unwrap();
-    assert!(sm.state() == &States::State2);
+    assert!(matches!(sm.state(), Ok(&States::State2)));
 
     sm.process_event(Events::Event1).unwrap();
-    assert!(sm.state() == &States::Fault);
+    assert!(matches!(sm.state(), Ok(&States::Fault)));
 }

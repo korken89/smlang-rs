@@ -45,7 +45,7 @@ impl StateMachineContext for Context {}
 fn main() {
     let mut sm = StateMachine::new(Context);
 
-    assert!(sm.state() == &States::Idle);
+    assert!(matches!(sm.state(), Ok(&States::Idle)));
 
     let r = sm.process_event(Events::Charge);
     assert!(matches!(r, Ok(&States::Charging)));
@@ -61,7 +61,7 @@ fn main() {
 
     let r = sm.process_event(Events::Charge);
     assert!(matches!(r, Err(Error::InvalidEvent)));
-    assert!(sm.state() == &States::Charged);
+    assert!(matches!(sm.state(), Ok(&States::Charged)));
 
     let r = sm.process_event(Events::Discharge);
     assert!(matches!(r, Ok(&States::Discharging)));
@@ -71,7 +71,7 @@ fn main() {
 
     let r = sm.process_event(Events::Discharge);
     assert!(matches!(r, Err(Error::InvalidEvent)));
-    assert!(sm.state() == &States::Discharged);
+    assert!(matches!(sm.state(), Ok(&States::Discharged)));
 
     sm = StateMachine::new_with_state(Context, States::Idle);
     let r = sm.process_event(Events::FaultDetected);
@@ -95,17 +95,17 @@ fn main() {
 
     let r = sm.process_event(Events::Charge);
     assert!(matches!(r, Err(Error::InvalidEvent)));
-    assert!(sm.state() == &States::Fault);
+    assert!(matches!(sm.state(), Ok(&States::Fault)));
 
     let r = sm.process_event(Events::Discharge);
     assert!(matches!(r, Err(Error::InvalidEvent)));
-    assert!(sm.state() == &States::Fault);
+    assert!(matches!(sm.state(), Ok(&States::Fault)));
 
     let r = sm.process_event(Events::ChargeComplete);
     assert!(matches!(r, Err(Error::InvalidEvent)));
-    assert!(sm.state() == &States::Fault);
+    assert!(matches!(sm.state(), Ok(&States::Fault)));
 
     let r = sm.process_event(Events::DischargeComplete);
     assert!(matches!(r, Err(Error::InvalidEvent)));
-    assert!(sm.state() == &States::Fault);
+    assert!(matches!(sm.state(), Ok(&States::Fault)));
 }

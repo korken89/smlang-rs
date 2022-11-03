@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
+- [breaking] Actions now take owned values
+- [breaking] `state()` now returns a `Result`
 - `StateMachine::new` and `StateMachine::new_with_state` are now const functions
 
 ## [v0.6.0] - 2022-11-02

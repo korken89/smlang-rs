@@ -42,7 +42,7 @@ impl StateMachineContext for Context {
         }
     }
 
-    fn action2(&mut self, event_data: &MyReferenceWrapper) {
+    fn action2(&mut self, event_data: MyReferenceWrapper) {
         println!("Got valid Event Data = {}", event_data.0);
     }
 }
