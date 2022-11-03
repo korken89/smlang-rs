@@ -69,7 +69,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 }
                 Some(_) => {
                     quote! {
-                        #state_name(ref state_data)
+                        #state_name(state_data)
                     }
                 }
             }
@@ -92,7 +92,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         }
                         Some(_) => {
                             quote! {
-                                #value(ref mut event_data)
+                                #value(event_data)
                             }
                         }
                     }
@@ -125,30 +125,49 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             value
                 .iter()
                 .map(|(name, _)| {
-                    // let event_name = &value.event;
+                    let state_data = match sm.state_data.data_types.get(state_name) {
+                        Some(_) => quote! { state_data },
+                        None => quote! {},
+                    };
 
-                    match (
-                        sm.state_data.data_types.get(state_name),
-                        sm.event_data.data_types.get(name),
-                    ) {
-                        (None, None) => {
-                            quote! {}
-                        }
-                        (Some(_), None) => {
-                            quote! {
-                                state_data
-                            }
-                        }
-                        (None, Some(_)) => {
-                            quote! {
-                                event_data
-                            }
-                        }
-                        (Some(_), Some(_)) => {
-                            quote! {
-                                state_data, event_data
-                            }
-                        }
+                    let event_data = match sm.event_data.data_types.get(name) {
+                        Some(_) => quote! { event_data },
+                        None => quote! {},
+                    };
+
+                    if state_data.is_empty() || event_data.is_empty() {
+                        quote! { #state_data #event_data }
+                    } else {
+                        quote! { #state_data, #event_data }
+                    }
+                })
+                .collect()
+        })
+        .collect();
+
+    let guard_action_ref_parameters: Vec<Vec<_>> = transitions
+        .iter()
+        .map(|(name, value)| {
+            let state_name = &sm.states.get(name).unwrap().to_string();
+
+            value
+                .iter()
+                .map(|(name, _)| {
+                    let state_data = match sm.state_data.data_types.get(state_name) {
+                        Some(_) => quote! { &state_data },
+                        None => quote! {},
+                    };
+
+                    let event_data = match sm.event_data.data_types.get(name) {
+                        Some(Type::Reference(_)) => quote! { event_data },
+                        Some(_) => quote! { &event_data },
+                        None => quote! {},
+                    };
+
+                    if state_data.is_empty() || event_data.is_empty() {
+                        quote! { #state_data #event_data }
+                    } else {
+                        quote! { #state_data, #event_data }
                     }
                 })
                 .collect()
@@ -293,21 +312,16 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
                 let state_data = match sm.state_data.data_types.get(state) {
                     Some(st) => {
-                        quote! { state_data: &#st, }
+                        quote! { state_data: #st, }
                     }
                     None => {
                         quote! {}
                     }
                 };
                 let event_data = match sm.event_data.data_types.get(event) {
-                    Some(et) => match et {
-                        Type::Reference(_) => {
-                            quote! { event_data: #et }
-                        }
-                        _ => {
-                            quote! { event_data: &#et }
-                        }
-                    },
+                    Some(et) => {
+                        quote! { event_data: #et }
+                    }
                     None => {
                         quote! {}
                     }
@@ -340,40 +354,46 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         .zip(
             actions
                 .iter()
-                .zip(out_states.iter().zip(guard_action_parameters.iter())),
+                .zip(in_states.iter().zip(out_states.iter().zip(guard_action_parameters.iter().zip(guard_action_ref_parameters.iter())))),
         )
         .map(
-            |(guards, (actions, (out_states, guard_action_parameters)))| {
+            |(guards, (actions, (in_state, (out_states, (guard_action_parameters, guard_action_ref_parameters)))))| {
                 guards
                     .iter()
                     .zip(
                         actions
                             .iter()
-                            .zip(out_states.iter().zip(guard_action_parameters.iter())),
+                            .zip(out_states.iter().zip(guard_action_parameters.iter().zip(guard_action_ref_parameters.iter()))),
                     )
-                    .map(|(guard, (action, (out_state, g_a_param)))| {
+                    .map(|(guard, (action, (out_state, (g_a_param, g_a_ref_param))))| {
                         if let Some(g) = guard {
                             if let Some(a) = action {
                                 quote! {
-                                    self.context.#g(#temporary_context_call #g_a_param).map_err(Error::GuardFailed)?;
+                                    if let Err(e) = self.context.#g(#temporary_context_call #g_a_ref_param) {
+                                        self.state = Some(States::#in_state);
+                                        return Err(Error::GuardFailed(e));
+                                    }
                                     let _data = self.context.#a(#temporary_context_call #g_a_param);
-                                    self.state = States::#out_state;
+                                    self.state = Some(States::#out_state);
                                 }
                             } else {
                                 quote! {
-                                    self.context.#g(#temporary_context_call #g_a_param).map_err(Error::GuardFailed)?;
-                                    self.state = States::#out_state;
+                                    if let Err(e) = self.context.#g(#temporary_context_call #g_a_ref_param) {
+                                        self.state = Some(States::#in_state);
+                                        return Err(Error::GuardFailed(e));
+                                    }
+                                    self.state = Some(States::#out_state);
                                 }
                             }
                         } else {
                             if let Some(a) = action {
                                 quote! {
                                     let _data = self.context.#a(#temporary_context_call #g_a_param);
-                                    self.state = States::#out_state;
+                                    self.state = Some(States::#out_state);
                                 }
                             } else {
                                 quote! {
-                                    self.state = States::#out_state;
+                                    self.state = Some(States::#out_state);
                                 }
                             }
                         }
@@ -392,7 +412,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         Some(st) => quote! {
             pub fn new(context: T, state_data: #st ) -> Self {
                 StateMachine {
-                    state: States::#starting_state (state_data),
+                    state: Some(States::#starting_state (state_data)),
                     context
                 }
             }
@@ -400,7 +420,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         None => quote! {
             pub fn new(context: T ) -> Self {
                 StateMachine {
-                    state: States::#starting_state,
+                    state: Some(States::#starting_state),
                     context
                 }
             }
@@ -481,11 +501,16 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             InvalidEvent,
             /// When an event is processed whose guard did not return `true`.
             GuardFailed(T),
+            /// When the state has an unexpected value.
+            ///
+            /// This can happen if there is a bug in the code generated by smlang,
+            /// or if a guard or action gets panicked.
+            Poisoned,
         }
 
         /// State machine structure definition.
         pub struct StateMachine<#state_lifetimes_code T: StateMachineContext> {
-            state: States <#state_lifetimes_code>,
+            state: Option<States <#state_lifetimes_code>>,
             context: T
         }
 
@@ -498,15 +523,15 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             #[inline(always)]
             pub fn new_with_state(context: T, initial_state: States <#state_lifetimes_code>) -> Self {
                 StateMachine {
-                    state: initial_state,
+                    state: Some(initial_state),
                     context
                 }
             }
 
             /// Returns the current state.
             #[inline(always)]
-            pub fn state(&self) -> &States {
-                &self.state
+            pub fn state(&self) -> Result<&States, #error_type> {
+                self.state.as_ref().ok_or_else(|| Error::Poisoned)
             }
 
             /// Returns the current context.
@@ -526,16 +551,22 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             /// It will return `Ok(&NextState)` if the transition was successful, or `Err(Error)`
             /// if there was an error in the transition.
             pub fn process_event(&mut self, #temporary_context mut event: Events) -> Result<&States, #error_type> {
-                match self.state {
+                match self.state.take().ok_or_else(|| Error::Poisoned)? {
                     #(States::#in_states => match event {
                         #(Events::#events => {
                             #code_blocks
 
-                            Ok(&self.state)
+                            self.state()
                         }),*
-                        _ => Err(Error::InvalidEvent),
+                        _ => {
+                            self.state = Some(States::#in_states);
+                            Err(Error::InvalidEvent)
+                        }
                     }),*
-                    _ => Err(Error::InvalidEvent),
+                    state => {
+                        self.state = Some(state);
+                        Err(Error::InvalidEvent)
+                    }
                 }
             }
         }

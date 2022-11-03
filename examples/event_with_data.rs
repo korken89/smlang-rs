@@ -29,7 +29,7 @@ impl StateMachineContext for Context {
         }
     }
 
-    fn action(&mut self, event_data: &MyEventData) {
+    fn action(&mut self, event_data: MyEventData) {
         println!("Got valid Event Data = {}", event_data.0);
     }
 }
