@@ -410,7 +410,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     let starting_state_name = starting_state.to_string();
     let new_sm_code = match sm.state_data.data_types.get(&starting_state_name) {
         Some(st) => quote! {
-            pub fn new(context: T, state_data: #st ) -> Self {
+            pub const fn new(context: T, state_data: #st ) -> Self {
                 StateMachine {
                     state: Some(States::#starting_state (state_data)),
                     context
@@ -418,7 +418,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             }
         },
         None => quote! {
-            pub fn new(context: T ) -> Self {
+            pub const fn new(context: T ) -> Self {
                 StateMachine {
                     state: Some(States::#starting_state),
                     context
@@ -521,7 +521,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
             /// Creates a new state machine with an initial state.
             #[inline(always)]
-            pub fn new_with_state(context: T, initial_state: States <#state_lifetimes_code>) -> Self {
+            pub const fn new_with_state(context: T, initial_state: States <#state_lifetimes_code>) -> Self {
                 StateMachine {
                     state: Some(initial_state),
                     context
