@@ -1,40 +1,8 @@
+use crate::parser::lifetimes::Lifetimes;
 use std::collections::HashMap;
-use syn::{parse, spanned::Spanned, GenericArgument, Lifetime, PathArguments, Type};
+use syn::{parse, spanned::Spanned, Type};
 
 pub type DataTypes = HashMap<String, Type>;
-pub type Lifetimes = Vec<Lifetime>;
-
-// helper function for extracting a vector of lifetimes from a Type
-fn get_lifetimes(data_type: &Type) -> Result<Lifetimes, parse::Error> {
-    let mut lifetimes = Lifetimes::new();
-    match data_type {
-        Type::Reference(tr) => {
-            if let Some(lifetime) = &tr.lifetime {
-                lifetimes.push(lifetime.clone());
-            } else {
-                return Err(parse::Error::new(
-                    data_type.span(),
-                    "This event's data lifetime is not defined, consider adding a lifetime.",
-                ));
-            }
-            Ok(lifetimes)
-        }
-        Type::Path(tp) => {
-            let punct = &tp.path.segments;
-            for p in punct.iter() {
-                if let PathArguments::AngleBracketed(abga) = &p.arguments {
-                    for arg in &abga.args {
-                        if let GenericArgument::Lifetime(lifetime) = &arg {
-                            lifetimes.push(lifetime.clone());
-                        }
-                    }
-                }
-            }
-            Ok(lifetimes)
-        }
-        _ => Ok(lifetimes),
-    }
-}
 
 #[derive(Debug)]
 pub struct DataDefinitions {
@@ -55,15 +23,15 @@ impl DataDefinitions {
     // helper function for adding a new data type to a data descriptions struct
     fn add(&mut self, key: String, data_type: Type) -> Result<(), parse::Error> {
         // retrieve any lifetimes used in this data-type
-        let mut lifetimes = get_lifetimes(&data_type)?;
+        let lifetimes = Lifetimes::from_type(&data_type)?;
 
         // add the data to the collection
         self.data_types.insert(key.clone(), data_type);
 
         // if any new lifetimes were used in the type definition, we add those as well
         if !lifetimes.is_empty() {
-            self.lifetimes.insert(key, lifetimes.clone());
-            self.all_lifetimes.append(&mut lifetimes);
+            self.all_lifetimes.extend(&lifetimes);
+            self.lifetimes.insert(key, lifetimes);
         }
         Ok(())
     }
