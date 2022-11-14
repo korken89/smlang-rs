@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+- Fixes multiple issues with lifetimes ([issue-57](https://github.com/korken89/smlang-rs/issues/57), [issue-58](https://github.com/korken89/smlang-rs/pull/58))
+
 ### Changed
 
 - [breaking] Actions now take owned values

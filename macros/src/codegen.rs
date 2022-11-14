@@ -1,8 +1,7 @@
 // Move guards to return a Result
 
-use crate::parser::data::Lifetimes;
+use crate::parser::lifetimes::Lifetimes;
 use crate::parser::ParsedStateMachine;
-use proc_macro2;
 use proc_macro2::Span;
 use quote::quote;
 use std::vec::Vec;
@@ -154,6 +153,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 .iter()
                 .map(|(name, _)| {
                     let state_data = match sm.state_data.data_types.get(state_name) {
+                        Some(Type::Reference(_)) => quote! { state_data },
                         Some(_) => quote! { &state_data },
                         None => quote! {},
                     };
@@ -217,59 +217,37 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     for (state, value) in transitions.iter() {
         // create the state data token stream
         let state_data = match sm.state_data.data_types.get(state) {
+            Some(st @ Type::Reference(_)) => quote! { state_data: #st, },
             Some(st) => quote! { state_data: &#st, },
             None => quote! {},
         };
 
         value.iter().for_each(|(event, value)| {
+            // get input state lifetimes
+            let in_state_lifetimes = sm.state_data.lifetimes.get(&value.in_state.to_string()).cloned().unwrap_or_default();
 
             // get output state lifetimes
-            let state_lifetimes = if let Some(lifetimes) = sm.state_data.lifetimes.get(&value.out_state.to_string()) {
-                lifetimes.clone()
-            } else {
-                Lifetimes::new()
-            };
+            let out_state_lifetimes = sm.state_data.lifetimes.get(&value.out_state.to_string()).cloned().unwrap_or_default();
 
-            // get the event lifetimes
-            let mut lifetimes = if let Some(lifetimes) = sm.event_data.lifetimes.get(event) {
-                lifetimes.clone()
-            } else {
-                Lifetimes::new()
-            };
+            // get event lifetimes
+            let event_lifetimes = sm.event_data.lifetimes.get(event).cloned().unwrap_or_default();
 
-            // combine the state data and event data lifetimes
-            lifetimes.append(&mut state_lifetimes.clone());
+            // combine all lifetimes
+            let mut all_lifetimes = Lifetimes::new();
+            all_lifetimes.extend(&in_state_lifetimes);
+            all_lifetimes.extend(&out_state_lifetimes);
+            all_lifetimes.extend(&event_lifetimes);
 
             // Create the guard traits for user implementation
             if let Some(guard) = &value.guard {
-                let guard_with_lifetimes = if let Some(lifetimes) = sm.event_data.lifetimes.get(event) {
-                    let lifetimes = &lifetimes;
-                    quote! {
-                        #guard<#(#lifetimes),*>
-                    }
-                } else {
-                    quote! {
-                        #guard
-                    }
-                };
-
                 let event_data = match sm.event_data.data_types.get(event) {
-                    Some(et) => match et {
-                        Type::Reference(_) => {
-                            quote! { event_data: #et }
-                        }
-                        _ => {
-                            quote! { event_data: &#et }
-                        }
-                    },
-                    None => {
-                        quote! {}
-                    }
+                    Some(et @ Type::Reference(_)) => quote! { event_data: #et },
+                    Some(et) => quote! { event_data: &#et },
+                    None => quote! {},
                 };
 
                 let guard_error = if sm.custom_guard_error {
                     quote! { Self::GuardError }
-
                 } else {
                     quote! { () }
                 };
@@ -279,7 +257,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     guard_set.push(guard.clone());
                     guard_list.extend(quote! {
                         #[allow(missing_docs)]
-                        fn #guard_with_lifetimes(&mut self, #temporary_context #state_data #event_data) -> Result<(), #guard_error>;
+                        fn #guard <#all_lifetimes> (&mut self, #temporary_context #state_data #event_data) -> Result<(), #guard_error>;
                     });
                 }
             }
@@ -298,16 +276,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         },
                         elems: Punctuated::new(),
                     })
-                };
-
-                let action_with_lifetimes = if lifetimes.is_empty() {
-                    quote! {
-                        #action
-                    }
-                } else {
-                    quote! {
-                        #action<#(#lifetimes),*>
-                    }
                 };
 
                 let state_data = match sm.state_data.data_types.get(state) {
@@ -332,7 +300,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     action_set.push(action.clone());
                     action_list.extend(quote! {
                         #[allow(missing_docs)]
-                        fn #action_with_lifetimes(&mut self, #temporary_context #state_data #event_data) -> #return_type;
+                        fn #action <#all_lifetimes> (&mut self, #temporary_context #state_data #event_data) -> #return_type;
                     });
                 }
             }
@@ -427,21 +395,11 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         },
     };
 
-    // create token-streams for state data lifetimes
-    let state_lifetimes_code = if sm.state_data.lifetimes.is_empty() {
-        quote! {}
-    } else {
-        let state_lifetimes = &sm.state_data.all_lifetimes;
-        quote! {#(#state_lifetimes),* ,}
-    };
+    let state_lifetimes = &sm.state_data.all_lifetimes;
+    let event_lifetimes = &sm.event_data.all_lifetimes;
 
-    // create token-streams for event data lifetimes
-    let event_lifetimes_code = if sm.event_data.lifetimes.is_empty() {
-        quote! {}
-    } else {
-        let event_lifetimes = &sm.event_data.all_lifetimes;
-        quote! {#(#event_lifetimes),* ,}
-    };
+    // lifetimes that exists in Events but not in States
+    let event_unique_lifetimes = event_lifetimes - state_lifetimes;
 
     let guard_error = if sm.custom_guard_error {
         quote! {
@@ -472,10 +430,10 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
         /// List of auto-generated states.
         #[allow(missing_docs)]
-        pub enum States <#state_lifetimes_code> { #(#state_list),* }
+        pub enum States <#state_lifetimes> { #(#state_list),* }
 
         /// Manually define PartialEq for States based on variant only to address issue-#21
-        impl<#state_lifetimes_code> PartialEq for States <#state_lifetimes_code> {
+        impl<#state_lifetimes> PartialEq for States <#state_lifetimes> {
             fn eq(&self, other: &Self) -> bool {
                 use core::mem::discriminant;
                 discriminant(self) == discriminant(other)
@@ -484,10 +442,10 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
         /// List of auto-generated events.
         #[allow(missing_docs)]
-        pub enum Events <#event_lifetimes_code> { #(#event_list),* }
+        pub enum Events <#event_lifetimes> { #(#event_list),* }
 
         /// Manually define PartialEq for Events based on variant only to address issue-#21
-        impl<#event_lifetimes_code> PartialEq for Events <#event_lifetimes_code> {
+        impl<#event_lifetimes> PartialEq for Events <#event_lifetimes> {
             fn eq(&self, other: &Self) -> bool {
                 use core::mem::discriminant;
                 discriminant(self) == discriminant(other)
@@ -509,19 +467,19 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         }
 
         /// State machine structure definition.
-        pub struct StateMachine<#state_lifetimes_code T: StateMachineContext> {
-            state: Option<States <#state_lifetimes_code>>,
+        pub struct StateMachine<#state_lifetimes T: StateMachineContext> {
+            state: Option<States <#state_lifetimes>>,
             context: T
         }
 
-        impl<#state_lifetimes_code T: StateMachineContext> StateMachine<#state_lifetimes_code T> {
+        impl<#state_lifetimes T: StateMachineContext> StateMachine<#state_lifetimes T> {
             /// Creates a new state machine with the specified starting state.
             #[inline(always)]
             #new_sm_code
 
             /// Creates a new state machine with an initial state.
             #[inline(always)]
-            pub const fn new_with_state(context: T, initial_state: States <#state_lifetimes_code>) -> Self {
+            pub const fn new_with_state(context: T, initial_state: States <#state_lifetimes>) -> Self {
                 StateMachine {
                     state: Some(initial_state),
                     context
@@ -530,7 +488,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
             /// Returns the current state.
             #[inline(always)]
-            pub fn state(&self) -> Result<&States, #error_type> {
+            pub fn state(&self) -> Result<&States <#state_lifetimes>, #error_type> {
                 self.state.as_ref().ok_or_else(|| Error::Poisoned)
             }
 
@@ -550,7 +508,11 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             ///
             /// It will return `Ok(&NextState)` if the transition was successful, or `Err(Error)`
             /// if there was an error in the transition.
-            pub fn process_event(&mut self, #temporary_context mut event: Events) -> Result<&States, #error_type> {
+            pub fn process_event <#event_unique_lifetimes> (
+                &mut self,
+                #temporary_context
+                mut event: Events <#event_lifetimes>
+            ) -> Result<&States <#state_lifetimes>, #error_type> {
                 match self.state.take().ok_or_else(|| Error::Poisoned)? {
                     #(States::#in_states => match event {
                         #(Events::#events => {

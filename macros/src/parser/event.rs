@@ -8,6 +8,7 @@ pub struct Event {
 
 #[derive(Debug)]
 pub struct EventMapping {
+    pub in_state: Ident,
     pub event: Ident,
     pub guard: Option<Ident>,
     pub action: Option<Ident>,

@@ -1,6 +1,7 @@
 pub mod data;
 pub mod event;
 pub mod input_state;
+pub mod lifetimes;
 pub mod output_state;
 pub mod state_machine;
 pub mod transition;
@@ -42,6 +43,7 @@ fn add_transition(
 
     if !p.contains_key(&transition.event.ident.to_string()) {
         let mapping = EventMapping {
+            in_state: transition.in_state.ident.clone(),
             event: transition.event.ident.clone(),
             guard: transition.guard.clone(),
             action: transition.action.clone(),
@@ -136,10 +138,6 @@ impl ParsedStateMachine {
             }
             states_events_mapping.insert(transition.out_state.ident.to_string(), HashMap::new());
         }
-
-        // Remove duplicate lifetimes
-        state_data.all_lifetimes.dedup();
-        event_data.all_lifetimes.dedup();
 
         for transition in sm.transitions.iter() {
             // if input state is a wildcard, we need to add this transition for all states
