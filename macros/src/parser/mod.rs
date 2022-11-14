@@ -13,7 +13,7 @@ use state_machine::StateMachine;
 use input_state::InputState;
 use proc_macro2::Span;
 
-use std::collections::HashMap;
+use std::collections::{hash_map, HashMap};
 use syn::{parse, Ident, Type};
 use transition::StateTransition;
 
@@ -41,7 +41,7 @@ fn add_transition(
         .get_mut(&transition.in_state.ident.to_string())
         .unwrap();
 
-    if !p.contains_key(&transition.event.ident.to_string()) {
+    if let hash_map::Entry::Vacant(entry) = p.entry(transition.event.ident.to_string()) {
         let mapping = EventMapping {
             in_state: transition.in_state.ident.clone(),
             event: transition.event.ident.clone(),
@@ -50,7 +50,7 @@ fn add_transition(
             out_state: transition.out_state.ident.clone(),
         };
 
-        p.insert(transition.event.ident.to_string(), mapping);
+        entry.insert(mapping);
     } else {
         return Err(parse::Error::new(
             transition.in_state.ident.span(),
@@ -59,9 +59,10 @@ fn add_transition(
     }
 
     // Check for actions when states have data a
-    if let Some(_) = state_data
+    if state_data
         .data_types
         .get(&transition.out_state.ident.to_string())
+        .is_some()
     {
         // This transition goes to a state that has data associated, check so it has an
         // action
@@ -79,18 +80,16 @@ fn add_transition(
 impl ParsedStateMachine {
     pub fn new(sm: StateMachine) -> parse::Result<Self> {
         // Check the initial state definition
-        let num_start: usize = sm
-            .transitions
-            .iter()
-            .map(|sm| if sm.in_state.start { 1 } else { 0 })
-            .sum();
+        let mut starting_transitions_iter = sm.transitions.iter().filter(|sm| sm.in_state.start);
 
-        if num_start == 0 {
-            return Err(parse::Error::new(
+        let starting_transition = starting_transitions_iter.next().ok_or_else(|| {
+            parse::Error::new(
                 Span::call_site(),
                 "No starting state defined, indicate the starting state with a *.",
-            ));
-        } else if num_start > 1 {
+            )
+        })?;
+
+        if starting_transitions_iter.next().is_some() {
             return Err(parse::Error::new(
                 Span::call_site(),
                 "More than one starting state defined (indicated with *), remove duplicates.",
@@ -98,14 +97,7 @@ impl ParsedStateMachine {
         }
 
         // Extract the starting state
-        let starting_state = sm
-            .transitions
-            .iter()
-            .find(|sm| sm.in_state.start)
-            .unwrap()
-            .in_state
-            .ident
-            .clone();
+        let starting_state = starting_transition.in_state.ident.clone();
 
         let mut states = HashMap::new();
         let mut state_data = DataDefinitions::new();

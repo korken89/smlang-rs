@@ -28,7 +28,7 @@ impl parse::Parse for StateTransitions {
         loop {
             let in_state: InputState = input.parse()?;
             in_states.push(in_state);
-            if let Err(_) = input.parse::<Token![|]>() {
+            if input.parse::<Token![|]>().is_err() {
                 break;
             };
         }
@@ -59,7 +59,7 @@ impl parse::Parse for StateTransitions {
         };
 
         // Possible action
-        let action = if let Ok(_) = input.parse::<Token![/]>() {
+        let action = if input.parse::<Token![/]>().is_ok() {
             let action: Ident = input.parse()?;
             Some(action)
         } else {
