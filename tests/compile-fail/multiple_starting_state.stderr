@@ -1,0 +1,13 @@
+error: More than one starting state defined (indicated with *), remove duplicates.
+  --> tests/compile-fail/multiple_starting_state.rs:5:1
+   |
+5  | / statemachine! {
+6  | |     transitions: {
+7  | |         //~ More than one starting state defined (indicated with *), remove duplicates.
+8  | |         *State1 + Event1 = State2,
+9  | |         *State2 + Event2 = State3,
+10 | |     }
+11 | | }
+   | |_^
+   |
+   = note: this error originates in the macro `statemachine` (in Nightly builds, run with -Z macro-backtrace for more info)

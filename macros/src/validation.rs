@@ -30,11 +30,7 @@ impl FunctionSignature {
             input_arguments.push(datatype.clone());
         }
 
-        let result = if let Some(datatype) = output_data {
-            Some(datatype.clone())
-        } else {
-            None
-        };
+        let result = output_data.cloned();
 
         Self {
             arguments: input_arguments,
@@ -71,9 +67,9 @@ fn validate_action_signatures(sm: &ParsedStateMachine) -> Result<(), parse::Erro
                 let signature = FunctionSignature::new(in_state_data, event_data, out_state_data);
 
                 // If the action is not yet known, add it to our tracking list.
-                if !actions.contains_key(&action.to_string()) {
-                    actions.insert(action.to_string(), signature.clone());
-                }
+                actions
+                    .entry(action.to_string())
+                    .or_insert_with(|| signature.clone());
 
                 // Check that the call signature is equivalent to the recorded signature for this
                 // action.
@@ -110,9 +106,9 @@ fn validate_guard_signatures(sm: &ParsedStateMachine) -> Result<(), parse::Error
                 let signature = FunctionSignature::new_guard(in_state_data, event_data);
 
                 // If the action is not yet known, add it to our tracking list.
-                if !guards.contains_key(&guard.to_string()) {
-                    guards.insert(guard.to_string(), signature.clone());
-                }
+                guards
+                    .entry(guard.to_string())
+                    .or_insert_with(|| signature.clone());
 
                 // Check that the call signature is equivalent to the recorded signature for this
                 // guard.

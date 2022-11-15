@@ -60,7 +60,7 @@ impl parse::Parse for StateMachine {
                                 break;
                             }
 
-                            if let Err(_) = content.parse::<Token![,]>() {
+                            if content.parse::<Token![,]>().is_err() {
                                 break;
                             };
                         }
@@ -111,7 +111,7 @@ impl parse::Parse for StateMachine {
                 break;
             }
 
-            if let Err(_) = input.parse::<Token![,]>() {
+            if input.parse::<Token![,]>().is_err() {
                 break;
             };
         }

@@ -10,7 +10,7 @@ use syn::{punctuated::Punctuated, token::Paren, Type, TypeTuple};
 pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     // Get only the unique states
     let mut state_list: Vec<_> = sm.states.iter().map(|(_, value)| value).collect();
-    state_list.sort_by(|a, b| a.to_string().cmp(&b.to_string()));
+    state_list.sort_by_key(|state| state.to_string());
 
     let state_list: Vec<_> = state_list
         .iter()
@@ -32,7 +32,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     // Extract events
     let mut event_list: Vec<_> = sm.events.iter().map(|(_, value)| value).collect();
-    event_list.sort_by(|a, b| a.to_string().cmp(&b.to_string()));
+    event_list.sort_by_key(|event| event.to_string());
 
     // Extract events
     let event_list: Vec<_> = event_list
@@ -253,7 +253,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 };
 
                 // Only add the guard if it hasn't been added before
-                if guard_set.iter().find(|a| a == &guard).is_none() {
+                if !guard_set.iter().any(|g| g == guard) {
                     guard_set.push(guard.clone());
                     guard_list.extend(quote! {
                         #[allow(missing_docs)]
@@ -296,7 +296,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 };
 
                 // Only add the action if it hasn't been added before
-                if action_set.iter().find(|a| a == &action).is_none() {
+                if !action_set.iter().any(|a| a == action) {
                     action_set.push(action.clone());
                     action_list.extend(quote! {
                         #[allow(missing_docs)]
@@ -353,16 +353,14 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                     self.state = Some(States::#out_state);
                                 }
                             }
+                        } else if let Some(a) = action {
+                            quote! {
+                                let _data = self.context.#a(#temporary_context_call #g_a_param);
+                                self.state = Some(States::#out_state);
+                            }
                         } else {
-                            if let Some(a) = action {
-                                quote! {
-                                    let _data = self.context.#a(#temporary_context_call #g_a_param);
-                                    self.state = Some(States::#out_state);
-                                }
-                            } else {
-                                quote! {
-                                    self.state = Some(States::#out_state);
-                                }
+                            quote! {
+                                self.state = Some(States::#out_state);
                             }
                         }
                     })
