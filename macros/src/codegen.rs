@@ -19,6 +19,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     let state_machine_context_type_name =
         format_ident!("{sm_name}StateMachineContext", span = sm_name_span);
 
+    let generate_entry_exit_states = sm.generate_entry_exit_states;
+
     // Get only the unique states
     let mut state_list: Vec<_> = sm.states.values().collect();
     state_list.sort_by_key(|state| state.to_string());
@@ -252,12 +254,26 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     let mut guard_list = proc_macro2::TokenStream::new();
     let mut action_list = proc_macro2::TokenStream::new();
+
+    let mut entry_list = proc_macro2::TokenStream::new();
     for (state, event_mappings) in transitions.iter() {
         // create the state data token stream
         let state_data = match sm.state_data.data_types.get(state) {
             Some(st @ Type::Reference(_)) => quote! { state_data: #st, },
             Some(st) => quote! { state_data: &#st, },
             None => quote! {},
+        };
+        if generate_entry_exit_states {
+            let entry_ident = format_ident!("on_entry_{}", string_morph::to_snake_case(state));
+            entry_list.extend(quote! {
+                #[allow(missing_docs)]
+                fn #entry_ident(&mut self){}
+            });
+            let exit_ident = format_ident!("on_exit_{}", string_morph::to_snake_case(state));
+            entry_list.extend(quote! {
+               #[allow(missing_docs)]
+               fn #exit_ident(&mut self){}
+            });
         };
 
         for (event, event_mapping) in event_mappings {
@@ -401,7 +417,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 .zip(in_states.iter().zip(out_states.iter().zip(guard_action_parameters.iter().zip(guard_action_ref_parameters.iter())))),
         )
         .map(
-            |(guards, (actions, (_, (out_states, (guard_action_parameters, guard_action_ref_parameters)))))| {
+            |(guards, (actions, (in_state, (out_states, (guard_action_parameters, guard_action_ref_parameters)))))| {
                 guards
                     .iter()
                     .zip(
@@ -413,6 +429,22 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         let streams: Vec<TokenStream> =
                             guard.iter()
                             .zip(action.iter().zip(out_state)).map(|(guard, (action,out_state))| {
+
+                                let binding = out_state.to_string();
+                                let out_state_string = &binding.split('(').collect::<Vec<_>>()[0];
+                                let entry_ident = format_ident!("on_entry_{}",string_morph::to_snake_case(out_state_string ));
+                                let binding = in_state.to_string();
+                                let in_state_string = &binding.split('(').collect::<Vec<_>>()[0];
+                                let exit_ident = format_ident!("on_exit_{}",string_morph::to_snake_case(in_state_string));
+                                let entry_exit_states = if generate_entry_exit_states {
+                                        quote! {
+                                        self.context_mut().#exit_ident();
+                                        self.context_mut().#entry_ident();
+                                        }
+                                    } else {
+                                        quote! { }
+                                    };
+
                                 let (is_async_action,action_code) = generate_action(action, &temporary_context_call, g_a_param);
                                 is_async_state_machine |= is_async_action;
                                 if let Some(expr) = guard { // Guarded transition
@@ -464,6 +496,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                         #guard_result
                                         self.context.log_guard(stringify!(#guard_expression), &guard_result);
                                         if guard_result.map_err(#error_type_name::GuardFailed)? {
+                                              #entry_exit_states
                                               #action_code
                                               let out_state = #states_type_name::#out_state;
                                               self.context.log_state_change(&out_state);
@@ -474,6 +507,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                 } else { // Unguarded transition
                                     quote!{
                                        #action_code
+                                       #entry_exit_states
                                        let out_state = #states_type_name::#out_state;
                                        self.context.log_state_change(&out_state);
                                        self.state = Some(out_state);
@@ -561,6 +595,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             #guard_error
             #guard_list
             #action_list
+            #entry_list
 
             /// Called at the beginning of a state machine's `process_event()`. No-op by
             /// default but can be overridden in implementations of a state machine's
