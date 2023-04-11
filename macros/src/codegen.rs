@@ -2,11 +2,21 @@
 
 use crate::parser::{lifetimes::Lifetimes, AsyncIdent, ParsedStateMachine};
 use proc_macro2::{Literal, Span};
-use quote::quote;
+use quote::{quote, format_ident};
 use std::vec::Vec;
 use syn::{punctuated::Punctuated, token::Paren, Type, TypeTuple};
 
 pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
+    let (sm_name, sm_name_span) = sm.name.as_ref()
+        .map(|name| (name.to_string(), name.span()))
+        .unwrap_or_else(|| (String::new(), Span::call_site()));
+    let states_type_name = format_ident!("{sm_name}States", span=sm_name_span);
+    let events_type_name = format_ident!("{sm_name}Events", span=sm_name_span);
+    let error_type_name = format_ident!("{sm_name}Error", span=sm_name_span);
+    let state_machine_type_name = format_ident!("{sm_name}StateMachine", span=sm_name_span);
+    let state_machine_context_type_name = format_ident!("{sm_name}StateMachineContext", span=sm_name_span);
+
+
     // Get only the unique states
     let mut state_list: Vec<_> = sm.states.values().collect();
     state_list.sort_by_key(|state| state.to_string());
@@ -355,20 +365,20 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                     false => quote! { },
                                 };
                                 quote! {
-                                    if let Err(e) = self.context.#g(#temporary_context_call #g_a_ref_param) #guard_await {
-                                        self.state = Some(States::#in_state);
-                                        return Err(Error::GuardFailed(e));
+                                    if let Err(e) = self.context.#g(#temporary_context_call #g_a_ref_param) {
+                                        self.state = Some(#states_type_name::#in_state);
+                                        return Err(#error_type_name::GuardFailed(e));
                                     }
-                                    let _data = self.context.#a(#temporary_context_call #g_a_param) #action_await;
-                                    self.state = Some(States::#out_state);
+                                    let _data = self.context.#a(#temporary_context_call #g_a_param);
+                                    self.state = Some(#states_type_name::#out_state);
                                 }
                             } else {
                                 quote! {
-                                    if let Err(e) = self.context.#g(#temporary_context_call #g_a_ref_param) #guard_await {
-                                        self.state = Some(States::#in_state);
-                                        return Err(Error::GuardFailed(e));
+                                    if let Err(e) = self.context.#g(#temporary_context_call #g_a_ref_param) {
+                                        self.state = Some(#states_type_name::#in_state);
+                                        return Err(#error_type_name::GuardFailed(e));
                                     }
-                                    self.state = Some(States::#out_state);
+                                    self.state = Some(#states_type_name::#out_state);
                                 }
                             }
                         } else if let Some(AsyncIdent {ident: a, is_async: is_a_async}) = action {
@@ -377,12 +387,12 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                 false => quote! { },
                             };
                             quote! {
-                                let _data = self.context.#a(#temporary_context_call #g_a_param) #action_await;
-                                self.state = Some(States::#out_state);
+                                let _data = self.context.#a(#temporary_context_call #g_a_param);
+                                self.state = Some(#states_type_name::#out_state);
                             }
                         } else {
                             quote! {
-                                self.state = Some(States::#out_state);
+                                self.state = Some(#states_type_name::#out_state);
                             }
                         }
                     })
@@ -393,22 +403,23 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     let starting_state = &sm.starting_state;
 
+
     // create a token stream for creating a new machine.  If the starting state contains data, then
     // add a second argument to pass this initial data
     let starting_state_name = starting_state.to_string();
     let new_sm_code = match sm.state_data.data_types.get(&starting_state_name) {
         Some(st) => quote! {
             pub const fn new(context: T, state_data: #st ) -> Self {
-                StateMachine {
-                    state: Some(States::#starting_state (state_data)),
+                #state_machine_type_name {
+                    state: Some(#states_type_name::#starting_state (state_data)),
                     context
                 }
             }
         },
         None => quote! {
             pub const fn new(context: T ) -> Self {
-                StateMachine {
-                    state: Some(States::#starting_state),
+                #state_machine_type_name {
+                    state: Some(#states_type_name::#starting_state),
                     context
                 }
             }
@@ -418,7 +429,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     let state_lifetimes = &sm.state_data.all_lifetimes;
     let event_lifetimes = &sm.event_data.all_lifetimes;
 
-    // lifetimes that exists in Events but not in States
+    // lifetimes that exists in #events_type_name but not in #states_type_name
     let event_unique_lifetimes = event_lifetimes - state_lifetimes;
 
     // List of values for `impl<core::fmt::Display>`
@@ -484,18 +495,16 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     let error_type = if sm.custom_guard_error {
         quote! {
-            Error<<T as StateMachineContext>::GuardError>
+            #error_type_name<<T as #state_machine_context_type_name>::GuardError>
         }
     } else {
-        quote! {Error}
+        quote! {#error_type_name}
     };
-
     // Build the states and events output
     quote! {
         /// This trait outlines the guards and actions that need to be implemented for the state
         /// machine.
-        #is_async_trait
-        pub trait StateMachineContext {
+        pub trait #state_machine_context_type_name {
             #guard_error
             #guard_list
             #action_list
@@ -503,12 +512,10 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
         /// List of auto-generated states.
         #[allow(missing_docs)]
-        pub enum States <#state_lifetimes> { #(#state_list),* }
+        pub enum #states_type_name <#state_lifetimes> { #(#state_list),* }
 
-        #state_display
-
-        /// Manually define PartialEq for States based on variant only to address issue-#21
-        impl<#state_lifetimes> PartialEq for States <#state_lifetimes> {
+        /// Manually define PartialEq for #states_type_name based on variant only to address issue-#21
+        impl<#state_lifetimes> PartialEq for #states_type_name <#state_lifetimes> {
             fn eq(&self, other: &Self) -> bool {
                 use core::mem::discriminant;
                 discriminant(self) == discriminant(other)
@@ -517,12 +524,10 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
         /// List of auto-generated events.
         #[allow(missing_docs)]
-        pub enum Events <#event_lifetimes> { #(#event_list),* }
+        pub enum #events_type_name <#event_lifetimes> { #(#event_list),* }
 
-        #event_display
-
-        /// Manually define PartialEq for Events based on variant only to address issue-#21
-        impl<#event_lifetimes> PartialEq for Events <#event_lifetimes> {
+        /// Manually define PartialEq for #events_type_name based on variant only to address issue-#21
+        impl<#event_lifetimes> PartialEq for #events_type_name <#event_lifetimes> {
             fn eq(&self, other: &Self) -> bool {
                 use core::mem::discriminant;
                 discriminant(self) == discriminant(other)
@@ -531,7 +536,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
         /// List of possible errors
         #[derive(Debug)]
-        pub enum Error<T=()> {
+        pub enum #error_type_name <T=()> {
             /// When an event is processed which should not come in the current state.
             InvalidEvent,
             /// When an event is processed whose guard did not return `true`.
@@ -544,20 +549,20 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         }
 
         /// State machine structure definition.
-        pub struct StateMachine<#state_lifetimes T: StateMachineContext> {
-            state: Option<States <#state_lifetimes>>,
+        pub struct #state_machine_type_name<#state_lifetimes T: #state_machine_context_type_name> {
+            state: Option<#states_type_name <#state_lifetimes>>,
             context: T
         }
 
-        impl<#state_lifetimes T: StateMachineContext> StateMachine<#state_lifetimes T> {
+        impl<#state_lifetimes T: #state_machine_context_type_name> #state_machine_type_name<#state_lifetimes T> {
             /// Creates a new state machine with the specified starting state.
             #[inline(always)]
             #new_sm_code
 
             /// Creates a new state machine with an initial state.
             #[inline(always)]
-            pub const fn new_with_state(context: T, initial_state: States <#state_lifetimes>) -> Self {
-                StateMachine {
+            pub const fn new_with_state(context: T, initial_state: #states_type_name <#state_lifetimes>) -> Self {
+                #state_machine_type_name {
                     state: Some(initial_state),
                     context
                 }
@@ -565,8 +570,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
             /// Returns the current state.
             #[inline(always)]
-            pub fn state(&self) -> Result<&States <#state_lifetimes>, #error_type> {
-                self.state.as_ref().ok_or_else(|| Error::Poisoned)
+            pub fn state(&self) -> Result<&#states_type_name <#state_lifetimes>, #error_type> {
+                self.state.as_ref().ok_or_else(|| #error_type_name ::Poisoned)
             }
 
             /// Returns the current context.
@@ -583,28 +588,28 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
             /// Process an event.
             ///
-            /// It will return `Ok(&NextState)` if the transition was successful, or `Err(Error)`
+            /// It will return `Ok(&NextState)` if the transition was successful, or `Err(#error_type_name)`
             /// if there was an error in the transition.
             pub #is_async fn process_event <#event_unique_lifetimes> (
                 &mut self,
                 #temporary_context
-                mut event: Events <#event_lifetimes>
-            ) -> Result<&States <#state_lifetimes>, #error_type> {
-                match self.state.take().ok_or_else(|| Error::Poisoned)? {
-                    #(States::#in_states => match event {
-                        #(Events::#events => {
+                mut event: #events_type_name <#event_lifetimes>
+            ) -> Result<&#states_type_name <#state_lifetimes>, #error_type> {
+                match self.state.take().ok_or_else(|| #error_type_name ::Poisoned)? {
+                    #(#states_type_name::#in_states => match event {
+                        #(#events_type_name::#events => {
                             #code_blocks
 
                             self.state()
                         }),*
                         _ => {
-                            self.state = Some(States::#in_states);
-                            Err(Error::InvalidEvent)
+                            self.state = Some(#states_type_name::#in_states);
+                            Err(#error_type_name ::InvalidEvent)
                         }
                     }),*
                     state => {
                         self.state = Some(state);
-                        Err(Error::InvalidEvent)
+                        Err(#error_type_name ::InvalidEvent)
                     }
                 }
             }

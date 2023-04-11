@@ -8,6 +8,7 @@ pub struct StateMachine {
     pub impl_display_states: bool,
     pub impl_display_events: bool,
     pub transitions: Vec<StateTransition>,
+    pub name: Option<Ident>,
 }
 
 impl StateMachine {
@@ -18,6 +19,7 @@ impl StateMachine {
             impl_display_states: false,
             impl_display_events: false,
             transitions: Vec::new(),
+            name: None
         }
     }
 
@@ -115,6 +117,10 @@ impl parse::Parse for StateMachine {
                     // Store the temporary context type
                     statemachine.temporary_context_type = Some(temporary_context_type);
 
+                }
+                "name" =>{
+                    input.parse::<Token![:]>()?;
+                    statemachine.name = Some(input.parse::<Ident>()?);
                 }
                 keyword => {
                     return Err(parse::Error::new(

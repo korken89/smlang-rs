@@ -27,6 +27,7 @@ pub struct AsyncIdent {
 
 #[derive(Debug)]
 pub struct ParsedStateMachine {
+    pub name: Option<Ident>,
     pub temporary_context_type: Option<Type>,
     pub custom_guard_error: bool,
     pub impl_display_events: bool,
@@ -197,6 +198,7 @@ impl ParsedStateMachine {
         }
 
         Ok(ParsedStateMachine {
+            name: sm.name,
             temporary_context_type: sm.temporary_context_type,
             custom_guard_error: sm.custom_guard_error,
             states,
