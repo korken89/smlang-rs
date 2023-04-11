@@ -19,6 +19,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     let state_machine_context_type_name =
         format_ident!("{sm_name}StateMachineContext", span = sm_name_span);
 
+    let generate_entry_exit_states = sm.generate_entry_exit_states;
+
     // Get only the unique states
     let mut state_list: Vec<_> = sm.states.values().collect();
     state_list.sort_by_key(|state| state.to_string());
@@ -225,6 +227,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     let mut guard_list = proc_macro2::TokenStream::new();
     let mut action_list = proc_macro2::TokenStream::new();
+
+    let mut entry_list = proc_macro2::TokenStream::new();
     for (state, value) in transitions.iter() {
         // create the state data token stream
         let state_data = match sm.state_data.data_types.get(state) {
@@ -233,9 +237,23 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             None => quote! {},
         };
 
+        if generate_entry_exit_states {
+            let entry_ident = format_ident!("on_entry_{}", string_morph::to_snake_case(state));
+            entry_list.extend(quote! {
+                #[allow(missing_docs)]
+                fn #entry_ident(&mut self){}
+            });
+            let exit_ident = format_ident!("on_exit_{}", string_morph::to_snake_case(state));
+            entry_list.extend(quote! {
+               #[allow(missing_docs)]
+               fn #exit_ident(&mut self){}
+            });
+        };
+
         value.iter().for_each(|(event, value)| {
             // get input state lifetimes
             let in_state_lifetimes = sm.state_data.lifetimes.get(&value.in_state.to_string()).cloned().unwrap_or_default();
+
 
             // get output state lifetimes
             let out_state_lifetimes = sm.state_data.lifetimes.get(&value.out_state.to_string()).cloned().unwrap_or_default();
@@ -356,6 +374,20 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                             .zip(out_states.iter().zip(guard_action_parameters.iter().zip(guard_action_ref_parameters.iter()))),
                     )
                     .map(|(guard, (action, (out_state, (g_a_param, g_a_ref_param))))| {
+                        let binding = out_state.to_string();
+                        let out_state_string = &binding.split('(').collect::<Vec<_>>()[0];
+                        let entry_ident = format_ident!("on_entry_{}",string_morph::to_snake_case(out_state_string ));
+                        let binding = in_state.to_string();
+                        let in_state_string = &binding.split('(').collect::<Vec<_>>()[0];
+                        let exit_ident = format_ident!("on_exit_{}",string_morph::to_snake_case(in_state_string));
+                        let entry_exit_states = if generate_entry_exit_states {
+                                quote! {
+                                self.context_mut().#exit_ident();
+                                self.context_mut().#entry_ident();
+                                }
+                            } else {
+                                quote! { }
+                            };
                         if let Some(AsyncIdent {ident: g, is_async: is_g_async}) = guard {
                             let guard_await = match is_g_async {
                                 true => { sm_is_async = true; quote! { .await } },
@@ -371,6 +403,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                         self.state = Some(#states_type_name::#in_state);
                                         return Err(#error_type_name::GuardFailed(e));
                                     }
+                                    #entry_exit_states
                                     let _data = self.context.#a(#temporary_context_call #g_a_param) #action_await;
                                     self.state = Some(#states_type_name::#out_state);
                                 }
@@ -380,6 +413,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                         self.state = Some(#states_type_name::#in_state);
                                         return Err(#error_type_name::GuardFailed(e));
                                     }
+                                    #entry_exit_states
                                     self.state = Some(#states_type_name::#out_state);
                                 }
                             }
@@ -389,11 +423,13 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                 false => quote! { },
                             };
                             quote! {
+                                #entry_exit_states
                                 let _data = self.context.#a(#temporary_context_call #g_a_param) #action_await ;
                                 self.state = Some(#states_type_name::#out_state);
                             }
                         } else {
                             quote! {
+                                #entry_exit_states
                                 self.state = Some(#states_type_name::#out_state);
                             }
                         }
@@ -467,6 +503,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             #guard_error
             #guard_list
             #action_list
+            #entry_list
         }
 
         /// List of auto-generated states.
