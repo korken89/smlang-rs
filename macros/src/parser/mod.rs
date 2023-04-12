@@ -58,6 +58,7 @@ pub struct ParsedStateMachine {
     pub states_events_mapping: HashMap<String, HashMap<String, EventMapping>>,
 
     pub generate_entry_exit_states: bool,
+    pub generate_transition_callback: bool,
 }
 
 // helper function for adding a transition to a transition event map
@@ -233,6 +234,7 @@ impl ParsedStateMachine {
             event_data,
             states_events_mapping,
             generate_entry_exit_states: sm.generate_entry_exit_states,
+            generate_transition_callback: sm.generate_transition_callback,
         })
     }
 }

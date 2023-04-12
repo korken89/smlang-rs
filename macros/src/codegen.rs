@@ -20,6 +20,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         format_ident!("{sm_name}StateMachineContext", span = sm_name_span);
 
     let generate_entry_exit_states = sm.generate_entry_exit_states;
+    let generate_transition_callback = sm.generate_transition_callback;
 
     // Get only the unique states
     let mut state_list: Vec<_> = sm.states.values().collect();
@@ -586,6 +587,13 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     let derive_states_list = &sm.derive_states;
     let derive_events_list = &sm.derive_events;
+    let transition_callback = if generate_transition_callback {
+        quote!(
+            self.context().transition_callback(&self.state);
+        )
+    } else {
+        quote!()
+    };
     // Build the states and events output
     quote! {
         /// This trait outlines the guards and actions that need to be implemented for the state
@@ -595,7 +603,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             #guard_error
             #guard_list
             #action_list
-            #entry_list
 
             /// Called at the beginning of a state machine's `process_event()`. No-op by
             /// default but can be overridden in implementations of a state machine's
@@ -616,6 +623,11 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             /// `process_event()`. No-op by default but can be overridden in implementations
             /// of a state machine's `StateMachineContext` trait.
             fn log_state_change(&self, new_state: & #states_type_name) {}
+
+            #entry_list
+
+            #[allow(missing_docs)]
+            fn transition_callback(&self, new_state: &Option<#states_type_name>) {}
         }
 
         /// List of auto-generated states.
@@ -714,6 +726,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     #states_type_name::#in_states => match event {
                         #(#events_type_name::#events => {
                             #code_blocks
+                            #transition_callback
+
                             #[allow(unreachable_code)]
                             {
                                 // none of the guarded or non-guarded transitions occurred,
