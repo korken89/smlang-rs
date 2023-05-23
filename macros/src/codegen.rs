@@ -2,7 +2,7 @@
 
 use crate::parser::lifetimes::Lifetimes;
 use crate::parser::ParsedStateMachine;
-use proc_macro2::Span;
+use proc_macro2::{Span, Literal};
 use quote::quote;
 use std::vec::Vec;
 use syn::{punctuated::Punctuated, token::Paren, Type, TypeTuple};
@@ -399,6 +399,54 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     // lifetimes that exists in Events but not in States
     let event_unique_lifetimes = event_lifetimes - state_lifetimes;
 
+    // List of values for `impl<core::fmt::Display>`
+    let state_display = match sm.impl_display_states {
+        false => quote! {},
+        true => {
+            let list: Vec<_> = state_list
+            .iter()
+            .map(|value| {
+                let escaped = Literal::string(&value.to_string());
+                quote! { Self::#value => write!(f, #escaped) }
+            })
+            .collect();
+            quote! {
+                /// Implement core::fmt::Display for States
+                impl<#state_lifetimes> core::fmt::Display for States <#state_lifetimes> {
+                    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                        match self {
+                            #(#list),*
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    // List of values for `impl<core::fmt::Display>`
+    let event_display = match sm.impl_display_events {
+        false => quote!{},
+        true => {
+            let list: Vec<_> = event_list
+            .iter()
+            .map(|value| {
+                let escaped = Literal::string(&value.to_string());
+                quote! { Self::#value => write!(f, #escaped) }
+            })
+            .collect();
+            quote! {
+                /// Implement core::fmt::Display for Events
+                impl<#event_lifetimes> core::fmt::Display for Events <#event_lifetimes> {
+                    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                        match self {
+                            #(#list),*
+                        }
+                    }
+                }
+            }
+        }
+    };
+
     let guard_error = if sm.custom_guard_error {
         quote! {
             /// The error type returned by guard functions.
@@ -430,6 +478,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         #[allow(missing_docs)]
         pub enum States <#state_lifetimes> { #(#state_list),* }
 
+        #state_display
+
         /// Manually define PartialEq for States based on variant only to address issue-#21
         impl<#state_lifetimes> PartialEq for States <#state_lifetimes> {
             fn eq(&self, other: &Self) -> bool {
@@ -441,6 +491,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         /// List of auto-generated events.
         #[allow(missing_docs)]
         pub enum Events <#event_lifetimes> { #(#event_list),* }
+
+        #event_display
 
         /// Manually define PartialEq for Events based on variant only to address issue-#21
         impl<#event_lifetimes> PartialEq for Events <#event_lifetimes> {

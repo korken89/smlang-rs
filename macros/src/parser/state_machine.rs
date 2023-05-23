@@ -5,6 +5,8 @@ use syn::{braced, parse, spanned::Spanned, token, Ident, Token, Type};
 pub struct StateMachine {
     pub temporary_context_type: Option<Type>,
     pub custom_guard_error: bool,
+    pub impl_display_states: bool,
+    pub impl_display_events: bool,
     pub transitions: Vec<StateTransition>,
 }
 
@@ -13,6 +15,8 @@ impl StateMachine {
         StateMachine {
             temporary_context_type: None,
             custom_guard_error: false,
+            impl_display_states: false,
+            impl_display_events: false,
             transitions: Vec::new(),
         }
     }
@@ -73,6 +77,20 @@ impl parse::Parse for StateMachine {
                         statemachine.custom_guard_error = true
                     }
 
+                }
+                "impl_display_states" => {
+                    input.parse::<Token![:]>()?;
+                    let b: syn::LitBool = input.parse()?;
+                    if b.value {
+                        statemachine.impl_display_states = true
+                    }
+                }
+                "impl_display_events" => {
+                    input.parse::<Token![:]>()?;
+                    let b: syn::LitBool = input.parse()?;
+                    if b.value {
+                        statemachine.impl_display_events = true
+                    }
                 }
                 "temporary_context" => {
                     input.parse::<Token![:]>()?;
