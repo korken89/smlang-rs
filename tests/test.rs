@@ -99,3 +99,40 @@ fn impl_display_events_states() {
     assert!(matches!(sm.state(), Ok(&States::End)));
     assert_eq!(format!("{}", sm.state().unwrap()), "End");
 }
+
+
+#[test]
+fn async_guards_and_actions() {
+    use async_trait::async_trait;
+    use smol;
+
+    smol::block_on(async {
+        statemachine! {
+            is_async: true,
+            transitions: {
+                *State1 + Event1 [async guard1] / async action1 = State2,
+                _ + Event1 = Fault,
+            }
+        }
+
+        struct Context;
+        #[async_trait]
+        impl StateMachineContext for Context {
+            async fn guard1(&mut self) -> Result<(),()>  {
+                Ok(())
+            }
+
+            async fn action1(&mut self) -> () {
+                ()
+            }
+        }
+
+        let mut sm = StateMachine::new(Context);
+
+        sm.process_event(Events::Event1).await.unwrap();
+        assert!(matches!(sm.state(), Ok(&States::State2)));
+
+        sm.process_event(Events::Event1).await.unwrap();
+        assert!(matches!(sm.state(), Ok(&States::Fault)));
+    });
+}

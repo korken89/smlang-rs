@@ -13,6 +13,10 @@ readme = "README.md"
 [dependencies]
 smlang-macros = { path = "macros", version = "0.6.0" }
 
+[dev-dependencies]
+smol = "1"
+async-trait = "0.1.68"
+
 [target.'cfg(not(target_os = "none"))'.dev-dependencies]
 trybuild = "1.0"
 

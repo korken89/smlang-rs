@@ -12,6 +12,9 @@ struct FunctionSignature {
 
     // Function result (if any).
     result: Option<syn::Type>,
+
+    // Is the function async
+    is_async: bool,
 }
 
 impl FunctionSignature {
@@ -19,6 +22,7 @@ impl FunctionSignature {
         input_data: Option<&syn::Type>,
         event_data: Option<&syn::Type>,
         output_data: Option<&syn::Type>,
+        is_async: bool,
     ) -> Self {
         let mut input_arguments = vec![];
 
@@ -35,12 +39,13 @@ impl FunctionSignature {
         Self {
             arguments: input_arguments,
             result,
+            is_async,
         }
     }
 
-    pub fn new_guard(input_state: Option<&syn::Type>, event: Option<&syn::Type>) -> Self {
+    pub fn new_guard(input_state: Option<&syn::Type>, event: Option<&syn::Type>, is_async: bool) -> Self {
         // Guards never have output data.
-        Self::new(input_state, event, None)
+        Self::new(input_state, event, None, is_async)
     }
 }
 
@@ -63,8 +68,8 @@ fn validate_action_signatures(sm: &ParsedStateMachine) -> Result<(), parse::Erro
                 .data_types
                 .get(&event_mapping.event.to_string());
 
-            if let Some(action) = &event_mapping.action {
-                let signature = FunctionSignature::new(in_state_data, event_data, out_state_data);
+            if let Some((action, is_async)) = &event_mapping.action {
+                let signature = FunctionSignature::new(in_state_data, event_data, out_state_data, *is_async);
 
                 // If the action is not yet known, add it to our tracking list.
                 actions
@@ -102,8 +107,8 @@ fn validate_guard_signatures(sm: &ParsedStateMachine) -> Result<(), parse::Error
                 .data_types
                 .get(&event_mapping.event.to_string());
 
-            if let Some(guard) = &event_mapping.guard {
-                let signature = FunctionSignature::new_guard(in_state_data, event_data);
+            if let Some((guard, is_async)) = &event_mapping.guard {
+                let signature = FunctionSignature::new_guard(in_state_data, event_data, *is_async);
 
                 // If the action is not yet known, add it to our tracking list.
                 guards

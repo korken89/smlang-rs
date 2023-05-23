@@ -239,7 +239,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             all_lifetimes.extend(&event_lifetimes);
 
             // Create the guard traits for user implementation
-            if let Some(guard) = &value.guard {
+            if let Some((guard, is_async)) = &value.guard {
                 let event_data = match sm.event_data.data_types.get(event) {
                     Some(et @ Type::Reference(_)) => quote! { event_data: #et },
                     Some(et) => quote! { event_data: &#et },
@@ -255,15 +255,24 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 // Only add the guard if it hasn't been added before
                 if !guard_set.iter().any(|g| g == guard) {
                     guard_set.push(guard.clone());
+                    let is_async = match is_async {
+                        true => quote!{ async },
+                        false => quote!{ },
+                    };
                     guard_list.extend(quote! {
                         #[allow(missing_docs)]
-                        fn #guard <#all_lifetimes> (&mut self, #temporary_context #state_data #event_data) -> Result<(), #guard_error>;
+                        #is_async fn #guard <#all_lifetimes> (&mut self, #temporary_context #state_data #event_data) -> Result<(), #guard_error>;
                     });
                 }
             }
 
             // Create the action traits for user implementation
-            if let Some(action) = &value.action {
+            if let Some((action, is_async)) = &value.action {
+                let is_async = match is_async {
+                    true => quote!{ async },
+                    false => quote!{ },
+                };
+
                 let return_type = if let Some(output_data) =
                     sm.state_data.data_types.get(&value.out_state.to_string())
                 {
@@ -300,7 +309,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     action_set.push(action.clone());
                     action_list.extend(quote! {
                         #[allow(missing_docs)]
-                        fn #action <#all_lifetimes> (&mut self, #temporary_context #state_data #event_data) -> #return_type;
+                        #is_async fn #action <#all_lifetimes> (&mut self, #temporary_context #state_data #event_data) -> #return_type;
                     });
                 }
             }
@@ -334,28 +343,40 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                             .zip(out_states.iter().zip(guard_action_parameters.iter().zip(guard_action_ref_parameters.iter()))),
                     )
                     .map(|(guard, (action, (out_state, (g_a_param, g_a_ref_param))))| {
-                        if let Some(g) = guard {
-                            if let Some(a) = action {
+                        if let Some((g, is_g_async)) = guard {
+                            let guard_await = match is_g_async {
+                                true => quote! { .await },
+                                false => quote! { },
+                            };
+                            if let Some((a, is_a_async)) = action {
+                                let action_await = match is_a_async {
+                                    true => quote! { .await },
+                                    false => quote! { },
+                                };
                                 quote! {
-                                    if let Err(e) = self.context.#g(#temporary_context_call #g_a_ref_param) {
+                                    if let Err(e) = self.context.#g(#temporary_context_call #g_a_ref_param) #guard_await {
                                         self.state = Some(States::#in_state);
                                         return Err(Error::GuardFailed(e));
                                     }
-                                    let _data = self.context.#a(#temporary_context_call #g_a_param);
+                                    let _data = self.context.#a(#temporary_context_call #g_a_param) #action_await;
                                     self.state = Some(States::#out_state);
                                 }
                             } else {
                                 quote! {
-                                    if let Err(e) = self.context.#g(#temporary_context_call #g_a_ref_param) {
+                                    if let Err(e) = self.context.#g(#temporary_context_call #g_a_ref_param) #guard_await {
                                         self.state = Some(States::#in_state);
                                         return Err(Error::GuardFailed(e));
                                     }
                                     self.state = Some(States::#out_state);
                                 }
                             }
-                        } else if let Some(a) = action {
+                        } else if let Some((a, is_a_async)) = action {
+                            let action_await = match is_a_async {
+                                true => quote! { .await },
+                                false => quote! { },
+                            };
                             quote! {
-                                let _data = self.context.#a(#temporary_context_call #g_a_param);
+                                let _data = self.context.#a(#temporary_context_call #g_a_param) #action_await;
                                 self.state = Some(States::#out_state);
                             }
                         } else {
@@ -454,6 +475,12 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         quote! {}
     };
 
+    let (is_async, is_async_trait) = if sm.is_async {
+        (quote! { async }, quote! { #[async_trait] })
+    } else {
+        (quote! {}, quote! {})
+    };
+
     let error_type = if sm.custom_guard_error {
         quote! {
             Error<<T as StateMachineContext>::GuardError>
@@ -466,6 +493,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     quote! {
         /// This trait outlines the guards and actions that need to be implemented for the state
         /// machine.
+        #is_async_trait
         pub trait StateMachineContext {
             #guard_error
             #guard_list
@@ -556,7 +584,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             ///
             /// It will return `Ok(&NextState)` if the transition was successful, or `Err(Error)`
             /// if there was an error in the transition.
-            pub fn process_event <#event_unique_lifetimes> (
+            pub #is_async fn process_event <#event_unique_lifetimes> (
                 &mut self,
                 #temporary_context
                 mut event: Events <#event_lifetimes>

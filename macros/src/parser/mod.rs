@@ -25,6 +25,7 @@ pub struct ParsedStateMachine {
     pub custom_guard_error: bool,
     pub impl_display_events: bool,
     pub impl_display_states: bool,
+    pub is_async: bool,
     pub states: HashMap<String, Ident>,
     pub starting_state: Ident,
     pub state_data: DataDefinitions,
@@ -193,6 +194,7 @@ impl ParsedStateMachine {
         Ok(ParsedStateMachine {
             temporary_context_type: sm.temporary_context_type,
             custom_guard_error: sm.custom_guard_error,
+            is_async: sm.is_async,
             states,
             starting_state,
             state_data,

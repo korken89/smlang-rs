@@ -10,8 +10,8 @@ pub struct Event {
 pub struct EventMapping {
     pub in_state: Ident,
     pub event: Ident,
-    pub guard: Option<Ident>,
-    pub action: Option<Ident>,
+    pub guard: Option<(Ident, bool)>,
+    pub action: Option<(Ident, bool)>,
     pub out_state: Ident,
 }
 
