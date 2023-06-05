@@ -75,3 +75,27 @@ fn multiple_lifetimes() {
     #[allow(dead_code)]
     struct WrappedEvents<'a, 'b, 'c>(Events<'a, 'b, 'c>);
 }
+
+#[test]
+fn impl_display_events_states() {
+    statemachine! {
+        impl_display_events: true,
+        impl_display_states: true,
+        transitions: {
+            *Init + Event = End,
+        }
+    }
+
+    struct Context;
+    impl StateMachineContext for Context {}
+
+    let mut sm = StateMachine::new(Context);
+    assert_eq!(format!("{}", sm.state().unwrap()), "Init");
+
+    let event = Events::Event;
+    assert_eq!(format!("{}", event), "Event");
+
+    sm.process_event(event).unwrap();
+    assert!(matches!(sm.state(), Ok(&States::End)));
+    assert_eq!(format!("{}", sm.state().unwrap()), "End");
+}
