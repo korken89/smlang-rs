@@ -1,7 +1,6 @@
 // Move guards to return a Result
 
-use crate::parser::lifetimes::Lifetimes;
-use crate::parser::ParsedStateMachine;
+use crate::parser::{lifetimes::Lifetimes, AsyncIdent, ParsedStateMachine};
 use proc_macro2::{Literal, Span};
 use quote::quote;
 use std::vec::Vec;
@@ -239,7 +238,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             all_lifetimes.extend(&event_lifetimes);
 
             // Create the guard traits for user implementation
-            if let Some((guard, is_async)) = &value.guard {
+            if let Some(AsyncIdent {ident: guard, is_async}) = &value.guard {
                 let event_data = match sm.event_data.data_types.get(event) {
                     Some(et @ Type::Reference(_)) => quote! { event_data: #et },
                     Some(et) => quote! { event_data: &#et },
@@ -267,7 +266,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             }
 
             // Create the action traits for user implementation
-            if let Some((action, is_async)) = &value.action {
+            if let Some(AsyncIdent {ident: action, is_async}) = &value.action {
                 let is_async = match is_async {
                     true => quote!{ async },
                     false => quote!{ },
@@ -343,12 +342,12 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                             .zip(out_states.iter().zip(guard_action_parameters.iter().zip(guard_action_ref_parameters.iter()))),
                     )
                     .map(|(guard, (action, (out_state, (g_a_param, g_a_ref_param))))| {
-                        if let Some((g, is_g_async)) = guard {
+                        if let Some(AsyncIdent {ident: g, is_async: is_g_async}) = guard {
                             let guard_await = match is_g_async {
                                 true => quote! { .await },
                                 false => quote! { },
                             };
-                            if let Some((a, is_a_async)) = action {
+                            if let Some(AsyncIdent {ident: a, is_async: is_a_async}) = action {
                                 let action_await = match is_a_async {
                                     true => quote! { .await },
                                     false => quote! { },
@@ -370,7 +369,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                     self.state = Some(States::#out_state);
                                 }
                             }
-                        } else if let Some((a, is_a_async)) = action {
+                        } else if let Some(AsyncIdent {ident: a, is_async: is_a_async}) = action {
                             let action_await = match is_a_async {
                                 true => quote! { .await },
                                 false => quote! { },
@@ -476,7 +475,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     };
 
     let (is_async, is_async_trait) = if sm.is_async {
-        (quote! { async }, quote! { #[async_trait] })
+        (quote! { async }, quote! { #[async_trait::async_trait] })
     } else {
         (quote! {}, quote! {})
     };

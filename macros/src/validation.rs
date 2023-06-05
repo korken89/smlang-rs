@@ -1,8 +1,7 @@
+use crate::parser::{AsyncIdent, ParsedStateMachine};
 use proc_macro2::Span;
 use std::collections::HashMap;
 use syn::parse;
-
-use super::parser::ParsedStateMachine;
 
 /// A basic representation an action call signature.
 #[derive(PartialEq, Clone)]
@@ -72,7 +71,11 @@ fn validate_action_signatures(sm: &ParsedStateMachine) -> Result<(), parse::Erro
                 .data_types
                 .get(&event_mapping.event.to_string());
 
-            if let Some((action, is_async)) = &event_mapping.action {
+            if let Some(AsyncIdent {
+                ident: action,
+                is_async,
+            }) = &event_mapping.action
+            {
                 let signature =
                     FunctionSignature::new(in_state_data, event_data, out_state_data, *is_async);
 
@@ -112,7 +115,11 @@ fn validate_guard_signatures(sm: &ParsedStateMachine) -> Result<(), parse::Error
                 .data_types
                 .get(&event_mapping.event.to_string());
 
-            if let Some((guard, is_async)) = &event_mapping.guard {
+            if let Some(AsyncIdent {
+                ident: guard,
+                is_async,
+            }) = &event_mapping.guard
+            {
                 let signature = FunctionSignature::new_guard(in_state_data, event_data, *is_async);
 
                 // If the action is not yet known, add it to our tracking list.
