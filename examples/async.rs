@@ -9,7 +9,6 @@ use smlang::statemachine;
 use smol;
 
 statemachine! {
-    is_async: true,
     transitions: {
         *State1 + Event1 [guard1] / async action1 = State2,
         State2 + Event2 [async guard2] / async action2 = State3,

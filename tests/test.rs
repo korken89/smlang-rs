@@ -100,7 +100,6 @@ fn impl_display_events_states() {
     assert_eq!(format!("{}", sm.state().unwrap()), "End");
 }
 
-
 #[test]
 fn async_guards_and_actions() {
     use async_trait::async_trait;
@@ -108,7 +107,6 @@ fn async_guards_and_actions() {
 
     smol::block_on(async {
         statemachine! {
-            is_async: true,
             transitions: {
                 *State1 + Event1 [async guard1] / async action1 = State2,
                 _ + Event1 = Fault,

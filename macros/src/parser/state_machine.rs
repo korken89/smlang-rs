@@ -7,7 +7,6 @@ pub struct StateMachine {
     pub custom_guard_error: bool,
     pub impl_display_states: bool,
     pub impl_display_events: bool,
-    pub is_async: bool,
     pub transitions: Vec<StateTransition>,
 }
 
@@ -18,7 +17,6 @@ impl StateMachine {
             custom_guard_error: false,
             impl_display_states: false,
             impl_display_events: false,
-            is_async: false,
             transitions: Vec::new(),
         }
     }
@@ -92,13 +90,6 @@ impl parse::Parse for StateMachine {
                     let b: syn::LitBool = input.parse()?;
                     if b.value {
                         statemachine.impl_display_events = true
-                    }
-                }
-                "is_async" => {
-                    input.parse::<Token![:]>()?;
-                    let is_async: syn::LitBool = input.parse()?;
-                    if is_async.value {
-                        statemachine.is_async = true
                     }
                 }
                 "temporary_context" => {

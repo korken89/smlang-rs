@@ -324,6 +324,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         }
     };
 
+    let mut sm_is_async = false;
+
     // Create the code blocks inside the switch cases
     let code_blocks: Vec<Vec<_>> = guards
         .iter()
@@ -344,12 +346,12 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     .map(|(guard, (action, (out_state, (g_a_param, g_a_ref_param))))| {
                         if let Some(AsyncIdent {ident: g, is_async: is_g_async}) = guard {
                             let guard_await = match is_g_async {
-                                true => quote! { .await },
+                                true => { sm_is_async = true; quote! { .await } },
                                 false => quote! { },
                             };
                             if let Some(AsyncIdent {ident: a, is_async: is_a_async}) = action {
                                 let action_await = match is_a_async {
-                                    true => quote! { .await },
+                                    true => { sm_is_async = true; quote! { .await } },
                                     false => quote! { },
                                 };
                                 quote! {
@@ -371,7 +373,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                             }
                         } else if let Some(AsyncIdent {ident: a, is_async: is_a_async}) = action {
                             let action_await = match is_a_async {
-                                true => quote! { .await },
+                                true => { sm_is_async = true; quote! { .await } },
                                 false => quote! { },
                             };
                             quote! {
@@ -474,7 +476,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         quote! {}
     };
 
-    let (is_async, is_async_trait) = if sm.is_async {
+    let (is_async, is_async_trait) = if sm_is_async {
         (quote! { async }, quote! { #[async_trait::async_trait] })
     } else {
         (quote! {}, quote! {})
