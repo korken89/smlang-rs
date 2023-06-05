@@ -477,7 +477,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     };
 
     let (is_async, is_async_trait) = if sm_is_async {
-        (quote! { async }, quote! { #[async_trait::async_trait] })
+        (quote! { async }, quote! { #[smlang::async_trait] })
     } else {
         (quote! {}, quote! {})
     };

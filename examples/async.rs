@@ -4,8 +4,7 @@
 
 #![deny(missing_docs)]
 
-use async_trait::async_trait;
-use smlang::statemachine;
+use smlang::{async_trait, statemachine};
 use smol;
 
 statemachine! {

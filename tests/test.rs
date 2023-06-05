@@ -102,7 +102,6 @@ fn impl_display_events_states() {
 
 #[test]
 fn async_guards_and_actions() {
-    use async_trait::async_trait;
     use smol;
 
     smol::block_on(async {
@@ -114,7 +113,7 @@ fn async_guards_and_actions() {
         }
 
         struct Context;
-        #[async_trait]
+        #[smlang::async_trait]
         impl StateMachineContext for Context {
             async fn guard1(&mut self) -> Result<(), ()> {
                 Ok(())
