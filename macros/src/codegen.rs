@@ -9,7 +9,7 @@ use syn::{punctuated::Punctuated, token::Paren, Type, TypeTuple};
 
 pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     // Get only the unique states
-    let mut state_list: Vec<_> = sm.states.iter().map(|(_, value)| value).collect();
+    let mut state_list: Vec<_> = sm.states.values().collect();
     state_list.sort_by_key(|state| state.to_string());
 
     let state_list: Vec<_> = state_list
@@ -31,7 +31,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         .collect();
 
     // Extract events
-    let mut event_list: Vec<_> = sm.events.iter().map(|(_, value)| value).collect();
+    let mut event_list: Vec<_> = sm.events.values().collect();
     event_list.sort_by_key(|event| event.to_string());
 
     // Extract events
