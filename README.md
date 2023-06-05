@@ -235,6 +235,32 @@ statemachine!{
 
 This example is available in `ex3.rs`.
 
+## Helpers
+
+### Auto-implement `core::fmt::Display`
+
+Setting the `impl_display_events` and `impl_display_states` fields to true in the `statemachine!` macro will automatically `impl core::fmt::Display` for `Events` and `States` respectively.
+
+
+```rust
+statemachine!{
+    impl_display_events: true,
+    impl_display_states: true,
+    transitions: {
+        *State1 + Event1 = State2,
+    }
+}
+
+// ...
+
+println!("Current state: {}", sm.state().unwrap());
+println!("Expected state: {}", States::State1);
+println!("Sending event: {}", Events::Event1);
+
+// ...
+
+```
+
 ## Contributors
 
 List of contributors in alphabetical order:
