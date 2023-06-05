@@ -400,51 +400,49 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     let event_unique_lifetimes = event_lifetimes - state_lifetimes;
 
     // List of values for `impl<core::fmt::Display>`
-    let state_display = match sm.impl_display_states {
-        false => quote! {},
-        true => {
-            let list: Vec<_> = state_list
+    let state_display = if sm.impl_display_states {
+        let list: Vec<_> = state_list
             .iter()
             .map(|value| {
                 let escaped = Literal::string(&value.to_string());
                 quote! { Self::#value => write!(f, #escaped) }
             })
             .collect();
-            quote! {
-                /// Implement core::fmt::Display for States
-                impl<#state_lifetimes> core::fmt::Display for States <#state_lifetimes> {
-                    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                        match self {
-                            #(#list),*
-                        }
+        quote! {
+            /// Implement core::fmt::Display for States
+            impl<#state_lifetimes> core::fmt::Display for States <#state_lifetimes> {
+                fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                    match self {
+                        #(#list),*
                     }
                 }
             }
         }
+    } else {
+        quote! {}
     };
 
     // List of values for `impl<core::fmt::Display>`
-    let event_display = match sm.impl_display_events {
-        false => quote!{},
-        true => {
-            let list: Vec<_> = event_list
-            .iter()
-            .map(|value| {
-                let escaped = Literal::string(&value.to_string());
-                quote! { Self::#value => write!(f, #escaped) }
-            })
-            .collect();
-            quote! {
-                /// Implement core::fmt::Display for Events
-                impl<#event_lifetimes> core::fmt::Display for Events <#event_lifetimes> {
-                    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                        match self {
-                            #(#list),*
-                        }
+    let event_display = if sm.impl_display_events {
+        let list: Vec<_> = event_list
+        .iter()
+        .map(|value| {
+            let escaped = Literal::string(&value.to_string());
+            quote! { Self::#value => write!(f, #escaped) }
+        })
+        .collect();
+        quote! {
+            /// Implement core::fmt::Display for Events
+            impl<#event_lifetimes> core::fmt::Display for Events <#event_lifetimes> {
+                fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                    match self {
+                        #(#list),*
                     }
                 }
             }
         }
+    } else {
+        quote!{}
     };
 
     let guard_error = if sm.custom_guard_error {
