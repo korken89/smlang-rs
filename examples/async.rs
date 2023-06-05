@@ -4,9 +4,9 @@
 
 #![deny(missing_docs)]
 
+use async_trait::async_trait;
 use smlang::statemachine;
 use smol;
-use async_trait::async_trait;
 
 statemachine! {
     is_async: true,
@@ -25,18 +25,18 @@ pub struct Context {
 
 #[async_trait]
 impl StateMachineContext for Context {
-    fn guard1(&mut self) -> Result<(),()>  {
+    fn guard1(&mut self) -> Result<(), ()> {
         println!("`guard1` called from sync context");
         Ok(())
     }
 
-    async fn action1(&mut self) ->  () {
+    async fn action1(&mut self) -> () {
         println!("`action1` called from async context");
         let mut lock = self.lock.write().await;
         *lock = true;
     }
 
-    async fn guard2(&mut self) ->  Result<(),()> {
+    async fn guard2(&mut self) -> Result<(), ()> {
         println!("`guard2` called from async context");
         let mut lock = self.lock.write().await;
         *lock = false;
@@ -45,7 +45,7 @@ impl StateMachineContext for Context {
 
     async fn action2(&mut self) -> () {
         println!("`action2` called from async context");
-        if ! *self.lock.read().await {
+        if !*self.lock.read().await {
             self.done = true;
         }
     }
@@ -58,7 +58,10 @@ impl StateMachineContext for Context {
 
 fn main() {
     smol::block_on(async {
-        let mut sm = StateMachine::new(Context {lock: smol::lock::RwLock::new(false), done: false});
+        let mut sm = StateMachine::new(Context {
+            lock: smol::lock::RwLock::new(false),
+            done: false,
+        });
         assert!(matches!(sm.state(), Ok(&States::State1)));
 
         let r = sm.process_event(Events::Event1).await;
@@ -79,7 +82,6 @@ fn main() {
         assert!(matches!(r, Err(Error::InvalidEvent)));
         assert!(matches!(sm.state(), Ok(&States::State4(_))));
     });
-
 
     // ...
 }

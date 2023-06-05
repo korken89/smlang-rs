@@ -43,7 +43,11 @@ impl FunctionSignature {
         }
     }
 
-    pub fn new_guard(input_state: Option<&syn::Type>, event: Option<&syn::Type>, is_async: bool) -> Self {
+    pub fn new_guard(
+        input_state: Option<&syn::Type>,
+        event: Option<&syn::Type>,
+        is_async: bool,
+    ) -> Self {
         // Guards never have output data.
         Self::new(input_state, event, None, is_async)
     }
@@ -69,7 +73,8 @@ fn validate_action_signatures(sm: &ParsedStateMachine) -> Result<(), parse::Erro
                 .get(&event_mapping.event.to_string());
 
             if let Some((action, is_async)) = &event_mapping.action {
-                let signature = FunctionSignature::new(in_state_data, event_data, out_state_data, *is_async);
+                let signature =
+                    FunctionSignature::new(in_state_data, event_data, out_state_data, *is_async);
 
                 // If the action is not yet known, add it to our tracking list.
                 actions

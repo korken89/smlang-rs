@@ -118,7 +118,7 @@ fn async_guards_and_actions() {
         struct Context;
         #[async_trait]
         impl StateMachineContext for Context {
-            async fn guard1(&mut self) -> Result<(),()>  {
+            async fn guard1(&mut self) -> Result<(), ()> {
                 Ok(())
             }
 
