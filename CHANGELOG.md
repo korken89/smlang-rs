@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- Add `impl_display_{states,events}` for auto-impementation of `core::fmt::Display` on `States` and/or `Events`
+
 ### Fixed
 
 - Fixes multiple issues with lifetimes ([issue-57](https://github.com/korken89/smlang-rs/issues/57), [issue-58](https://github.com/korken89/smlang-rs/pull/58))
