@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 - Add `impl_display_{states,events}` for auto-impementation of `core::fmt::Display` on `States` and/or `Events`
+- Add support for async guards and actions
 
 ### Fixed
 
