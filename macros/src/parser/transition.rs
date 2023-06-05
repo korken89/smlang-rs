@@ -1,14 +1,15 @@
 use super::event::Event;
 use super::input_state::InputState;
 use super::output_state::OutputState;
+use super::AsyncIdent;
 use syn::{bracketed, parse, token, Ident, Token};
 
 #[derive(Debug)]
 pub struct StateTransition {
     pub in_state: InputState,
     pub event: Event,
-    pub guard: Option<Ident>,
-    pub action: Option<Ident>,
+    pub guard: Option<AsyncIdent>,
+    pub action: Option<AsyncIdent>,
     pub out_state: OutputState,
 }
 
@@ -16,8 +17,8 @@ pub struct StateTransition {
 pub struct StateTransitions {
     pub in_states: Vec<InputState>,
     pub event: Event,
-    pub guard: Option<Ident>,
-    pub action: Option<Ident>,
+    pub guard: Option<AsyncIdent>,
+    pub action: Option<AsyncIdent>,
     pub out_state: OutputState,
 }
 
@@ -52,16 +53,24 @@ impl parse::Parse for StateTransitions {
         let guard = if input.peek(token::Bracket) {
             let content;
             bracketed!(content in input);
+            let is_async = content.parse::<token::Async>().is_ok();
             let guard: Ident = content.parse()?;
-            Some(guard)
+            Some(AsyncIdent {
+                ident: guard,
+                is_async,
+            })
         } else {
             None
         };
 
         // Possible action
         let action = if input.parse::<Token![/]>().is_ok() {
+            let is_async = input.parse::<token::Async>().is_ok();
             let action: Ident = input.parse()?;
-            Some(action)
+            Some(AsyncIdent {
+                ident: action,
+                is_async,
+            })
         } else {
             None
         };

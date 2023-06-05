@@ -66,4 +66,5 @@
 
 #![no_std]
 
+pub use async_trait::async_trait;
 pub use smlang_macros::statemachine;

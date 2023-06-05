@@ -1,3 +1,4 @@
+use crate::parser::AsyncIdent;
 use syn::{parenthesized, parse, spanned::Spanned, token, Ident, Token, Type};
 
 #[derive(Debug, Clone)]
@@ -10,8 +11,8 @@ pub struct Event {
 pub struct EventMapping {
     pub in_state: Ident,
     pub event: Ident,
-    pub guard: Option<Ident>,
-    pub action: Option<Ident>,
+    pub guard: Option<AsyncIdent>,
+    pub action: Option<AsyncIdent>,
     pub out_state: Ident,
 }
 

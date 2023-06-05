@@ -179,6 +179,10 @@ See example `examples/event_with_data.rs` for a usage example.
 
 See example `examples/guard_action_syntax.rs` for a usage-example.
 
+### Async Guard and Action
+
+See example `examples/async.rs` for a usage-example.
+
 ## State Machine Examples
 
 Here are some examples of state machines converted from UML to the State Machine Language DSL. Runnable versions of each example is available in the `examples` folder.

@@ -19,6 +19,12 @@ use transition::StateTransition;
 
 pub type TransitionMap = HashMap<String, HashMap<String, EventMapping>>;
 
+#[derive(Debug, Clone)]
+pub struct AsyncIdent {
+    pub ident: Ident,
+    pub is_async: bool,
+}
+
 #[derive(Debug)]
 pub struct ParsedStateMachine {
     pub temporary_context_type: Option<Type>,
