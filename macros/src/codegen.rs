@@ -2,7 +2,7 @@
 
 use crate::parser::lifetimes::Lifetimes;
 use crate::parser::ParsedStateMachine;
-use proc_macro2::{Span, Literal};
+use proc_macro2::{Literal, Span};
 use quote::quote;
 use std::vec::Vec;
 use syn::{punctuated::Punctuated, token::Paren, Type, TypeTuple};
@@ -425,12 +425,12 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     // List of values for `impl<core::fmt::Display>`
     let event_display = if sm.impl_display_events {
         let list: Vec<_> = event_list
-        .iter()
-        .map(|value| {
-            let escaped = Literal::string(&value.to_string());
-            quote! { Self::#value => write!(f, #escaped) }
-        })
-        .collect();
+            .iter()
+            .map(|value| {
+                let escaped = Literal::string(&value.to_string());
+                quote! { Self::#value => write!(f, #escaped) }
+            })
+            .collect();
         quote! {
             /// Implement core::fmt::Display for Events
             impl<#event_lifetimes> core::fmt::Display for Events <#event_lifetimes> {
@@ -442,7 +442,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             }
         }
     } else {
-        quote!{}
+        quote! {}
     };
 
     let guard_error = if sm.custom_guard_error {
