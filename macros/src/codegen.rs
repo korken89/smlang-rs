@@ -490,6 +490,43 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         quote! {Error}
     };
 
+    let mut state_derives = Vec::new();
+
+    if sm.impl_debug_states {
+        state_derives.push(quote!{Debug});
+    }
+
+    let state_derives = if !state_derives.is_empty() {
+        quote!{#[derive(#(#state_derives),*)]}
+    } else {
+        quote!{}
+    };
+
+    let mut event_derives = Vec::new();
+
+    if sm.impl_debug_events {
+        event_derives.push(quote!{Debug});
+    }
+
+    let event_derives = if !event_derives.is_empty() {
+        quote!{#[derive(#(#event_derives),*)]}
+    } else {
+        quote!{}
+    };
+
+    let mut state_machine_derives = Vec::new();
+
+    if sm.impl_debug_state_machine {
+        state_machine_derives.push(quote!{Debug});
+    }
+
+    let state_machine_derives = if !state_machine_derives.is_empty() {
+        quote!{#[derive(#(#state_machine_derives),*)]}
+    } else {
+        quote!{}
+    };
+
+
     // Build the states and events output
     quote! {
         /// This trait outlines the guards and actions that need to be implemented for the state
@@ -503,6 +540,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
         /// List of auto-generated states.
         #[allow(missing_docs)]
+        #state_derives
         pub enum States <#state_lifetimes> { #(#state_list),* }
 
         #state_display
@@ -517,6 +555,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
         /// List of auto-generated events.
         #[allow(missing_docs)]
+        #event_derives
         pub enum Events <#event_lifetimes> { #(#event_list),* }
 
         #event_display
@@ -544,6 +583,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         }
 
         /// State machine structure definition.
+        #state_machine_derives
         pub struct StateMachine<#state_lifetimes T: StateMachineContext> {
             state: Option<States <#state_lifetimes>>,
             context: T

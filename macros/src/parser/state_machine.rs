@@ -5,8 +5,11 @@ use syn::{braced, parse, spanned::Spanned, token, Ident, Token, Type};
 pub struct StateMachine {
     pub temporary_context_type: Option<Type>,
     pub custom_guard_error: bool,
+    pub impl_debug_states: bool,
+    pub impl_debug_events: bool,
     pub impl_display_states: bool,
     pub impl_display_events: bool,
+    pub impl_debug_state_machine: bool,
     pub transitions: Vec<StateTransition>,
 }
 
@@ -15,8 +18,11 @@ impl StateMachine {
         StateMachine {
             temporary_context_type: None,
             custom_guard_error: false,
+            impl_debug_states: false,
+            impl_debug_events: false,
             impl_display_states: false,
             impl_display_events: false,
+            impl_debug_state_machine: false,
             transitions: Vec::new(),
         }
     }
@@ -78,6 +84,20 @@ impl parse::Parse for StateMachine {
                     }
 
                 }
+                "impl_debug_states" => {
+                    input.parse::<Token![:]>()?;
+                    let b: syn::LitBool = input.parse()?;
+                    if b.value {
+                        statemachine.impl_debug_states = true
+                    }
+                }
+                "impl_debug_events" => {
+                    input.parse::<Token![:]>()?;
+                    let b: syn::LitBool = input.parse()?;
+                    if b.value {
+                        statemachine.impl_debug_events = true
+                    }
+                }
                 "impl_display_states" => {
                     input.parse::<Token![:]>()?;
                     let b: syn::LitBool = input.parse()?;
@@ -90,6 +110,13 @@ impl parse::Parse for StateMachine {
                     let b: syn::LitBool = input.parse()?;
                     if b.value {
                         statemachine.impl_display_events = true
+                    }
+                }
+                "impl_debug_state_machine" => {
+                    input.parse::<Token![:]>()?;
+                    let b: syn::LitBool = input.parse()?;
+                    if b.value {
+                        statemachine.impl_debug_state_machine = true
                     }
                 }
                 "temporary_context" => {
