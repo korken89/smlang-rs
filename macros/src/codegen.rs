@@ -1,7 +1,7 @@
 // Move guards to return a Result
 
 use crate::parser::{lifetimes::Lifetimes, AsyncIdent, ParsedStateMachine};
-use proc_macro2::{Literal, Span};
+use proc_macro2::Span;
 use quote::{quote, format_ident};
 use std::vec::Vec;
 use syn::{punctuated::Punctuated, token::Paren, Type, TypeTuple};
@@ -365,11 +365,11 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                     false => quote! { },
                                 };
                                 quote! {
-                                    if let Err(e) = self.context.#g(#temporary_context_call #g_a_ref_param) {
+                                    if let Err(e) = self.context.#g(#temporary_context_call #g_a_ref_param) #guard_await {
                                         self.state = Some(#states_type_name::#in_state);
                                         return Err(#error_type_name::GuardFailed(e));
                                     }
-                                    let _data = self.context.#a(#temporary_context_call #g_a_param);
+                                    let _data = self.context.#a(#temporary_context_call #g_a_param) #action_await;
                                     self.state = Some(#states_type_name::#out_state);
                                 }
                             } else {
@@ -387,7 +387,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                 false => quote! { },
                             };
                             quote! {
-                                let _data = self.context.#a(#temporary_context_call #g_a_param);
+                                let _data = self.context.#a(#temporary_context_call #g_a_param) #action_await ;
                                 self.state = Some(#states_type_name::#out_state);
                             }
                         } else {
@@ -432,51 +432,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     // lifetimes that exists in #events_type_name but not in #states_type_name
     let event_unique_lifetimes = event_lifetimes - state_lifetimes;
 
-    // List of values for `impl<core::fmt::Display>`
-    let state_display = if sm.impl_display_states {
-        let list: Vec<_> = state_list
-            .iter()
-            .map(|value| {
-                let escaped = Literal::string(&value.to_string());
-                quote! { Self::#value => write!(f, #escaped) }
-            })
-            .collect();
-        quote! {
-            /// Implement core::fmt::Display for States
-            impl<#state_lifetimes> core::fmt::Display for States <#state_lifetimes> {
-                fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                    match self {
-                        #(#list),*
-                    }
-                }
-            }
-        }
-    } else {
-        quote! {}
-    };
-
-    // List of values for `impl<core::fmt::Display>`
-    let event_display = if sm.impl_display_events {
-        let list: Vec<_> = event_list
-            .iter()
-            .map(|value| {
-                let escaped = Literal::string(&value.to_string());
-                quote! { Self::#value => write!(f, #escaped) }
-            })
-            .collect();
-        quote! {
-            /// Implement core::fmt::Display for Events
-            impl<#event_lifetimes> core::fmt::Display for Events <#event_lifetimes> {
-                fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                    match self {
-                        #(#list),*
-                    }
-                }
-            }
-        }
-    } else {
-        quote! {}
-    };
 
     let guard_error = if sm.custom_guard_error {
         quote! {
@@ -500,10 +455,14 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     } else {
         quote! {#error_type_name}
     };
+    
+    let derive_states_list = &sm.derive_states;
+    let derive_events_list = &sm.derive_events;
     // Build the states and events output
     quote! {
         /// This trait outlines the guards and actions that need to be implemented for the state
         /// machine.
+        #is_async_trait
         pub trait #state_machine_context_type_name {
             #guard_error
             #guard_list
@@ -512,6 +471,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
         /// List of auto-generated states.
         #[allow(missing_docs)]
+        #[derive(#(#derive_states_list),*)]
         pub enum #states_type_name <#state_lifetimes> { #(#state_list),* }
 
         /// Manually define PartialEq for #states_type_name based on variant only to address issue-#21
@@ -524,6 +484,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
         /// List of auto-generated events.
         #[allow(missing_docs)]
+        #[derive(#(#derive_events_list),*)]
         pub enum #events_type_name <#event_lifetimes> { #(#event_list),* }
 
         /// Manually define PartialEq for #events_type_name based on variant only to address issue-#21

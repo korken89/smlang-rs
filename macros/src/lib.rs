@@ -34,7 +34,7 @@ pub fn statemachine(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                 }else{
                     let mut diagram_hasher = std::collections::hash_map::DefaultHasher::new();
                     diagram.hash(&mut diagram_hasher);
-                    format!("{:010x}", diagram_hasher.finish())
+                    format!("smlang{:010x}", diagram_hasher.finish())
                 };
 
                 // Start the 'dot' process.

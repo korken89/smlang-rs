@@ -16,12 +16,12 @@ pub fn generate_diagram(sm: &ParsedStateMachine) -> String {
                 eventmapping
                     .guard
                     .as_ref()
-                    .map(|i| i.to_string())
+                    .map(|i| i.ident.to_string())
                     .unwrap_or_else(|| "_".to_string()),
                 eventmapping
                     .action
                     .as_ref()
-                    .map(|i| i.to_string())
+                    .map(|i| i.ident.to_string())
                     .unwrap_or_else(|| "_".to_string()),
             ));
             diagram_transitions.push((

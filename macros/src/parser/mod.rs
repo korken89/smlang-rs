@@ -28,6 +28,8 @@ pub struct AsyncIdent {
 #[derive(Debug)]
 pub struct ParsedStateMachine {
     pub name: Option<Ident>,
+    pub derive_states: Vec<Ident>,
+    pub derive_events: Vec<Ident>,
     pub temporary_context_type: Option<Type>,
     pub custom_guard_error: bool,
     pub impl_display_events: bool,
@@ -199,6 +201,8 @@ impl ParsedStateMachine {
 
         Ok(ParsedStateMachine {
             name: sm.name,
+            derive_states: sm.derive_states,
+            derive_events: sm.derive_events,
             temporary_context_type: sm.temporary_context_type,
             custom_guard_error: sm.custom_guard_error,
             states,

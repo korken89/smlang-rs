@@ -1,5 +1,5 @@
 use super::transition::{StateTransition, StateTransitions};
-use syn::{braced, parse, spanned::Spanned, token, Ident, Token, Type};
+use syn::{braced, parse, spanned::Spanned, token, Ident, Token, Type, bracketed};
 
 #[derive(Debug)]
 pub struct StateMachine {
@@ -9,6 +9,8 @@ pub struct StateMachine {
     pub impl_display_events: bool,
     pub transitions: Vec<StateTransition>,
     pub name: Option<Ident>,
+    pub derive_states: Vec<Ident>,
+    pub derive_events: Vec<Ident>,
 }
 
 impl StateMachine {
@@ -19,7 +21,9 @@ impl StateMachine {
             impl_display_states: false,
             impl_display_events: false,
             transitions: Vec::new(),
-            name: None
+            name: None,
+            derive_states: Vec::new(),
+            derive_events: Vec::new(),
         }
     }
 
@@ -121,11 +125,43 @@ impl parse::Parse for StateMachine {
                 "name" =>{
                     input.parse::<Token![:]>()?;
                     statemachine.name = Some(input.parse::<Ident>()?);
-                }
+                },
+                "derive_states" => {
+                    input.parse::<Token![:]>()?;
+                    if input.peek(token::Bracket) {
+                        let content;
+                        bracketed!(content in input);
+                        loop{
+                            if content.is_empty() {
+                                break;
+                            };
+                            let trait_ =  content.parse::<Ident>()?;
+                            statemachine.derive_states.push(trait_);
+                            if content.parse::<Token![,]>().is_err() {
+                                break;
+                            };
+                        }
+                    }
+                },
+                "derive_events" => {
+                    input.parse::<Token![:]>()?;
+                    let content;
+                    bracketed!(content in input);
+                    loop{
+                        if content.is_empty() {
+                            break;
+                        };
+                        let trait_ =  content.parse::<Ident>()?;
+                        statemachine.derive_events.push(trait_);
+                        if content.parse::<Token![,]>().is_err() {
+                            break;
+                        };
+                    }
+                },
                 keyword => {
                     return Err(parse::Error::new(
                         input.span(),
-                        format!("Unknown keyword {}. Support keywords: [\"transitions\", \"temporary_context\", \"custom_guard_error\"]", keyword)
+                        format!("Unknown keyword {}. Support keywords: [\"name\", \"transitions\", \"temporary_context\", \"custom_guard_error\", \"derive_states\", \"derive_events\"]", keyword)
                     ))
                 }
             }
