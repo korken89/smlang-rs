@@ -241,15 +241,18 @@ This example is available in `ex3.rs`.
 
 ## Helpers
 
-### Auto-implement `core::fmt::Display`
+### Auto-derive certain traits for states and events
 
-Setting the `impl_display_events` and `impl_display_states` fields to true in the `statemachine!` macro will automatically `impl core::fmt::Display` for `Events` and `States` respectively.
+Setting `derive_events` and `derive_states` fields to an array of traits adds a derive expression to `Events` and `States` enums respectively. To derive Display, use `derive_more::Display`.
 
 
 ```rust
+use core::Debug;
+use derive_more::Display;
+// ...
 statemachine!{
-    impl_display_events: true,
-    impl_display_states: true,
+    derive_states: [Debug, Display],
+    derive_events: [Debug, Display],
     transitions: {
         *State1 + Event1 = State2,
     }

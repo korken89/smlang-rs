@@ -1,5 +1,7 @@
 extern crate smlang;
 
+use derive_more::Display;
+
 use smlang::statemachine;
 
 #[test]
@@ -77,10 +79,10 @@ fn multiple_lifetimes() {
 }
 
 #[test]
-fn impl_display_events_states() {
+fn derive_display_events_states() {
     statemachine! {
-        impl_display_events: true,
-        impl_display_states: true,
+        derive_events: [Debug,Display],
+        derive_states: [Debug,Display],
         transitions: {
             *Init + Event = End,
         }
@@ -91,12 +93,39 @@ fn impl_display_events_states() {
 
     let mut sm = StateMachine::new(Context);
     assert_eq!(format!("{}", sm.state().unwrap()), "Init");
+    assert_eq!(format!("{:?}", sm.state().unwrap()), "Init");
 
     let event = Events::Event;
     assert_eq!(format!("{}", event), "Event");
 
     sm.process_event(event).unwrap();
     assert!(matches!(sm.state(), Ok(&States::End)));
+    assert_eq!(format!("{}", sm.state().unwrap()), "End");
+}
+
+#[test]
+fn named_derive_display_events_states() {
+    statemachine! {
+        name: SM,
+        derive_events: [Debug,Display],
+        derive_states: [Debug,Display],
+        transitions: {
+            *Init + Event = End,
+        }
+    }
+
+    struct Context;
+    impl SMStateMachineContext for Context {}
+
+    let mut sm = SMStateMachine::new(Context);
+    assert_eq!(format!("{}", sm.state().unwrap()), "Init");
+    assert_eq!(format!("{:?}", sm.state().unwrap()), "Init");
+
+    let event = SMEvents::Event;
+    assert_eq!(format!("{}", event), "Event");
+
+    sm.process_event(event).unwrap();
+    assert!(matches!(sm.state(), Ok(&SMStates::End)));
     assert_eq!(format!("{}", sm.state().unwrap()), "End");
 }
 

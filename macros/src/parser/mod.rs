@@ -32,8 +32,6 @@ pub struct ParsedStateMachine {
     pub derive_events: Vec<Ident>,
     pub temporary_context_type: Option<Type>,
     pub custom_guard_error: bool,
-    pub impl_display_events: bool,
-    pub impl_display_states: bool,
     pub states: HashMap<String, Ident>,
     pub starting_state: Ident,
     pub state_data: DataDefinitions,
@@ -211,8 +209,6 @@ impl ParsedStateMachine {
             events,
             event_data,
             states_events_mapping,
-            impl_display_events: sm.impl_display_events,
-            impl_display_states: sm.impl_display_states,
         })
     }
 }

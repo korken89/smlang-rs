@@ -2,20 +2,22 @@
 
 use crate::parser::{lifetimes::Lifetimes, AsyncIdent, ParsedStateMachine};
 use proc_macro2::Span;
-use quote::{quote, format_ident};
+use quote::{format_ident, quote};
 use std::vec::Vec;
 use syn::{punctuated::Punctuated, token::Paren, Type, TypeTuple};
 
 pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
-    let (sm_name, sm_name_span) = sm.name.as_ref()
+    let (sm_name, sm_name_span) = sm
+        .name
+        .as_ref()
         .map(|name| (name.to_string(), name.span()))
         .unwrap_or_else(|| (String::new(), Span::call_site()));
-    let states_type_name = format_ident!("{sm_name}States", span=sm_name_span);
-    let events_type_name = format_ident!("{sm_name}Events", span=sm_name_span);
-    let error_type_name = format_ident!("{sm_name}Error", span=sm_name_span);
-    let state_machine_type_name = format_ident!("{sm_name}StateMachine", span=sm_name_span);
-    let state_machine_context_type_name = format_ident!("{sm_name}StateMachineContext", span=sm_name_span);
-
+    let states_type_name = format_ident!("{sm_name}States", span = sm_name_span);
+    let events_type_name = format_ident!("{sm_name}Events", span = sm_name_span);
+    let error_type_name = format_ident!("{sm_name}Error", span = sm_name_span);
+    let state_machine_type_name = format_ident!("{sm_name}StateMachine", span = sm_name_span);
+    let state_machine_context_type_name =
+        format_ident!("{sm_name}StateMachineContext", span = sm_name_span);
 
     // Get only the unique states
     let mut state_list: Vec<_> = sm.states.values().collect();
@@ -403,7 +405,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     let starting_state = &sm.starting_state;
 
-
     // create a token stream for creating a new machine.  If the starting state contains data, then
     // add a second argument to pass this initial data
     let starting_state_name = starting_state.to_string();
@@ -432,7 +433,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     // lifetimes that exists in #events_type_name but not in #states_type_name
     let event_unique_lifetimes = event_lifetimes - state_lifetimes;
 
-
     let guard_error = if sm.custom_guard_error {
         quote! {
             /// The error type returned by guard functions.
@@ -455,7 +455,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     } else {
         quote! {#error_type_name}
     };
-    
+
     let derive_states_list = &sm.derive_states;
     let derive_events_list = &sm.derive_events;
     // Build the states and events output

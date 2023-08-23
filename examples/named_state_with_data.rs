@@ -32,5 +32,8 @@ fn main() {
     let mut sm = StatesWithDataStateMachine::new(Context);
     let result = sm.process_event(StatesWithDataEvents::Event1);
 
-    assert!(matches!(result, Ok(&StatesWithDataStates::State2(MyStateData(42)))));
+    assert!(matches!(
+        result,
+        Ok(&StatesWithDataStates::State2(MyStateData(42)))
+    ));
 }

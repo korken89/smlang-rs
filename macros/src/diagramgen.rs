@@ -4,7 +4,7 @@ use crate::parser::*;
 pub fn generate_diagram(sm: &ParsedStateMachine) -> String {
     let transitions = &sm.states_events_mapping;
 
-    let mut diagram_states  = sm.states.iter().map(|s| s.0).collect::<Vec<&String>>();
+    let mut diagram_states = sm.states.iter().map(|s| s.0).collect::<Vec<&String>>();
     diagram_states.sort();
     let diagram_states = diagram_states.into_iter();
     let mut diagram_events = vec![];
@@ -31,9 +31,9 @@ pub fn generate_diagram(sm: &ParsedStateMachine) -> String {
             ));
         }
     }
-    // Sorting is needed to ensure stable (ie not changing between runs of 
-    // the same sm code) dot file contents. This is needed to ensure stable 
-    // hash sum, which is used to name unnamed diagrams. If done without sorting, 
+    // Sorting is needed to ensure stable (ie not changing between runs of
+    // the same sm code) dot file contents. This is needed to ensure stable
+    // hash sum, which is used to name unnamed diagrams. If done without sorting,
     // the output is polluted with lots of similar svg files with different names.
     // This ensures that new files will only occur upon changing the structure of the code.
     diagram_events.sort();

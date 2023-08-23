@@ -26,12 +26,11 @@ pub fn statemachine(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                 use std::hash::{Hash, Hasher};
                 use std::io::Write;
 
-
                 // Generate dot syntax for the statemachine.
                 let diagram = diagramgen::generate_diagram(&sm);
-                let diagram_name = if let Some(name) = &sm.name{
+                let diagram_name = if let Some(name) = &sm.name {
                     name.to_string()
-                }else{
+                } else {
                     let mut diagram_hasher = std::collections::hash_map::DefaultHasher::new();
                     diagram.hash(&mut diagram_hasher);
                     format!("smlang{:010x}", diagram_hasher.finish())

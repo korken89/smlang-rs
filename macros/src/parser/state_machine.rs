@@ -1,12 +1,10 @@
 use super::transition::{StateTransition, StateTransitions};
-use syn::{braced, parse, spanned::Spanned, token, Ident, Token, Type, bracketed};
+use syn::{braced, bracketed, parse, spanned::Spanned, token, Ident, Token, Type};
 
 #[derive(Debug)]
 pub struct StateMachine {
     pub temporary_context_type: Option<Type>,
     pub custom_guard_error: bool,
-    pub impl_display_states: bool,
-    pub impl_display_events: bool,
     pub transitions: Vec<StateTransition>,
     pub name: Option<Ident>,
     pub derive_states: Vec<Ident>,
@@ -18,8 +16,6 @@ impl StateMachine {
         StateMachine {
             temporary_context_type: None,
             custom_guard_error: false,
-            impl_display_states: false,
-            impl_display_events: false,
             transitions: Vec::new(),
             name: None,
             derive_states: Vec::new(),
@@ -83,20 +79,6 @@ impl parse::Parse for StateMachine {
                         statemachine.custom_guard_error = true
                     }
 
-                }
-                "impl_display_states" => {
-                    input.parse::<Token![:]>()?;
-                    let b: syn::LitBool = input.parse()?;
-                    if b.value {
-                        statemachine.impl_display_states = true
-                    }
-                }
-                "impl_display_events" => {
-                    input.parse::<Token![:]>()?;
-                    let b: syn::LitBool = input.parse()?;
-                    if b.value {
-                        statemachine.impl_display_events = true
-                    }
                 }
                 "temporary_context" => {
                     input.parse::<Token![:]>()?;
