@@ -9,8 +9,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
-- Add `impl_display_{states,events}` for auto-impementation of `core::fmt::Display` on `States` and/or `Events`
 - Add support for async guards and actions
+- Add name to statemachine and make dot output stable and unique ([issue-62](https://github.com/korken89/smlang-rs/pull/62))
+- Add derive macros to states and events ([issue-62](https://github.com/korken89/smlang-rs/pull/62))
 
 ### Fixed
 
