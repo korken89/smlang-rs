@@ -13,12 +13,21 @@ use state_machine::StateMachine;
 use input_state::InputState;
 use proc_macro2::Span;
 
-use std::collections::{hash_map, HashMap};
+use std::{
+    collections::{hash_map, HashMap},
+    hash::Hash,
+};
 use syn::{parse, Ident, Type};
 use transition::StateTransition;
 
 pub type TransitionMap = HashMap<String, HashMap<String, EventMapping>>;
 
+#[derive(Debug, Clone)]
+pub struct EntryIdent {
+    pub ident: Ident,
+    pub state: Vec<InputState>,
+    pub is_async: bool,
+}
 #[derive(Debug, Clone)]
 pub struct AsyncIdent {
     pub ident: Ident,
@@ -41,6 +50,8 @@ pub struct ParsedStateMachine {
 
     pub generate_entry_exit_states: bool,
     pub generate_transition_callback: bool,
+    pub entry_functions: HashMap<Ident, Ident>,
+    pub exit_functions: HashMap<Ident, Ident>,
 }
 
 // helper function for adding a transition to a transition event map
@@ -48,10 +59,15 @@ fn add_transition(
     transition: &StateTransition,
     transition_map: &mut TransitionMap,
     state_data: &DataDefinitions,
+    entry_fns: &HashMap<Ident, Ident>,
+    exit_fns: &HashMap<Ident, Ident>,
 ) -> Result<(), parse::Error> {
     let p = transition_map
         .get_mut(&transition.in_state.ident.to_string())
         .unwrap();
+
+    let entry_fn = entry_fns.get(&transition.in_state.ident.clone());
+    let exit_fn = exit_fns.get(&transition.in_state.ident.clone());
 
     if let hash_map::Entry::Vacant(entry) = p.entry(transition.event.ident.to_string()) {
         let mapping = EventMapping {
@@ -60,6 +76,9 @@ fn add_transition(
             guard: transition.guard.clone(),
             action: transition.action.clone(),
             out_state: transition.out_state.ident.clone(),
+
+            entry_fn: entry_fn.cloned(),
+            exit_fn: exit_fn.cloned(),
         };
 
         entry.insert(mapping);
@@ -116,6 +135,33 @@ impl ParsedStateMachine {
         let mut events = HashMap::new();
         let mut event_data = DataDefinitions::new();
         let mut states_events_mapping = TransitionMap::new();
+
+        let mut states_with_exit_function = HashMap::new();
+        let mut states_with_entry_function = HashMap::new();
+
+        fn add_entry(map: &mut HashMap<Ident, Ident>, vec: &Vec<EntryIdent>) -> parse::Result<()> {
+            for identifier in vec {
+                for input_state in &identifier.state {
+                    if let Some(existing_identifier) =
+                        map.insert(input_state.ident.clone(), identifier.ident.clone())
+                    {
+                        if identifier.ident != existing_identifier {
+                            println!(
+                                "entry_state: {:?}, state.ident: {:?}",
+                                identifier.ident, input_state.ident
+                            );
+                            return Err(parse::Error::new(
+                                Span::call_site(),
+                                "Different entry or exit functions defined for state",
+                            ));
+                        }
+                    }
+                }
+            }
+            Ok(())
+        }
+        add_entry(&mut states_with_entry_function, &sm.entries)?;
+        add_entry(&mut states_with_exit_function, &sm.exits)?;
 
         for transition in sm.transitions.iter() {
             // Collect states
@@ -182,6 +228,8 @@ impl ParsedStateMachine {
                         &wildcard_transition,
                         &mut states_events_mapping,
                         &state_data,
+                        &states_with_entry_function,
+                        &states_with_exit_function,
                     )?;
 
                     transition_added = true;
@@ -196,7 +244,13 @@ impl ParsedStateMachine {
                     ));
                 }
             } else {
-                add_transition(transition, &mut states_events_mapping, &state_data)?;
+                add_transition(
+                    transition,
+                    &mut states_events_mapping,
+                    &state_data,
+                    &states_with_entry_function,
+                    &states_with_exit_function,
+                )?;
             }
         }
 
@@ -214,6 +268,9 @@ impl ParsedStateMachine {
             states_events_mapping,
             generate_entry_exit_states: sm.generate_entry_exit_states,
             generate_transition_callback: sm.generate_transition_callback,
+
+            entry_functions: states_with_entry_function,
+            exit_functions: states_with_exit_function,
         })
     }
 }

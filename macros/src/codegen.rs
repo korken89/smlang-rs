@@ -22,6 +22,9 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     let generate_entry_exit_states = sm.generate_entry_exit_states;
     let generate_transition_callback = sm.generate_transition_callback;
 
+    let entry_fns = &sm.entry_functions;
+    let exit_fns = &sm.exit_functions;
+
     // Get only the unique states
     let mut state_list: Vec<_> = sm.states.values().collect();
     state_list.sort_by_key(|state| state.to_string());
@@ -354,6 +357,14 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         }
     };
 
+    //
+    //let entry_fn = if let Some(entry_fn) =& value.entry_fn {
+    //    quote!{ #entry_fn }
+    //} else { quote! { } };
+    //let exit_fn = if let Some(exit_fn) = & value.exit_fn {
+    //    quote!{ #exit_fn }}
+    //    else { quote! { } };
+
     let mut sm_is_async = false;
 
     // Create the code blocks inside the switch cases
@@ -376,9 +387,15 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     .map(|(guard, (action, (out_state, (g_a_param, g_a_ref_param))))| {
                         let binding = out_state.to_string();
                         let out_state_string = &binding.split('(').collect::<Vec<_>>()[0];
-                        let entry_ident = format_ident!("on_entry_{}",string_morph::to_snake_case(out_state_string ));
                         let binding = in_state.to_string();
                         let in_state_string = &binding.split('(').collect::<Vec<_>>()[0];
+
+                        let entry_ident = entry_fns.get(out_state_string.into());
+                        let entry_ident = if let Some(entry_ident) = entry_ident {
+                            quote! { #entry_ident }
+                        } else {
+                            quote! { }
+                        };
                         let exit_ident = format_ident!("on_exit_{}",string_morph::to_snake_case(in_state_string));
                         let entry_exit_states = if generate_entry_exit_states {
                                 quote! {

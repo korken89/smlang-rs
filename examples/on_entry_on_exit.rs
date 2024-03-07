@@ -7,10 +7,10 @@ use smlang::statemachine;
 statemachine! {
     name: OnEntryExample,
     transitions: {
-        *D0 + ToD1 = D1,
-        D1 + ToD2 = D2,
+        *D0 > exit_d0 + ToD1 = D1,
+        D0 + ToD3 = D3,
+        D1 < enter_d1 + ToD2 = D2,
     },
-    generate_entry_exit_states: true,
 }
 
 /// Context
@@ -20,10 +20,10 @@ pub struct Context {
 }
 
 impl OnEntryExampleStateMachineContext for Context {
-    fn on_exit_d0(&mut self) {
+    fn exit_d0(&mut self) {
         self.exited_d0 = true;
     }
-    fn on_entry_d1(&mut self) {
+    fn enter_d1(&mut self) {
         self.entered_d1 = true;
     }
 }
