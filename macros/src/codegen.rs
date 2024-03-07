@@ -22,6 +22,9 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     let generate_entry_exit_states = sm.generate_entry_exit_states;
     let generate_transition_callback = sm.generate_transition_callback;
 
+    let entry_fns = &sm.entry_functions;
+    let exit_fns = &sm.exit_functions;
+
     // Get only the unique states
     let mut state_list: Vec<_> = sm.states.values().collect();
     state_list.sort_by_key(|state| state.to_string());
@@ -113,11 +116,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 .collect()
         })
         .collect();
-
-    // println!("sm: {:#?}", sm);
-    // println!("in_states: {:#?}", in_states);
-    // println!("events: {:#?}", events);
-    // println!("transitions: {:#?}", transitions);
 
     // Map guards, actions and output states into code blocks
     let guards: Vec<Vec<_>> = transitions
@@ -257,6 +255,21 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     let mut action_list = proc_macro2::TokenStream::new();
 
     let mut entry_list = proc_macro2::TokenStream::new();
+
+    let mut entries_exits = proc_macro2::TokenStream::new();
+    for ident in entry_fns.values() {
+        entries_exits.extend(quote! {
+            #[allow(missing_docs)]
+            fn #ident(&mut self){}
+        });
+    }
+    for ident in exit_fns.values() {
+        entries_exits.extend(quote! {
+            #[allow(missing_docs)]
+            fn #ident(&mut self){}
+        });
+    }
+
     for (state, event_mappings) in transitions.iter() {
         // create the state data token stream
         let state_data = match sm.state_data.data_types.get(state) {
@@ -497,10 +510,10 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                         #guard_result
                                         self.context.log_guard(stringify!(#guard_expression), &guard_result);
                                         if guard_result.map_err(#error_type_name::GuardFailed)? {
-                                              #entry_exit_states
                                               #action_code
                                               let out_state = #states_type_name::#out_state;
                                               self.context.log_state_change(&out_state);
+                                              #entry_exit_states
                                               self.state = Some(out_state);
                                               return self.state()
                                         }
@@ -508,9 +521,9 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                 } else { // Unguarded transition
                                     quote!{
                                        #action_code
-                                       #entry_exit_states
                                        let out_state = #states_type_name::#out_state;
                                        self.context.log_state_change(&out_state);
+                                       #entry_exit_states
                                        self.state = Some(out_state);
                                        return self.state();
                                    }
@@ -603,6 +616,9 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             #guard_error
             #guard_list
             #action_list
+            #entry_list
+            #entries_exits
+
 
             /// Called at the beginning of a state machine's `process_event()`. No-op by
             /// default but can be overridden in implementations of a state machine's
@@ -623,8 +639,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             /// `process_event()`. No-op by default but can be overridden in implementations
             /// of a state machine's `StateMachineContext` trait.
             fn log_state_change(&self, new_state: & #states_type_name) {}
-
-            #entry_list
 
             #[allow(missing_docs)]
             fn transition_callback(&self, new_state: &Option<#states_type_name>) {}

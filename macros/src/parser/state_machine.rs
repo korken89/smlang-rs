@@ -1,4 +1,7 @@
-use super::transition::{StateTransition, StateTransitions};
+use super::{
+    transition::{StateTransition, StateTransitions},
+    EntryIdent,
+};
 use syn::{braced, bracketed, parse, spanned::Spanned, token, Ident, Token, Type};
 
 #[derive(Debug)]
@@ -11,6 +14,8 @@ pub struct StateMachine {
     pub derive_events: Vec<Ident>,
     pub generate_entry_exit_states: bool,
     pub generate_transition_callback: bool,
+    pub entries: Vec<EntryIdent>,
+    pub exits: Vec<EntryIdent>,
 }
 
 impl StateMachine {
@@ -24,6 +29,8 @@ impl StateMachine {
             derive_events: Vec::new(),
             generate_entry_exit_states: false,
             generate_transition_callback: false,
+            entries: Vec::new(),
+            exits: Vec::new(),
         }
     }
 
@@ -37,6 +44,12 @@ impl StateMachine {
                 out_state: transitions.out_state.clone(),
             };
             self.transitions.push(transition);
+        }
+        if let Some(entry) = transitions.entry {
+            self.entries.push(entry);
+        }
+        if let Some(exit) = transitions.exit {
+            self.exits.push(exit);
         }
     }
 }

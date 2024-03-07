@@ -260,6 +260,27 @@ statemachine!{
 
 This example is available in `ex3.rs`.
 
+### Using entry and exit functions in transitions
+
+DSL implementation:
+
+```rust
+statemachine!{
+    transitions: {
+        *State1 + Event1 = State2,
+        State2 < exit_state_2 + Event2 = State1,
+        State1 > enter_state_3 + Event3 = State3,
+        State2 + Event3 = State3,
+    }
+}
+```
+For all transitions entering State3, the function `enter_state_3` will be
+called. For all transitions exiting State2, the function `exit_state_2` will be
+called, in the right order, so first the `exit` function prior to the `entry`
+function.
+
+An example is available in `on_entry_on_exit`.
+
 ## Helpers
 
 ### Auto-derive certain traits for states and events
