@@ -14,6 +14,9 @@ pub struct EventMapping {
     pub guard: Option<AsyncIdent>,
     pub action: Option<AsyncIdent>,
     pub out_state: Ident,
+
+    pub entry_fn: Option<Ident>,
+    pub exit_fn: Option<Ident>,
 }
 
 impl parse::Parse for Event {

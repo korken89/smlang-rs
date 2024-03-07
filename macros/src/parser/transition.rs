@@ -1,7 +1,7 @@
-use super::event::Event;
 use super::input_state::InputState;
 use super::output_state::OutputState;
 use super::AsyncIdent;
+use super::{event::Event, EntryIdent};
 use syn::{bracketed, parse, token, Ident, Token};
 
 #[derive(Debug)]
@@ -19,11 +19,14 @@ pub struct StateTransitions {
     pub event: Event,
     pub guard: Option<AsyncIdent>,
     pub action: Option<AsyncIdent>,
+    pub entry: Option<EntryIdent>,
+    pub exit: Option<EntryIdent>,
     pub out_state: OutputState,
 }
 
 impl parse::Parse for StateTransitions {
     fn parse(input: parse::ParseStream) -> syn::Result<Self> {
+        println!("input: {:?}", input);
         // parse the input pattern
         let mut in_states = Vec::new();
         loop {
@@ -33,6 +36,7 @@ impl parse::Parse for StateTransitions {
                 break;
             };
         }
+        println!("in_states: {:?}", in_states);
 
         // Make sure that if a wildcard is used, it is the only input state
         if in_states.len() > 1 {
@@ -46,6 +50,34 @@ impl parse::Parse for StateTransitions {
             }
         }
 
+        // Possible extry function
+        let entry = if input.parse::<Token![<]>().is_ok() {
+            let is_async = input.parse::<token::Async>().is_ok();
+            let entry_function: Ident = input.parse()?;
+            println!("found entry token: ident: {:?}", entry_function);
+            Some(EntryIdent {
+                ident: entry_function,
+                state: in_states.clone(),
+                is_async,
+            })
+        } else {
+            None
+        };
+        let exit = if input.parse::<Token![>]>().is_ok() {
+            let is_async = input.parse::<token::Async>().is_ok();
+            let exit_function: Ident = match input.parse() {
+                Ok(v) => v,
+                Err(e) => panic!("Could not parse exit token: {:?}", e),
+            };
+            println!("found exit token: ident: {:?}", exit_function);
+            Some(EntryIdent {
+                ident: exit_function,
+                state: in_states.clone(),
+                is_async,
+            })
+        } else {
+            None
+        };
         // Event
         let event: Event = input.parse()?;
 
@@ -83,6 +115,8 @@ impl parse::Parse for StateTransitions {
             guard,
             action,
             out_state,
+            entry,
+            exit,
         })
     }
 }
