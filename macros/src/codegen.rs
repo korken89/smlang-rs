@@ -367,20 +367,29 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                     false => quote! { },
                                 };
                                 quote! {
-                                    if let Err(e) = self.context.#g(#temporary_context_call #g_a_ref_param) #guard_await {
+                                    let guard_result = self.context.#g(#temporary_context_call #g_a_ref_param) #guard_await;
+                                    self.context.log_guard(stringify!(#g), &guard_result);
+                                    if let Err(e) = guard_result {
                                         self.state = Some(#states_type_name::#in_state);
                                         return Err(#error_type_name::GuardFailed(e));
                                     }
                                     let _data = self.context.#a(#temporary_context_call #g_a_param) #action_await;
-                                    self.state = Some(#states_type_name::#out_state);
+                                    self.context.log_action(stringify!(#a));
+                                    let out_state = #states_type_name::#out_state;
+                                    self.context.log_state_change(&out_state);
+                                    self.state = Some(out_state);
                                 }
                             } else {
                                 quote! {
-                                    if let Err(e) = self.context.#g(#temporary_context_call #g_a_ref_param) {
+                                    let guard_result = self.context.#g(#temporary_context_call #g_a_ref_param);
+                                    self.context.log_guard(stringify!(#g), &guard_result);
+                                    if let Err(e) = guard_result {
                                         self.state = Some(#states_type_name::#in_state);
                                         return Err(#error_type_name::GuardFailed(e));
                                     }
-                                    self.state = Some(#states_type_name::#out_state);
+                                    let out_state = #states_type_name::#out_state;
+                                    self.context.log_state_change(&out_state);
+                                    self.state = Some(out_state);
                                 }
                             }
                         } else if let Some(AsyncIdent {ident: a, is_async: is_a_async}) = action {
@@ -390,11 +399,16 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                             };
                             quote! {
                                 let _data = self.context.#a(#temporary_context_call #g_a_param) #action_await ;
-                                self.state = Some(#states_type_name::#out_state);
+                                self.context.log_action(stringify!(#a));
+                                let out_state = #states_type_name::#out_state;
+                                self.context.log_state_change(&out_state);
+                                self.state = Some(out_state);
                             }
                         } else {
                             quote! {
-                                self.state = Some(#states_type_name::#out_state);
+                                let out_state = #states_type_name::#out_state;
+                                self.context.log_state_change(&out_state);
+                                self.state = Some(out_state);
                             }
                         }
                     })
@@ -442,6 +456,12 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         quote! {}
     };
 
+    let guard_error_type = if sm.custom_guard_error {
+        quote! { Self::GuardError }
+    } else {
+        quote! { () }
+    };
+
     let (is_async, is_async_trait) = if sm_is_async {
         (quote! { async }, quote! { #[smlang::async_trait] })
     } else {
@@ -467,6 +487,26 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             #guard_error
             #guard_list
             #action_list
+
+            /// Called at the beginning of a state machine's `process_event()`. No-op by
+            /// default but can be overridden in implementations of a state machine's
+            /// `StateMachineContext` trait.
+            fn log_process_event(&self, current_state: & #states_type_name, event: & #events_type_name) {}
+
+            /// Called after executing a guard during `process_event()`. No-op by
+            /// default but can be overridden in implementations of a state machine's
+            /// `StateMachineContext` trait.
+            fn log_guard(&self, guard: &'static str, result: &Result<(), #guard_error_type >) {}
+
+            /// Called after executing an action during `process_event()`. No-op by
+            /// default but can be overridden in implementations of a state machine's
+            /// `StateMachineContext` trait.
+            fn log_action(&self, action: &'static str) {}
+
+            /// Called when transitioning to a new state as a result of an event passed to
+            /// `process_event()`. No-op by default but can be overridden in implementations
+            /// of a state machine's `StateMachineContext` trait.
+            fn log_state_change(&self, new_state: & #states_type_name) {}
         }
 
         /// List of auto-generated states.
@@ -556,6 +596,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 #temporary_context
                 mut event: #events_type_name <#event_lifetimes>
             ) -> Result<&#states_type_name <#state_lifetimes>, #error_type> {
+                self.context.log_process_event(self.state()?, &event);
                 match self.state.take().ok_or_else(|| #error_type_name ::Poisoned)? {
                     #(#states_type_name::#in_states => match event {
                         #(#events_type_name::#events => {
