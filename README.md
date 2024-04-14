@@ -268,6 +268,20 @@ println!("Sending event: {}", Events::Event1);
 
 ```
 
+### Hooks for logging events, guards, actions, and state transitions
+
+The `StateMachineContext` trait defines (and provides default, no-op implementations for) functions that are called for each event, guard, action, and state transition. You can provide your
+own implementations which plug into your preferred logging mechanism.
+
+```rust
+fn log_process_event(&self, current_state: &States, event: &Events) {}
+fn log_guard(&self, guard: &'static str, result: &Result<(), ()>) {}
+fn log_action(&self, action: &'static str) {}
+fn log_state_change(&self, new_state: &States) {}
+```
+
+See `examples/state_machine_logger.rs` for an example which uses `derive_states` and `derive_events` to derive `Debug` implementations for easy logging.
+
 ## Contributors
 
 List of contributors in alphabetical order:
