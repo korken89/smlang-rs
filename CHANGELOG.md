@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Add support for async guards and actions
 - Add name to statemachine and make dot output stable and unique ([issue-62](https://github.com/korken89/smlang-rs/pull/62))
 - Add derive macros to states and events ([issue-62](https://github.com/korken89/smlang-rs/pull/62))
+- Add hooks to `StateMachineContext` for logging events, guards, actions, and state changes
 
 ### Fixed
 
