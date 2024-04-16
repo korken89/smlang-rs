@@ -69,44 +69,6 @@ statemachine!{
 }
 ```
 
-## Generated Types and Documentation
-
-When this crate is used in a project the documentation will be auto generated in the
-**documentation of the project**, this comes from the procedural macro also generating
-documentation.
-
-```rust
-// Auto generated enum of states
-enum States { ... }
-```
-
-```rust
-// Auto generated enum of possible events
-enum Events { ... }
-```
-
-```rust
-// Auto generated struct which holds the state machine implementation
-struct StateMachine { ... }
-```
-
-```rust
-impl StateMachine {
-    /// Creates a state machine with the starting state
-    pub fn new() -> Self;
-
-    /// Returns the current state
-    pub fn state(&self) -> States;
-
-    /// Process an event
-    pub fn process_event(&mut self, event: Events) -> Result<States, Error>;
-}
-```
-
-`StateMachine::process_event` will return `Ok(NextState)` if the transition was successful,
-`Err(Error::GuardFailed)` if the guard failed, or `Err(Error::InvalidEvent)` if an event
-which should not come at this stage of the state machine was processed.
-
 See example `examples/input_state_pattern_match.rs` for a usage example.
 
 ### State machine context
