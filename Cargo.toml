@@ -11,7 +11,7 @@ edition = "2018"
 readme = "README.md"
 
 [dependencies]
-smlang-macros = { path = "macros", version = "0.6.0" }
+smlang-macros = { path = "macros", version = "0.7.0" }
 async-trait = "0.1"
 
 [dev-dependencies]
