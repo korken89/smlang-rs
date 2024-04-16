@@ -5,9 +5,11 @@
 
 > A state machine language DSL based on the syntax of [Boost-SML](https://boost-ext.github.io/sml/).
 
-## Aim
+`smlang` is a procedural macro library creating a state machine language DSL is to facilitate the
+use of state machines, as they quite fast can become overly complicated to write and get an
+overview of.
 
-The aim of this DSL is to facilitate the use of state machines, as they quite fast can become overly complicated to write and get an overview of.
+The library supports both `async` and non-`async` code.
 
 ## Transition DSL
 
@@ -15,15 +17,47 @@ The DSL is defined as follows:
 
 ```rust
 statemachine!{
+    // An optional prefix to name the generated state machine trait code. This can be used to allow
+    // multiple state machines to exist in the same source file. The generated trait and types are
+    `<name>States`, `<name>Events`, and `<name>StateMachine` respectively.
+    name: "",
+
+    // Can be used if a temporary context is needed within the state machine API. When specified,
+    // the temporary context is provided in `StateMachine::process_event()` and is exposed in
+    // guards and actions as the second argument.
+    temporary_context: None,
+
+    // Can be optionally specified to add a new `type GuardError` to the generated
+    // `StateMachineContext` trait to allow guards to return a custom error type instead of `()`.
+    custom_guard_error: false,
+
+    // An optional list of derive names for the generated `States` and `Events` enumerations
+    respectively. For example, to `#[derive(Debug)]`, these would both be specified as `[Debug]`.
+    derive_states: [],
+    derive_events: [],
+
     transitions: {
         *SrcState1 + Event1 [ guard1 ] / action1 = DstState2, // * denotes starting state
         SrcState2 + Event2 [ guard2 ] / action2 = DstState1,
+
+        // Pattern matching can be used to support multiple states with the same transition event.
+        SrcState1 | SrcState2 + Event3 [ guard3] / action1 = DstState3,
+
+        // States can contain data
+        StateWithData(u32) + Event = DstState,
+        StateWithData(&'a u32) + Event = DstState,
+
+        // ..or wildcarding can be used to allow all states to share a transition event.
+        _ + Event4 = DstState4,
     }
     // ...
 }
 ```
 
-Where `guard` and `action` are optional and can be left out. A `guard` is a function which returns `true` if the state transition should happen, and `false`  if the transition should not happen, while `action` are functions that are run during the transition which are guaranteed to finish before entering the new state.
+Where `guard` and `action` are optional and can be left out. A `guard` is a function which returns
+`Ok()` if the state transition should happen, and `false`  if the transition should not happen,
+while `action` are functions that are run during the transition which are guaranteed to finish
+before entering the new state.
 
 > This implies that any state machine must be written as a list of transitions.
 
@@ -63,12 +97,52 @@ statemachine!{
 }
 ```
 
+## Generated Types and Documentation
+
+When this crate is used in a project the documentation will be auto generated in the
+**documentation of the project**, this comes from the procedural macro also generating
+documentation.
+
+```ignore
+// Auto generated enum of states
+enum States { ... }
+```
+
+```ignore
+// Auto generated enum of possible events
+enum Events { ... }
+```
+
+```ignore
+// Auto generated struct which holds the state machine implementation
+struct StateMachine { ... }
+```
+
+```ignore
+impl StateMachine {
+    /// Creates a state machine with the starting state
+    pub fn new() -> Self;
+
+    /// Returns the current state
+    pub fn state(&self) -> States;
+
+    /// Process an event
+    pub fn process_event(&mut self, event: Events) -> Result<States, Error>;
+}
+```
+
+`StateMachine::process_event` will return `Ok(NextState)` if the transition was successful,
+`Err(Error::GuardFailed)` if the guard failed, or `Err(Error::InvalidEvent)` if an event
+which should not come at this stage of the state machine was processed.
+
 See example `examples/input_state_pattern_match.rs` for a usage example.
 
 ### State machine context
 
 The state machine needs a context to be defined.
-The `StateMachineContext` is generated from the `statemachine!` proc-macro and is what implements guards and actions, and data that is available in all states within the state machine and persists between state transitions:
+The `StateMachineContext` is generated from the `statemachine!` proc-macro and is what implements
+guards and actions, and data that is available in all states within the state machine and persists
+between state transitions:
 
 ```rust
 statemachine!{
@@ -90,6 +164,7 @@ fn main() {
 ```
 
 See example `examples/context.rs` for a usage example.
+
 
 ### State data
 
@@ -288,6 +363,7 @@ List of contributors in alphabetical order:
 
 * Emil Fresk ([@korken89](https://github.com/korken89))
 * Mathias Koch ([@MathiasKoch](https://github.com/MathiasKoch))
+* Ryan Summers ([@ryan-summers](https://github.com/ryan-summers))
 * Donny Zimmanck ([@dzimmanck](https://github.com/dzimmanck))
 
 ---
@@ -296,10 +372,8 @@ List of contributors in alphabetical order:
 
 Licensed under either of
 
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or
-  http://www.apache.org/licenses/LICENSE-2.0)
-
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+- Apache License, Version 2.0 [LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>
+- MIT license [LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>
 
 at your option.
 
