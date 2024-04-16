@@ -19,7 +19,7 @@ The DSL is defined as follows:
 statemachine!{
     // An optional prefix to name the generated state machine trait code. This can be used to allow
     // multiple state machines to exist in the same source file. The generated trait and types are
-    `<name>States`, `<name>Events`, and `<name>StateMachine` respectively.
+    // `<name>States`, `<name>Events`, and `<name>StateMachine` respectively.
     name: "",
 
     // Can be used if a temporary context is needed within the state machine API. When specified,
@@ -32,7 +32,7 @@ statemachine!{
     custom_guard_error: false,
 
     // An optional list of derive names for the generated `States` and `Events` enumerations
-    respectively. For example, to `#[derive(Debug)]`, these would both be specified as `[Debug]`.
+    // respectively. For example, to `#[derive(Debug)]`, these would both be specified as `[Debug]`.
     derive_states: [],
     derive_events: [],
 
@@ -103,22 +103,22 @@ When this crate is used in a project the documentation will be auto generated in
 **documentation of the project**, this comes from the procedural macro also generating
 documentation.
 
-```ignore
+```rust
 // Auto generated enum of states
 enum States { ... }
 ```
 
-```ignore
+```rust
 // Auto generated enum of possible events
 enum Events { ... }
 ```
 
-```ignore
+```rust
 // Auto generated struct which holds the state machine implementation
 struct StateMachine { ... }
 ```
 
-```ignore
+```rust
 impl StateMachine {
     /// Creates a state machine with the starting state
     pub fn new() -> Self;
@@ -256,12 +256,50 @@ See example `examples/guard_action_syntax.rs` for a usage-example.
 
 ### Async Guard and Action
 
+Guards and actions may both be optionally `async`:
+```rust
+use smlang::{async_trait, statemachine};
+
+statemachine! {
+    transitions: {
+        *State1 + Event1 [guard1] / async action1 = State2,
+        State2 + Event2 [async guard2] / action2 = State3,
+    }
+}
+
+
+#[async_trait]
+pub struct Context {
+    // ...
+}
+
+impl StateMachineContext for Context {
+    async fn action1(&mut self) -> () {
+        // ...
+    }
+
+    async fn guard2(&mut self) -> Result<(), ()> {
+        // ...
+    }
+
+    fn guard1(&mut self) -> Result<(), ()> {
+        // ...
+    }
+
+    fn action2(&mut self) -> () {
+        // ...
+    }
+}
+```
+
+
 See example `examples/async.rs` for a usage-example.
 
 ## State Machine Examples
 
-Here are some examples of state machines converted from UML to the State Machine Language DSL. Runnable versions of each example is available in the `examples` folder.
-The `.png`s are generated with the `graphviz` feature.
+Here are some examples of state machines converted from UML to the State Machine Language DSL.
+Runnable versions of each example is available in the `examples` folder. The `.png`s are generated
+with the `graphviz` feature.
 
 ### Linear state machine
 
