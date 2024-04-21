@@ -4,6 +4,7 @@ error: Action `action` can only be reused when all input states, events, and out
 3  | / statemachine! {
 4  | |     transitions: {
 5  | |         *Init + Event / action = State1(u32),
+6  | |
 ...  |
 10 | |     }
 11 | | }
