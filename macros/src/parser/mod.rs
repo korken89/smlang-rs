@@ -70,8 +70,7 @@ fn add_transition(
     // Check for actions when states have data a
     if state_data
         .data_types
-        .get(&transition.out_state.ident.to_string())
-        .is_some()
+        .contains_key(&transition.out_state.ident.to_string())
     {
         // This transition goes to a state that has data associated, check so it has an
         // action

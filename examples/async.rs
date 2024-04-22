@@ -5,7 +5,6 @@
 #![deny(missing_docs)]
 
 use smlang::{async_trait, statemachine};
-use smol;
 
 statemachine! {
     transitions: {

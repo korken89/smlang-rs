@@ -45,6 +45,7 @@ fn multiple_lifetimes() {
         }
     }
 
+    #[allow(dead_code)]
     struct Context;
 
     impl StateMachineContext for Context {
