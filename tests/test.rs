@@ -49,16 +49,16 @@ fn multiple_lifetimes() {
     struct Context;
 
     impl StateMachineContext for Context {
-        fn guard1<'a>(&mut self, _event_data: &'a X) -> Result<(), ()> {
-            Ok(())
+        fn guard1(&mut self, _event_data: &X) -> Result<bool, ()> {
+            Ok(true)
         }
 
-        fn guard2<'a, 'b>(&mut self, _state_data: &'a X, _event_data: &'b Y) -> Result<(), ()> {
-            Ok(())
+        fn guard2(&mut self, _state_data: &X, _event_data: &Y) -> Result<bool, ()> {
+            Ok(true)
         }
 
-        fn guard3<'c>(&mut self, _event_data: &'c Z) -> Result<(), ()> {
-            Ok(())
+        fn guard3(&mut self, _event_data: &Z) -> Result<bool, ()> {
+            Ok(true)
         }
 
         fn action1<'a>(&mut self, event_data: &'a X) -> &'a X {
@@ -69,7 +69,7 @@ fn multiple_lifetimes() {
             (state_data, event_data)
         }
 
-        fn action3<'c>(&mut self, _event_data: &'c Z) {}
+        fn action3(&mut self, _event_data: &Z) {}
     }
 
     #[allow(dead_code)]
@@ -145,8 +145,8 @@ fn async_guards_and_actions() {
         struct Context;
         #[smlang::async_trait]
         impl StateMachineContext for Context {
-            async fn guard1(&mut self) -> Result<(), ()> {
-                Ok(())
+            async fn guard1(&mut self) -> Result<bool, ()> {
+                Ok(true)
             }
 
             async fn action1(&mut self) -> () {

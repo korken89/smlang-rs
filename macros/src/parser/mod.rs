@@ -13,6 +13,7 @@ use state_machine::StateMachine;
 use input_state::InputState;
 use proc_macro2::Span;
 
+use crate::parser::event::Transition;
 use std::collections::{hash_map, HashMap};
 use syn::{parse, Ident, Type};
 use transition::StateTransition;
@@ -50,21 +51,27 @@ fn add_transition(
         .get_mut(&transition.in_state.ident.to_string())
         .unwrap();
 
-    if let hash_map::Entry::Vacant(entry) = p.entry(transition.event.ident.to_string()) {
-        let mapping = EventMapping {
-            in_state: transition.in_state.ident.clone(),
-            event: transition.event.ident.clone(),
-            guard: transition.guard.clone(),
-            action: transition.action.clone(),
-            out_state: transition.out_state.ident.clone(),
-        };
-
-        entry.insert(mapping);
-    } else {
-        return Err(parse::Error::new(
-            transition.in_state.ident.span(),
-            "State and event combination specified multiple times, remove duplicates.",
-        ));
+    match p.entry(transition.event.ident.to_string()) {
+        hash_map::Entry::Vacant(entry) => {
+            let mapping = EventMapping {
+                in_state: transition.in_state.ident.clone(),
+                event: transition.event.ident.clone(),
+                transitions: vec![Transition {
+                    guard: transition.guard.clone(),
+                    action: transition.action.clone(),
+                    out_state: transition.out_state.ident.clone(),
+                }],
+            };
+            entry.insert(mapping);
+        }
+        hash_map::Entry::Occupied(mut entry) => {
+            let mapping = entry.get_mut();
+            mapping.transitions.push(Transition {
+                guard: transition.guard.clone(),
+                action: transition.action.clone(),
+                out_state: transition.out_state.ident.clone(),
+            });
+        }
     }
 
     // Check for actions when states have data a

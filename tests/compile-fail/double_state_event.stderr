@@ -1,5 +1,0 @@
-error: State and event combination specified multiple times, remove duplicates.
- --> $DIR/double_state_event.rs:8:9
-  |
-8 |         State1 + Event1 = State3, //~ State and event combination specified multiple times, remove duplicates.
-  |         ^^^^^^

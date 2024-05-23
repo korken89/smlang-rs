@@ -38,7 +38,7 @@ pub fn statemachine(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
                 // Start the 'dot' process.
                 let mut process = std::process::Command::new("dot")
-                    .args(&["-Tsvg", "-o", &format!("statemachine_{diagram_name}.svg")])
+                    .args(["-Tsvg", "-o", &format!("statemachine_{diagram_name}.svg")])
                     .stdin(std::process::Stdio::piped())
                     .spawn()
                     .expect("Failed to execute 'dot'. Are you sure graphviz is installed?");

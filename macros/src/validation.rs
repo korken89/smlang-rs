@@ -70,27 +70,32 @@ fn validate_action_signatures(sm: &ParsedStateMachine) -> Result<(), parse::Erro
                 .event_data
                 .data_types
                 .get(&event_mapping.event.to_string());
+            for transition in &event_mapping.transitions {
+                if let Some(AsyncIdent {
+                    ident: action,
+                    is_async,
+                }) = &transition.action
+                {
+                    let signature = FunctionSignature::new(
+                        in_state_data,
+                        event_data,
+                        out_state_data,
+                        *is_async,
+                    );
 
-            if let Some(AsyncIdent {
-                ident: action,
-                is_async,
-            }) = &event_mapping.action
-            {
-                let signature =
-                    FunctionSignature::new(in_state_data, event_data, out_state_data, *is_async);
+                    // If the action is not yet known, add it to our tracking list.
+                    actions
+                        .entry(action.to_string())
+                        .or_insert_with(|| signature.clone());
 
-                // If the action is not yet known, add it to our tracking list.
-                actions
-                    .entry(action.to_string())
-                    .or_insert_with(|| signature.clone());
-
-                // Check that the call signature is equivalent to the recorded signature for this
-                // action.
-                if actions.get(&action.to_string()).unwrap() != &signature {
-                    return Err(parse::Error::new(
-                        Span::call_site(),
-                        format!("Action `{}` can only be reused when all input states, events, and output states have the same data", action),
-                    ));
+                    // Check that the call signature is equivalent to the recorded signature for this
+                    // action.
+                    if actions.get(&action.to_string()).unwrap() != &signature {
+                        return Err(parse::Error::new(
+                            Span::call_site(),
+                            format!("Action `{}` can only be reused when all input states, events, and output states have the same data", action),
+                        ));
+                    }
                 }
             }
         }
@@ -114,26 +119,28 @@ fn validate_guard_signatures(sm: &ParsedStateMachine) -> Result<(), parse::Error
                 .event_data
                 .data_types
                 .get(&event_mapping.event.to_string());
+            for transition in &event_mapping.transitions {
+                if let Some(AsyncIdent {
+                    ident: guard,
+                    is_async,
+                }) = &transition.guard
+                {
+                    let signature =
+                        FunctionSignature::new_guard(in_state_data, event_data, *is_async);
 
-            if let Some(AsyncIdent {
-                ident: guard,
-                is_async,
-            }) = &event_mapping.guard
-            {
-                let signature = FunctionSignature::new_guard(in_state_data, event_data, *is_async);
+                    // If the action is not yet known, add it to our tracking list.
+                    guards
+                        .entry(guard.to_string())
+                        .or_insert_with(|| signature.clone());
 
-                // If the action is not yet known, add it to our tracking list.
-                guards
-                    .entry(guard.to_string())
-                    .or_insert_with(|| signature.clone());
-
-                // Check that the call signature is equivalent to the recorded signature for this
-                // guard.
-                if guards.get(&guard.to_string()).unwrap() != &signature {
-                    return Err(parse::Error::new(
-                        Span::call_site(),
-                        format!("Guard `{}` can only be reused when all input states and events have the same data", guard),
-                    ));
+                    // Check that the call signature is equivalent to the recorded signature for this
+                    // guard.
+                    if guards.get(&guard.to_string()).unwrap() != &signature {
+                        return Err(parse::Error::new(
+                            Span::call_site(),
+                            format!("Guard `{}` can only be reused when all input states and events have the same data", guard),
+                        ));
+                    }
                 }
             }
         }

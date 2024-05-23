@@ -22,9 +22,9 @@ pub struct Context {
 
 #[async_trait]
 impl StateMachineContext for Context {
-    fn guard1(&mut self) -> Result<(), ()> {
+    fn guard1(&mut self) -> Result<bool, ()> {
         println!("`guard1` called from sync context");
-        Ok(())
+        Ok(true)
     }
 
     async fn action1(&mut self) -> () {
@@ -33,11 +33,11 @@ impl StateMachineContext for Context {
         *lock = true;
     }
 
-    async fn guard2(&mut self) -> Result<(), ()> {
+    async fn guard2(&mut self) -> Result<bool, ()> {
         println!("`guard2` called from async context");
         let mut lock = self.lock.write().await;
         *lock = false;
-        Ok(())
+        Ok(true)
     }
 
     async fn action2(&mut self) -> () {

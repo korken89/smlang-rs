@@ -21,10 +21,10 @@ statemachine! {
 pub struct Context;
 
 impl StateMachineContext for Context {
-    fn guard1(&mut self, event_data: &[u8]) -> Result<(), ()> {
+    fn guard1(&mut self, event_data: &[u8]) -> Result<bool, ()> {
         // Only ok if the slice is not empty
         if !event_data.is_empty() {
-            Ok(())
+            Ok(true)
         } else {
             Err(())
         }
@@ -34,9 +34,9 @@ impl StateMachineContext for Context {
         println!("Got valid Event Data = {:?}", event_data);
     }
 
-    fn guard2(&mut self, event_data: &MyReferenceWrapper) -> Result<(), ()> {
+    fn guard2(&mut self, event_data: &MyReferenceWrapper) -> Result<bool, ()> {
         if *event_data.0 > 9000 {
-            Ok(())
+            Ok(true)
         } else {
             Err(())
         }
