@@ -284,12 +284,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         None => quote! {},
                     };
 
-                    let guard_error = if sm.custom_guard_error {
-                        quote! { Self::GuardError }
-                    } else {
-                        quote! { () }
-                    };
-
                     // Only add the guard if it hasn't been added before
                     if !guard_set.iter().any(|g| g == guard) {
                         guard_set.push(guard.clone());
@@ -299,7 +293,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         };
                         guard_list.extend(quote! {
                             #[allow(missing_docs)]
-                            #is_async fn #guard <#all_lifetimes> (&mut self, #temporary_context #state_data #event_data) -> Result<bool, #guard_error>;
+                            #is_async fn #guard <#all_lifetimes> (&mut self, #temporary_context #state_data #event_data) -> bool;
                         });
                     }
                 }
@@ -375,7 +369,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 .zip(in_states.iter().zip(out_states.iter().zip(guard_action_parameters.iter().zip(guard_action_ref_parameters.iter())))),
         )
         .map(
-            |(guards, (actions, (in_state, (out_states, (guard_action_parameters, guard_action_ref_parameters)))))| {
+            |(guards, (actions, (_, (out_states, (guard_action_parameters, guard_action_ref_parameters)))))| {
                 guards
                     .iter()
                     .zip(
@@ -401,7 +395,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                     let guard_result = self.context.#g(#temporary_context_call #g_a_ref_param) #guard_await;
                                     self.context.log_guard(stringify!(#g), &guard_result);
                                     match guard_result {
-                                        Ok(true) => {
+                                        true => {
                                             let _data = self.context.#a(#temporary_context_call #g_a_param) #action_await;
                                             self.context.log_action(stringify!(#a));
                                             let out_state = #states_type_name::#out_state;
@@ -409,11 +403,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                             self.state = Some(out_state);
                                             return self.state()
                                         },
-                                        Err(e) => {
-                                            self.state = Some(#states_type_name::#in_state);
-                                            return Err(#error_type_name::GuardFailed(e))
-                                        },
-                                        _ => {},
+                                        false => {},
                                     }
 
                                 }
@@ -422,17 +412,13 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                     let guard_result = self.context.#g(#temporary_context_call #g_a_ref_param);
                                     self.context.log_guard(stringify!(#g), &guard_result);
                                     match guard_result {
-                                        Ok(true) => {
+                                        true => {
                                             let out_state = #states_type_name::#out_state;
                                             self.context.log_state_change(&out_state);
                                             self.state = Some(out_state);
                                             return self.state()
                                         },
-                                        Err(e) => {
-                                            self.state = Some(#states_type_name::#in_state);
-                                            return Err(#error_type_name::GuardFailed(e))
-                                        },
-                                        _ => {},
+                                        false => {},
                                     }
                                 }
                                     }
@@ -498,34 +484,13 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     // lifetimes that exists in #events_type_name but not in #states_type_name
     let event_unique_lifetimes = event_lifetimes - state_lifetimes;
 
-    let guard_error = if sm.custom_guard_error {
-        quote! {
-            /// The error type returned by guard functions.
-            type GuardError: core::fmt::Debug;
-        }
-    } else {
-        quote! {}
-    };
-
-    let guard_error_type = if sm.custom_guard_error {
-        quote! { Self::GuardError }
-    } else {
-        quote! { () }
-    };
-
     let (is_async, is_async_trait) = if sm_is_async {
         (quote! { async }, quote! { #[smlang::async_trait] })
     } else {
         (quote! {}, quote! {})
     };
 
-    let error_type = if sm.custom_guard_error {
-        quote! {
-            #error_type_name<<T as #state_machine_context_type_name>::GuardError>
-        }
-    } else {
-        quote! {#error_type_name}
-    };
+    let error_type = quote! {#error_type_name};
 
     let derive_states_list = &sm.derive_states;
     let derive_events_list = &sm.derive_events;
@@ -535,7 +500,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         /// machine.
         #is_async_trait
         pub trait #state_machine_context_type_name {
-            #guard_error
             #guard_list
             #action_list
 
@@ -547,7 +511,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             /// Called after executing a guard during `process_event()`. No-op by
             /// default but can be overridden in implementations of a state machine's
             /// `StateMachineContext` trait.
-            fn log_guard(&self, guard: &'static str, result: &Result<bool, #guard_error_type >) {}
+            fn log_guard(&self, guard: &'static str, result: &bool) {}
 
             /// Called after executing an action during `process_event()`. No-op by
             /// default but can be overridden in implementations of a state machine's
