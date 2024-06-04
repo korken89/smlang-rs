@@ -54,7 +54,7 @@ fn main() {
 
     // The action will never run as the guard will fail
     let r = sm.process_event(LoopingWithGuardsEvents::Event2);
-    assert!(matches!(r, Err(LoopingWithGuardsError::GuardFailed(()))));
+    assert!(matches!(r, Err(LoopingWithGuardsError::TransitionsFailed)));
 
     println!("After action 2");
 

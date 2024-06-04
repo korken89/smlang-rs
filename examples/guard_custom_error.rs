@@ -60,5 +60,5 @@ fn main() {
 
     let r = sm.process_event(Events::Event1(MyEventData(1)));
 
-    assert!(matches!(r, Err(Error::GuardFailed(()))));
+    assert!(matches!(r, Err(Error::TransitionsFailed)));
 }

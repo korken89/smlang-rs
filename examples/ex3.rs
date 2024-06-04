@@ -53,7 +53,7 @@ fn main() {
 
     // The action will never run as the guard will fail
     let r = sm.process_event(Events::Event2);
-    assert!(matches!(r, Err(Error::GuardFailed(()))));
+    assert!(matches!(r, Err(Error::TransitionsFailed)));
 
     println!("After action 2");
 
