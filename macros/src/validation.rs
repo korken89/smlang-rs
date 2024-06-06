@@ -1,3 +1,4 @@
+use crate::parser::transition::visit_guards;
 use crate::parser::{AsyncIdent, ParsedStateMachine};
 use proc_macro2::Span;
 use std::collections::HashMap;
@@ -120,27 +121,27 @@ fn validate_guard_signatures(sm: &ParsedStateMachine) -> Result<(), parse::Error
                 .data_types
                 .get(&event_mapping.event.to_string());
             for transition in &event_mapping.transitions {
-                if let Some(AsyncIdent {
-                    ident: guard,
-                    is_async,
-                }) = &transition.guard
-                {
-                    let signature =
-                        FunctionSignature::new_guard(in_state_data, event_data, *is_async);
+                if let Some(guard_expression) = &transition.guard {
+                    let res = visit_guards(guard_expression, |guard| {
+                        let signature =
+                            FunctionSignature::new_guard(in_state_data, event_data, guard.is_async);
 
-                    // If the action is not yet known, add it to our tracking list.
-                    guards
-                        .entry(guard.to_string())
-                        .or_insert_with(|| signature.clone());
+                        // If the action is not yet known, add it to our tracking list.
+                        guards
+                            .entry(guard.ident.to_string())
+                            .or_insert_with(|| signature.clone());
 
-                    // Check that the call signature is equivalent to the recorded signature for this
-                    // guard.
-                    if guards.get(&guard.to_string()).unwrap() != &signature {
-                        return Err(parse::Error::new(
-                            Span::call_site(),
-                            format!("Guard `{}` can only be reused when all input states and events have the same data", guard),
-                        ));
-                    }
+                        // Check that the call signature is equivalent to the recorded signature for this
+                        // guard.
+                        if guards.get(&guard.ident.to_string()).unwrap() != &signature {
+                            return Err(parse::Error::new(
+                                Span::call_site(),
+                                format!("Guard `{}` can only be reused when all input states and events have the same data", guard.ident),
+                            ));
+                        }
+                        Ok(())
+                    });
+                    res?;
                 }
             }
         }

@@ -17,7 +17,7 @@ pub fn generate_diagram(sm: &ParsedStateMachine) -> String {
                     transition
                         .guard
                         .as_ref()
-                        .map(|i| i.ident.to_string())
+                        .map(|i| i.to_string())
                         .unwrap_or_else(|| "_".to_string()),
                     transition
                         .action

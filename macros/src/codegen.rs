@@ -1,9 +1,10 @@
 // Move guards to return a Result
 
+use crate::parser::transition::{visit_guards, GuardExpression};
 use crate::parser::{lifetimes::Lifetimes, AsyncIdent, ParsedStateMachine};
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote};
-use syn::{punctuated::Punctuated, token::Paren, Type, TypeTuple};
+use syn::{parse, punctuated::Punctuated, token::Paren, Type, TypeTuple};
 
 pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     let (sm_name, sm_name_span) = sm
@@ -116,7 +117,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     // println!("transitions: {:#?}", transitions);
 
     // Map guards, actions and output states into code blocks
-    let guards: Vec<Vec<Vec<Option<AsyncIdent>>>> = transitions
+    let guards: Vec<Vec<Vec<Option<GuardExpression>>>> = transitions
         .values()
         .map(|event_mappings| {
             event_mappings
@@ -277,25 +278,31 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 all_lifetimes.extend(&event_lifetimes);
 
                 // Create the guard traits for user implementation
-                if let Some(AsyncIdent {ident: guard, is_async}) = &transition.guard {
-                    let event_data = match sm.event_data.data_types.get(event) {
-                        Some(et @ Type::Reference(_)) => quote! { event_data: #et },
-                        Some(et) => quote! { event_data: &#et },
-                        None => quote! {},
-                    };
-
-                    // Only add the guard if it hasn't been added before
-                    if !guard_set.iter().any(|g| g == guard) {
-                        guard_set.push(guard.clone());
-                        let is_async = match is_async {
-                            true => quote!{ async },
-                            false => quote!{ },
+                if let Some(guard_expression) = &transition.guard {
+                    let _ = visit_guards(guard_expression,|guard| {
+                        let is_async = guard.is_async;
+                        let guard = &guard.ident;
+                        let event_data = match sm.event_data.data_types.get(event) {
+                            Some(et @ Type::Reference(_)) => quote! { event_data: #et },
+                            Some(et) => quote! { event_data: &#et },
+                            None => quote! {},
                         };
-                        guard_list.extend(quote! {
+
+                        // Only add the guard if it hasn't been added before
+                        if !guard_set.iter().any(|g| g == guard) {
+                            guard_set.push(guard.clone());
+                            let is_async = match is_async {
+                                true => quote!{ async },
+                                false => quote!{ },
+                            };
+                            guard_list.extend(quote! {
                             #[allow(missing_docs)]
                             #is_async fn #guard <#all_lifetimes> (&mut self, #temporary_context #state_data #event_data) -> bool;
                         });
-                    }
+                        };
+                        let res : Result<(), parse::Error> = Ok(());
+                        res
+                    });
                 }
 
                 // Create the action traits for user implementation
@@ -380,51 +387,62 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     .map(|(guard, (action, (out_state, (g_a_param, g_a_ref_param))))| {
                         let streams: Vec<TokenStream> =
                             guard.iter()
-                            .zip(action.iter().zip(out_state)).map(|(guard, (action,out_state))|
-                                if let Some(AsyncIdent {ident: guard_ident, is_async: is_g_async}) = guard {
-                                    let guard_await = match is_g_async {
-                                        true => { sm_is_async = true; quote! { .await } },
-                                        false => quote! { },
+                            .zip(action.iter().zip(out_state)).map(|(guard, (action,out_state))| {
+                                if let Some(expr) = guard {
+                                    let mut guard_visitor = |async_ident: &AsyncIdent| {
+                                        let guard_ident = &async_ident.ident;
+                                        if async_ident.is_async {
+                                            quote! { self.context.#guard_ident(#temporary_context_call #g_a_ref_param).await }
+                                        } else {
+                                            quote! { self.context.#guard_ident(#temporary_context_call #g_a_ref_param) }
+                                        }
                                     };
-                                    if let Some(AsyncIdent {ident: a, is_async: is_a_async}) = action {
+                                    let guard_expression = expr.to_token_stream(&mut guard_visitor);
+
+                                    if let Some(AsyncIdent { ident: a, is_async: is_a_async }) = action {
                                         let action_await = match is_a_async {
-                                            true => { sm_is_async = true; quote! { .await } },
+                                            true => {
+                                                sm_is_async = true;
+                                                quote! { .await }
+                                            },
                                             false => quote! { },
                                         };
                                         quote! {
-                                    let guard_result = self.context.#guard_ident(#temporary_context_call #g_a_ref_param) #guard_await;
-                                    self.context.log_guard(stringify!(#guard_ident), &guard_result);
-                                    match guard_result {
-                                        true => {
-                                            let _data = self.context.#a(#temporary_context_call #g_a_param) #action_await;
-                                            self.context.log_action(stringify!(#a));
-                                            let out_state = #states_type_name::#out_state;
-                                            self.context.log_state_change(&out_state);
-                                            self.state = Some(out_state);
-                                            return self.state()
-                                        },
-                                        false => {},
-                                    }
-
-                                }
+                                            let guard_result = #guard_expression;
+                                            self.context.log_guard(stringify!(#guard_expression), &guard_result);
+                                            match guard_result {
+                                                true => {
+                                                    let _data = self.context.#a(#temporary_context_call #g_a_param) #action_await;
+                                                    self.context.log_action(stringify!(#a));
+                                                    let out_state = #states_type_name::#out_state;
+                                                    self.context.log_state_change(&out_state);
+                                                    self.state = Some(out_state);
+                                                    return self.state()
+                                                },
+                                                false => {},
+                                            }
+                                        }
                                     } else {
                                         quote! {
-                                    let guard_result = self.context.#guard_ident(#temporary_context_call #g_a_ref_param);
-                                    self.context.log_guard(stringify!(#guard_ident), &guard_result);
-                                    match guard_result {
-                                        true => {
-                                            let out_state = #states_type_name::#out_state;
-                                            self.context.log_state_change(&out_state);
-                                            self.state = Some(out_state);
-                                            return self.state()
-                                        },
-                                        false => {},
+                                            let guard_result = #guard_expression;
+                                            self.context.log_guard(stringify!(#guard_expression), &guard_result);
+                                            match guard_result {
+                                                true => {
+                                                    let out_state = #states_type_name::#out_state;
+                                                    self.context.log_state_change(&out_state);
+                                                    self.state = Some(out_state);
+                                                    return self.state()
+                                                },
+                                                false => {},
+                                            }
+                                        }
                                     }
-                                }
-                                    }
-                                } else if let Some(AsyncIdent {ident: action_ident, is_async: is_a_async}) = action {
+                                } else if let Some(AsyncIdent { ident: action_ident, is_async: is_a_async }) = action {
                                     let action_await = match is_a_async {
-                                        true => { sm_is_async = true; quote! { .await } },
+                                        true => {
+                                            sm_is_async = true;
+                                            quote! { .await }
+                                        },
                                         false => quote! { },
                                     };
                                     quote! {
@@ -443,7 +461,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                 return self.state();
                             }
                                 }
-
+                            }
                             ).collect();
                         quote!{
                             #(#streams)*
@@ -551,7 +569,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         }
 
         /// List of possible errors
-        #[derive(Debug)]
+        #[derive(Debug,PartialEq)]
         pub enum #error_type_name {
             /// When an event is processed which should not come in the current state.
             InvalidEvent,

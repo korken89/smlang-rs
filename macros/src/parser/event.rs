@@ -1,3 +1,4 @@
+use crate::parser::transition::GuardExpression;
 use crate::parser::AsyncIdent;
 use syn::{parenthesized, parse, spanned::Spanned, token, Ident, Token, Type};
 
@@ -16,7 +17,7 @@ pub struct EventMapping {
 
 #[derive(Debug)]
 pub struct Transition {
-    pub guard: Option<AsyncIdent>,
+    pub guard: Option<GuardExpression>,
     pub action: Option<AsyncIdent>,
     pub out_state: Ident,
 }

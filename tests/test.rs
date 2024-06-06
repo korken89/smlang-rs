@@ -163,3 +163,83 @@ fn async_guards_and_actions() {
         assert!(matches!(sm.state(), Ok(&States::Fault)));
     });
 }
+
+#[test]
+fn guard_expressions() {
+    #[derive(PartialEq, Display)]
+    pub struct Entry(pub u32);
+
+    statemachine! {
+        derive_states: [Display, Debug],
+        transitions: {
+            *Init + Login(&'a Entry) [valid_entry] / attempt = LoggedIn,
+            Init + Login(&'a Entry) [!valid_entry && !too_many_attempts] / attempt = Init,
+            Init + Login(&'a Entry) [!valid_entry && too_many_attempts] / attempt = LoginDenied,
+            LoggedIn + Logout / reset = Init,
+        }
+    }
+
+    /// Context
+    pub struct Context {
+        password: u32,
+        attempts: u32,
+    }
+    impl StateMachineContext for Context {
+        fn valid_entry(&mut self, e: &Entry) -> bool {
+            e.0 == self.password
+        }
+        fn too_many_attempts(&mut self, _e: &Entry) -> bool {
+            self.attempts >= 3
+        }
+        fn attempt(&mut self, _e: &Entry) {
+            self.attempts += 1;
+        }
+        fn reset(&mut self) {
+            self.attempts = 0;
+        }
+    }
+
+    let mut sm = StateMachine::new(Context {
+        password: 42,
+        attempts: 0,
+    });
+    assert_eq!(format!("{}", sm.state().unwrap()), "Init");
+
+    let bad_entry = Entry(10);
+    let good_entry = Entry(42);
+
+    let _ = sm.process_event(Events::Login(&bad_entry));
+    assert_eq!(sm.context().attempts, 1);
+    assert_eq!(format!("{}", sm.state().unwrap()), "Init");
+
+    let _ = sm.process_event(Events::Login(&bad_entry));
+    assert_eq!(sm.context().attempts, 2);
+    assert_eq!(format!("{}", sm.state().unwrap()), "Init");
+
+    let _ = sm.process_event(Events::Login(&good_entry));
+    assert_eq!(sm.context().attempts, 3);
+    assert_eq!(format!("{}", sm.state().unwrap()), "LoggedIn");
+
+    let _ = sm.process_event(Events::Logout);
+    assert_eq!(sm.context().attempts, 0);
+    assert_eq!(format!("{}", sm.state().unwrap()), "Init");
+
+    let _ = sm.process_event(Events::Login(&bad_entry));
+    let _ = sm.process_event(Events::Login(&bad_entry));
+    let _ = sm.process_event(Events::Login(&bad_entry));
+    assert_eq!(sm.context().attempts, 3);
+    assert_eq!(format!("{}", sm.state().unwrap()), "Init");
+
+    // exhausted attempts
+    let _ = sm.process_event(Events::Login(&bad_entry));
+    assert_eq!(sm.context().attempts, 4);
+    assert_eq!(format!("{}", sm.state().unwrap()), "LoginDenied");
+
+    // Invalid event, as we are in a final state
+    assert_eq!(
+        sm.process_event(Events::Login(&good_entry)),
+        Err(Error::InvalidEvent)
+    );
+    assert_eq!(sm.context().attempts, 4);
+    assert_eq!(format!("{}", sm.state().unwrap()), "LoginDenied");
+}

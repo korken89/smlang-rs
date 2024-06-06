@@ -11,19 +11,36 @@ use event::EventMapping;
 use state_machine::StateMachine;
 
 use input_state::InputState;
-use proc_macro2::Span;
+use proc_macro2::{Span, TokenStream};
 
 use crate::parser::event::Transition;
 use std::collections::{hash_map, HashMap};
+use std::fmt;
 use syn::{parse, Ident, Type};
 use transition::StateTransition;
-
 pub type TransitionMap = HashMap<String, HashMap<String, EventMapping>>;
 
 #[derive(Debug, Clone)]
 pub struct AsyncIdent {
     pub ident: Ident,
     pub is_async: bool,
+}
+impl AsyncIdent {
+    pub fn to_token_stream<F>(&self, context: &mut F) -> TokenStream
+    where
+        F: FnMut(&AsyncIdent) -> TokenStream,
+    {
+        context(self)
+    }
+}
+impl fmt::Display for AsyncIdent {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.is_async {
+            write!(f, "{}().await", self.ident)
+        } else {
+            write!(f, "{}()", self.ident)
+        }
+    }
 }
 
 #[derive(Debug)]
