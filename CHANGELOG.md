@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Add name to statemachine and make dot output stable and unique ([issue-62](https://github.com/korken89/smlang-rs/pull/62))
 - Add derive macros to states and events ([issue-62](https://github.com/korken89/smlang-rs/pull/62))
 - Add hooks to `StateMachineContext` for logging events, guards, actions, and state changes
+- Add support multiple guarded transitions for a triggering event
+- Add support for guard boolean expressions in the state machine declaration
 
 ### Fixed
 
@@ -24,6 +26,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - [breaking] `state()` now returns a `Result`
 - `StateMachine::new` and `StateMachine::new_with_state` are now const functions
 - Fixed clippy warnings
+- [breaking] Changed guard functions return type from Result<(),()> to bool
 
 ## [v0.6.0] - 2022-11-02
 
