@@ -1,6 +1,6 @@
 // Move guards to return a Result
 
-use crate::parser::transition::{visit_guards, GuardExpression};
+use crate::parser::transition::visit_guards;
 use crate::parser::{lifetimes::Lifetimes, AsyncIdent, ParsedStateMachine};
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote};
@@ -117,7 +117,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     // println!("transitions: {:#?}", transitions);
 
     // Map guards, actions and output states into code blocks
-    let guards: Vec<Vec<Vec<Option<GuardExpression>>>> = transitions
+    let guards: Vec<Vec<_>> = transitions
         .values()
         .map(|event_mappings| {
             event_mappings
@@ -133,7 +133,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         })
         .collect();
 
-    let actions: Vec<Vec<Vec<Option<AsyncIdent>>>> = transitions
+    let actions: Vec<Vec<_>> = transitions
         .values()
         .map(|event_mappings| {
             event_mappings
@@ -380,7 +380,11 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         let streams: Vec<TokenStream> =
                             guard.iter()
                             .zip(action.iter().zip(out_state)).map(|(guard, (action,out_state))| {
-                                if let Some(expr) = guard {
+                                let (is_async,action_code) = generate_action(action, &temporary_context_call, g_a_param);
+                                if is_async {
+                                    sm_is_async = is_async;
+                                }
+                                if let Some(expr) = guard { // Guarded transition
                                     let mut guard_visitor = |async_ident: &AsyncIdent| {
                                         let guard_ident = &async_ident.ident;
                                         if async_ident.is_async {
@@ -391,59 +395,25 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                     };
                                     let guard_expression = expr.to_token_stream(&mut guard_visitor);
 
-                                    if let Some(AsyncIdent { ident: a, is_async: is_a_async }) = action {
-                                        let action_await = if *is_a_async {
-                                            sm_is_async = true;
-                                            quote! { .await }
-                                        } else {
-                                            quote! { }
-                                        };
-                                        quote! {
-                                            let guard_result = #guard_expression;
-                                            self.context.log_guard(stringify!(#guard_expression), &guard_result);
-                                            if guard_result {
-                                                let _data = self.context.#a(#temporary_context_call #g_a_param) #action_await;
-                                                self.context.log_action(stringify!(#a));
-                                                let out_state = #states_type_name::#out_state;
-                                                self.context.log_state_change(&out_state);
-                                                self.state = Some(out_state);
-                                                return self.state()
-                                            }
-                                        }
-                                    } else {
-                                        quote! {
-                                            let guard_result = #guard_expression;
-                                            self.context.log_guard(stringify!(#guard_expression), &guard_result);
-                                            if guard_result {
-                                                let out_state = #states_type_name::#out_state;
-                                                self.context.log_state_change(&out_state);
-                                                self.state = Some(out_state);
-                                                return self.state()
-                                            }
+                                    quote! {
+                                        let guard_result = #guard_expression;
+                                        self.context.log_guard(stringify!(#guard_expression), &guard_result);
+                                        if guard_result {
+                                            #action_code
+                                            let out_state = #states_type_name::#out_state;
+                                            self.context.log_state_change(&out_state);
+                                            self.state = Some(out_state);
+                                            return self.state()
                                         }
                                     }
-                                } else if let Some(AsyncIdent { ident: action_ident, is_async: is_a_async }) = action {
-                                    let action_await = if *is_a_async {
-                                        sm_is_async = true;
-                                        quote! { .await }
-                                    } else {
-                                        quote! { }
-                                    };
-                                    quote! {
-                                let _data = self.context.#action_ident(#temporary_context_call #g_a_param) #action_await ;
-                                self.context.log_action(stringify!(#action_ident));
-                                let out_state = #states_type_name::#out_state;
-                                self.context.log_state_change(&out_state);
-                                self.state = Some(out_state);
-                                return self.state();
-                            }
-                                } else {
-                                    quote! {
-                                let out_state = #states_type_name::#out_state;
-                                self.context.log_state_change(&out_state);
-                                self.state = Some(out_state);
-                                return self.state();
-                            }
+                                } else { // Not guarded transition
+                                    quote!{
+                                       #action_code
+                                       let out_state = #states_type_name::#out_state;
+                                       self.context.log_state_change(&out_state);
+                                       self.state = Some(out_state);
+                                       return self.state();
+                                   }
                                 }
                             }
                             ).collect();
@@ -640,4 +610,23 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             }
         }
     }
+}
+fn generate_action(action: &Option<AsyncIdent>, temporary_context_call: &TokenStream, g_a_param: &TokenStream ) -> (bool,TokenStream) {
+    let mut is_async= false;
+    let code = if let Some(AsyncIdent { ident: action_ident, is_async: is_a_async }) = action {
+        let action_await = if *is_a_async {
+            is_async = true;
+            quote! { .await }
+        } else {
+            quote! { }
+        };
+        quote! {
+            // ACTION
+            let _data = self.context.#action_ident(#temporary_context_call #g_a_param) #action_await;
+            self.context.log_action(stringify!(#action_ident));
+        }
+    } else {
+        quote! { }
+    };
+    (is_async,code)
 }
