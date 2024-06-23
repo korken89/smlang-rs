@@ -22,8 +22,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     let generate_entry_exit_states = sm.generate_entry_exit_states;
     let generate_transition_callback = sm.generate_transition_callback;
 
-    let entry_fns = &sm.entry_functions;
-    let exit_fns = &sm.exit_functions;
+    let mut entry_fns = sm.entry_functions.clone();
+    let mut exit_fns = sm.exit_functions.clone();
 
     // Get only the unique states
     let mut state_list: Vec<_> = sm.states.values().collect();
@@ -254,8 +254,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     let mut guard_list = proc_macro2::TokenStream::new();
     let mut action_list = proc_macro2::TokenStream::new();
 
-    let mut entry_list = proc_macro2::TokenStream::new();
-
     let mut entries_exits = proc_macro2::TokenStream::new();
     for ident in entry_fns.values() {
         entries_exits.extend(quote! {
@@ -279,15 +277,17 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         };
         if generate_entry_exit_states {
             let entry_ident = format_ident!("on_entry_{}", string_morph::to_snake_case(state));
-            entry_list.extend(quote! {
+            entries_exits.extend(quote! {
                 #[allow(missing_docs)]
                 fn #entry_ident(&mut self){}
             });
+            entry_fns.insert(format_ident!("{}", state), entry_ident);
             let exit_ident = format_ident!("on_exit_{}", string_morph::to_snake_case(state));
-            entry_list.extend(quote! {
+            entries_exits.extend(quote! {
                #[allow(missing_docs)]
                fn #exit_ident(&mut self){}
             });
+            exit_fns.insert(format_ident!("{}", state), exit_ident);
         };
 
         for (event, event_mapping) in event_mappings {
@@ -616,7 +616,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             #guard_error
             #guard_list
             #action_list
-            #entry_list
             #entries_exits
 
 

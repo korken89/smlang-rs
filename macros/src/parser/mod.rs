@@ -75,15 +75,10 @@ fn add_transition(
     transition: &StateTransition,
     transition_map: &mut TransitionMap,
     state_data: &DataDefinitions,
-    entry_fns: &HashMap<Ident, Ident>,
-    exit_fns: &HashMap<Ident, Ident>,
 ) -> Result<(), parse::Error> {
     let p = transition_map
         .get_mut(&transition.in_state.ident.to_string())
         .unwrap();
-
-    let entry_fn = entry_fns.get(&transition.in_state.ident.clone());
-    let exit_fn = exit_fns.get(&transition.in_state.ident.clone());
 
     match p.entry(transition.event.ident.to_string()) {
         hash_map::Entry::Vacant(entry) => {
@@ -94,8 +89,6 @@ fn add_transition(
                     guard: transition.guard.clone(),
                     action: transition.action.clone(),
                     out_state: transition.out_state.ident.clone(),
-                    entry_fn: entry_fn.cloned(),
-                    exit_fn: exit_fn.cloned(),
                 }],
             };
             entry.insert(mapping);
@@ -106,8 +99,6 @@ fn add_transition(
                 guard: transition.guard.clone(),
                 action: transition.action.clone(),
                 out_state: transition.out_state.ident.clone(),
-                entry_fn: entry_fn.cloned(),
-                exit_fn: exit_fn.cloned(),
             });
         }
     }
@@ -166,10 +157,6 @@ impl ParsedStateMachine {
                         map.insert(input_state.ident.clone(), identifier.ident.clone())
                     {
                         if identifier.ident != existing_identifier {
-                            println!(
-                                "entry_state: {:?}, state.ident: {:?}",
-                                identifier.ident, input_state.ident
-                            );
                             return Err(parse::Error::new(
                                 Span::call_site(),
                                 "Different entry or exit functions defined for state",
@@ -248,8 +235,6 @@ impl ParsedStateMachine {
                         &wildcard_transition,
                         &mut states_events_mapping,
                         &state_data,
-                        &states_with_entry_function,
-                        &states_with_exit_function,
                     )?;
 
                     transition_added = true;
@@ -264,13 +249,7 @@ impl ParsedStateMachine {
                     ));
                 }
             } else {
-                add_transition(
-                    transition,
-                    &mut states_events_mapping,
-                    &state_data,
-                    &states_with_entry_function,
-                    &states_with_exit_function,
-                )?;
+                add_transition(transition, &mut states_events_mapping, &state_data)?;
             }
         }
 

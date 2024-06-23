@@ -20,9 +20,6 @@ pub struct Transition {
     pub guard: Option<GuardExpression>,
     pub action: Option<AsyncIdent>,
     pub out_state: Ident,
-
-    pub entry_fn: Option<Ident>,
-    pub exit_fn: Option<Ident>,
 }
 
 impl parse::Parse for Event {

@@ -281,6 +281,11 @@ function.
 
 An example is available in `on_entry_on_exit`.
 
+There is also a generic flag available, `generate_on_entry_on_exit`, which will
+generate for all states in the statemachine an entry and an exit function. If
+they are not used, they will be optimized away by the compiler. An example be
+found in `on_entry_on_exit_generic`.
+
 ## Helpers
 
 ### Auto-derive certain traits for states and events
