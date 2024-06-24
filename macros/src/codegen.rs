@@ -260,8 +260,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             None => quote! {},
         };
 
-        event_mappings.iter().for_each(|(event, event_mapping)| {
-            event_mapping.transitions.iter().for_each(|transition|{
+        for (event, event_mapping) in event_mappings {
+            for transition in &event_mapping.transitions{
                 // get input state lifetimes
                 let in_state_lifetimes = sm.state_data.lifetimes.get(&event_mapping.in_state.to_string()).cloned().unwrap_or_default();
 
@@ -344,8 +344,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         });
                     }
                 }
-            })
-        })
+            }
+        }
     }
 
     let temporary_context_call = match &sm.temporary_context_type {
