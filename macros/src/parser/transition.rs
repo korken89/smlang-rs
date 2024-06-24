@@ -217,3 +217,36 @@ fn parse_primary(input: parse::ParseStream) -> syn::Result<GuardExpression> {
         is_async: false,
     }))
 }
+
+#[cfg(test)]
+mod test{
+    use syn::parse_str;
+    use crate::parser::transition::GuardExpression;
+
+    #[test]
+    fn bad_guard_expression(){
+        let guard_expression = "a && b c";
+        assert!( parse_str::<GuardExpression>(guard_expression).is_err() );
+    }
+    #[test]
+    fn guard_expressions() -> Result<(),syn::Error> {
+        for (guard_expression_str, expected) in vec![
+            ("guard","guard()"),
+            ("async guard","guard().await"),
+            ("async a || async b", "a().await || b().await"),
+            ("!guard","!guard()"),
+            ("a && b","a() && b()"),
+            ("a || b","a() || b()"),
+            ("a || b || c","a() || b() || c()"),
+            ("a || b && c || d","a() || b() && c() || d()"),
+            ("(a || b) && (c || d)","(a() || b()) && (c() || d())"),
+            ("a && b || c && d","a() && b() || c() && d()"),
+            ("a && ( !b && c ) || d && e", "a() && (!b() && c()) || d() && e()"),
+        ]{
+            let guard_expression: GuardExpression = parse_str(guard_expression_str)?;
+            assert_eq!(guard_expression.to_string(), expected);
+            println!("{:?}", guard_expression);
+        }
+        Ok(())
+    }
+}
