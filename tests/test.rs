@@ -53,16 +53,16 @@ fn multiple_lifetimes() {
     struct Context;
 
     impl StateMachineContext for Context {
-        fn guard1(&mut self, _event_data: &X) -> bool {
-            true
+        fn guard1(&mut self, _event_data: &X) -> Result<bool,()> {
+            Ok(true)
         }
 
-        fn guard2(&mut self, _state_data: &X, _event_data: &Y) -> bool {
-            true
+        fn guard2(&mut self, _state_data: &X, _event_data: &Y) -> Result<bool,()> {
+            Ok(true)
         }
 
-        fn guard3(&mut self, _event_data: &Z) -> bool {
-            true
+        fn guard3(&mut self, _event_data: &Z) -> Result<bool,()> {
+            Ok(true)
         }
 
         fn action1<'a>(&mut self, event_data: &'a X) -> &'a X {
@@ -149,8 +149,8 @@ fn async_guards_and_actions() {
         struct Context;
         #[smlang::async_trait]
         impl StateMachineContext for Context {
-            async fn guard1(&mut self) -> bool {
-                true
+            async fn guard1(&mut self) -> Result<bool,()> {
+                Ok(true)
             }
 
             async fn action1(&mut self) -> () {
@@ -189,11 +189,11 @@ fn guard_expressions() {
         attempts: u32,
     }
     impl StateMachineContext for Context {
-        fn valid_entry(&mut self, e: &Entry) -> bool {
-            e.0 == self.password
+        fn valid_entry(&mut self, e: &Entry) -> Result<bool,()> {
+            Ok(e.0 == self.password)
         }
-        fn too_many_attempts(&mut self, _e: &Entry) -> bool {
-            self.attempts >= 3
+        fn too_many_attempts(&mut self, _e: &Entry) -> Result<bool,()> {
+            Ok(self.attempts >= 3)
         }
         fn attempt(&mut self, _e: &Entry) {
             self.attempts += 1;

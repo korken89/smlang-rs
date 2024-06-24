@@ -18,14 +18,14 @@ statemachine! {
 pub struct Context;
 
 impl StateMachineContext for Context {
-    fn guard(&mut self) -> bool {
+    fn guard(&mut self) -> Result<bool,()> {
         // Always ok
-        true
+        Ok(true)
     }
 
-    fn guard_fail(&mut self) -> bool {
+    fn guard_fail(&mut self) -> Result<bool,()> {
         // Always fail
-        false
+        Ok(false)
     }
 
     fn action1(&mut self) {
