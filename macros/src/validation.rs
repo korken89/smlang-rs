@@ -149,10 +149,43 @@ fn validate_guard_signatures(sm: &ParsedStateMachine) -> Result<(), parse::Error
 
     Ok(())
 }
+fn validate_unreachable_transitions(sm: &ParsedStateMachine) -> Result<(), parse::Error> {
+    let all_transitions = &sm.states_events_mapping;
+    for (in_state, event_mappings) in all_transitions {
+        for (event, event_mapping) in event_mappings {
+            // more than single transition for (in_state,event)
+            if event_mapping.transitions.len() > 1 {
+                let mut unguarded_count = 0;
+                for t in &event_mapping.transitions {
+                    if let Some(g) = &t.guard {
+                        if unguarded_count > 0 { // Guarded transition AFTER an unguarded one
+                            return Err(parse::Error::new(
+                                Span::call_site(),
+                                format!("{} + {}: [{}] : guarded transition is unreachable because it follows an unguarded transition, which handles all cases",
+                                        in_state, event, g.to_string()),
+                            ));
+                        }
+                    } else { // unguarded
+                        unguarded_count += 1;
+                        if unguarded_count > 1 {
+                            return Err(parse::Error::new(
+                                Span::call_site(),
+                                format!("{} + {}: State and event combination specified multiple times, remove duplicates.", in_state, event),
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 
 /// Validate coherency of the state machine.
 pub fn validate(sm: &ParsedStateMachine) -> Result<(), parse::Error> {
     validate_action_signatures(sm)?;
     validate_guard_signatures(sm)?;
+    validate_unreachable_transitions(sm)?;
     Ok(())
 }

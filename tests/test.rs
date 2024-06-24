@@ -8,9 +8,12 @@ use smlang::statemachine;
 fn compile_fail_tests() {
     let t = trybuild::TestCases::new();
     t.compile_fail("tests/compile-fail/*.rs");
-    t.pass("tests/pass/*.rs")
 }
-
+#[test]
+fn pass_tests() {
+    let t = trybuild::TestCases::new();
+    t.pass("tests/pass/*.rs");
+}
 #[test]
 fn wildcard_after_input_state() {
     statemachine! {
