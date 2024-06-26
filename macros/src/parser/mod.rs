@@ -114,12 +114,10 @@ impl ParsedStateMachine {
         // Check the initial state definition
         let mut starting_transitions_iter = sm.transitions.iter().filter(|sm| sm.in_state.start);
 
-        let starting_transition = starting_transitions_iter.next().ok_or_else(|| {
-            parse::Error::new(
-                Span::call_site(),
-                "No starting state defined, indicate the starting state with a *.",
-            )
-        })?;
+        let starting_transition = starting_transitions_iter.next().ok_or(parse::Error::new(
+            Span::call_site(),
+            "No starting state defined, indicate the starting state with a *.",
+        ))?;
 
         if starting_transitions_iter.next().is_some() {
             return Err(parse::Error::new(

@@ -315,6 +315,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                             let is_async = if is_async { quote!{ async } } else { quote!{ } };
                             guard_list.extend(quote! {
                             #[allow(missing_docs)]
+                            #[allow(clippy::result_unit_err)]
                             #is_async fn #guard <#all_lifetimes> (&mut self, #temporary_context #state_data #event_data) -> Result<bool,#guard_error>;
                         });
                         };
@@ -371,6 +372,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         action_set.push(action.clone());
                         action_list.extend(quote! {
                             #[allow(missing_docs)]
+                            #[allow(clippy::unused_unit)]
                             #is_async fn #action <#all_lifetimes> (&mut self, #temporary_context #state_data #event_data) -> #return_type;
                         });
                     }
@@ -668,12 +670,13 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             pub #is_async fn process_event <#event_unique_lifetimes> (
                 &mut self,
                 #temporary_context
-                mut event: #events_type_name <#event_lifetimes>
+                event: #events_type_name <#event_lifetimes>
             ) -> Result<&#states_type_name <#state_lifetimes>, #error_type> {
                 self.context.log_process_event(self.state()?, &event);
-
-                match self.state.take().ok_or(#error_type_name ::Poisoned)? {
-                    #(#states_type_name::#in_states => match event {
+               match self.state.take().ok_or(#error_type_name ::Poisoned)? {
+                    #(
+                    #[allow(clippy::match_single_binding)]
+                    #states_type_name::#in_states => match event {
                         #(#events_type_name::#events => {
                             #code_blocks
                             #[allow(unreachable_code)]
@@ -690,10 +693,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                             Err(#error_type_name ::InvalidEvent)
                         }
                     }),*
-                    state => {
-                        self.state = Some(state);
-                        Err(#error_type_name ::InvalidEvent)
-                    }
                 }
             }
         }
