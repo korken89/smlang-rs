@@ -9,7 +9,7 @@ use smlang::{async_trait, statemachine};
 statemachine! {
     transitions: {
         *State1 + Event1 [guard1] / async action1 = State2,
-        State2 + Event2 [async guard2] / async action2 = State3,
+        State2 + Event2 [async guard2 && guard3] / async action2 = State3,
         State3 + Event3 / action3 = State4(bool),
     }
 }
@@ -22,15 +22,9 @@ pub struct Context {
 
 #[async_trait]
 impl StateMachineContext for Context {
-    fn guard1(&mut self) -> Result<bool, ()> {
-        println!("`guard1` called from sync context");
+    fn guard3(&mut self) -> Result<bool, ()> {
+        println!("`guard3` called from async context");
         Ok(true)
-    }
-
-    async fn action1(&mut self) -> () {
-        println!("`action1` called from async context");
-        let mut lock = self.lock.write().await;
-        *lock = true;
     }
 
     async fn guard2(&mut self) -> Result<bool, ()> {
@@ -40,11 +34,22 @@ impl StateMachineContext for Context {
         Ok(true)
     }
 
+    fn guard1(&mut self) -> Result<bool, ()> {
+        println!("`guard1` called from sync context");
+        Ok(true)
+    }
+
     async fn action2(&mut self) -> () {
         println!("`action2` called from async context");
         if !*self.lock.read().await {
             self.done = true;
         }
+    }
+
+    async fn action1(&mut self) -> () {
+        println!("`action1` called from async context");
+        let mut lock = self.lock.write().await;
+        *lock = true;
     }
 
     fn action3(&mut self) -> bool {

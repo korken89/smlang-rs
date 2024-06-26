@@ -108,28 +108,28 @@ impl fmt::Display for GuardExpression {
     }
 }
 impl GuardExpression {
-    pub fn to_token_stream<F>(&self, context: &mut F) -> TokenStream
+    pub fn to_token_stream<F>(&self, visit: &mut F) -> TokenStream
     where
         F: FnMut(&AsyncIdent) -> TokenStream,
     {
         match self {
-            GuardExpression::Guard(async_ident) => async_ident.to_token_stream(context),
+            GuardExpression::Guard(async_ident) => async_ident.to_token_stream(visit),
             GuardExpression::Not(expr) => {
-                let expr_tokens = expr.to_token_stream(context);
+                let expr_tokens = expr.to_token_stream(visit);
                 quote! { !#expr_tokens }
             }
             GuardExpression::Group(expr) => {
-                let expr_tokens = expr.to_token_stream(context);
+                let expr_tokens = expr.to_token_stream(visit);
                 quote! { (#expr_tokens) }
             }
             GuardExpression::And(lhs, rhs) => {
-                let lhs_tokens = lhs.to_token_stream(context);
-                let rhs_tokens = rhs.to_token_stream(context);
+                let lhs_tokens = lhs.to_token_stream(visit);
+                let rhs_tokens = rhs.to_token_stream(visit);
                 quote! { #lhs_tokens && #rhs_tokens }
             }
             GuardExpression::Or(lhs, rhs) => {
-                let lhs_tokens = lhs.to_token_stream(context);
-                let rhs_tokens = rhs.to_token_stream(context);
+                let lhs_tokens = lhs.to_token_stream(visit);
+                let rhs_tokens = rhs.to_token_stream(visit);
                 quote! { #lhs_tokens || #rhs_tokens }
             }
         }

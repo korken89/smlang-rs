@@ -26,11 +26,11 @@ pub struct AsyncIdent {
     pub is_async: bool,
 }
 impl AsyncIdent {
-    pub fn to_token_stream<F>(&self, context: &mut F) -> TokenStream
+    pub fn to_token_stream<F>(&self, visit: &mut F) -> TokenStream
     where
         F: FnMut(&AsyncIdent) -> TokenStream,
     {
-        context(self)
+        visit(self)
     }
 }
 impl fmt::Display for AsyncIdent {

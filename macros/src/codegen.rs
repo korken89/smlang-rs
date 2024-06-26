@@ -388,7 +388,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         }
     };
 
-    let mut sm_is_async = false;
+    let mut is_async_state_machine = false;
 
     // Create the code blocks inside the switch cases
     let code_blocks: Vec<Vec<_>> = guards
@@ -411,19 +411,22 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         let streams: Vec<TokenStream> =
                             guard.iter()
                             .zip(action.iter().zip(out_state)).map(|(guard, (action,out_state))| {
-                                let (is_async,action_code) = generate_action(action, &temporary_context_call, g_a_param);
-                                sm_is_async |= is_async;
+                                let (is_async_action,action_code) = generate_action(action, &temporary_context_call, g_a_param);
+                                is_async_state_machine |= is_async_action;
                                 if let Some(expr) = guard { // Guarded transition
-                                    let mut guard_visitor = |async_ident: &AsyncIdent| {
+                                    let guard_expression;
+                                    let mut is_async_expression = false;
+                                    guard_expression = expr.to_token_stream(&mut |async_ident: &AsyncIdent| {
                                         let guard_ident = &async_ident.ident;
+                                        is_async_expression |= async_ident.is_async;
                                         if async_ident.is_async {
                                             quote! { self.context.#guard_ident(#temporary_context_call #g_a_ref_param).await? }
                                         } else {
                                             quote! { self.context.#guard_ident(#temporary_context_call #g_a_ref_param)? }
                                         }
-                                    };
-                                    let guard_expression = expr.to_token_stream(&mut guard_visitor);
-                                    let guard_result = if sm_is_async {
+                                    });
+                                    is_async_state_machine |= is_async_expression;
+                                    let guard_result = if is_async_expression {
                                         // This #guard_expression contains a boolean expression of async guard functions.
                                         // Each guard function has Result<bool,_> return type.
                                         // For example, [ async f && !async g ] will expand into
@@ -526,7 +529,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         quote! { () }
     };
 
-    let (is_async, is_async_trait) = if sm_is_async {
+    let (is_async, is_async_trait) = if is_async_state_machine {
         (quote! { async }, quote! { #[smlang::async_trait] })
     } else {
         (quote! {}, quote! {})
