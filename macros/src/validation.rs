@@ -163,7 +163,7 @@ fn validate_unreachable_transitions(sm: &ParsedStateMachine) -> Result<(), parse
                             return Err(parse::Error::new(
                                 Span::call_site(),
                                 format!("{} + {}: [{}] : guarded transition is unreachable because it follows an unguarded transition, which handles all cases",
-                                        in_state, event, g.to_string()),
+                                        in_state, event, g),
                             ));
                         }
                     } else {
