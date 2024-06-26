@@ -158,14 +158,16 @@ fn validate_unreachable_transitions(sm: &ParsedStateMachine) -> Result<(), parse
                 let mut unguarded_count = 0;
                 for t in &event_mapping.transitions {
                     if let Some(g) = &t.guard {
-                        if unguarded_count > 0 { // Guarded transition AFTER an unguarded one
+                        if unguarded_count > 0 {
+                            // Guarded transition AFTER an unguarded one
                             return Err(parse::Error::new(
                                 Span::call_site(),
                                 format!("{} + {}: [{}] : guarded transition is unreachable because it follows an unguarded transition, which handles all cases",
                                         in_state, event, g.to_string()),
                             ));
                         }
-                    } else { // unguarded
+                    } else {
+                        // unguarded
                         unguarded_count += 1;
                         if unguarded_count > 1 {
                             return Err(parse::Error::new(
@@ -180,7 +182,6 @@ fn validate_unreachable_transitions(sm: &ParsedStateMachine) -> Result<(), parse
     }
     Ok(())
 }
-
 
 /// Validate coherency of the state machine.
 pub fn validate(sm: &ParsedStateMachine) -> Result<(), parse::Error> {

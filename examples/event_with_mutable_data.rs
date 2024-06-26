@@ -21,7 +21,7 @@ statemachine! {
 pub struct Context;
 
 impl StateMachineContext for Context {
-    fn guard(&mut self, event_data: &mut MyEventData) -> Result<bool,()> {
+    fn guard(&mut self, event_data: &mut MyEventData) -> Result<bool, ()> {
         event_data.0 = 55;
         Ok(true)
     }

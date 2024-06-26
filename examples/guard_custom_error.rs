@@ -34,9 +34,9 @@ statemachine! {
 pub struct Context;
 
 impl StateMachineContext for Context {
-    type GuardError = GuardError;    // Guard1 has access to the data from Event1
+    type GuardError = GuardError; // Guard1 has access to the data from Event1
     fn guard1(&mut self, _event_data: &MyEventData) -> Result<bool, GuardError> {
-        Ok(false)
+        Err(GuardError::Custom)
     }
 
     // Action1 has access to the data from Event1, and need to return the state data for State2
@@ -45,7 +45,7 @@ impl StateMachineContext for Context {
     }
 
     // Guard2 has access to the data from State2
-    fn guard2(&mut self, _state_data: &MyStateData) -> Result<bool,GuardError> {
+    fn guard2(&mut self, _state_data: &MyStateData) -> Result<bool, GuardError> {
         todo!()
     }
 
@@ -60,5 +60,5 @@ fn main() {
 
     let r = sm.process_event(Events::Event1(MyEventData(1)));
 
-    assert!(matches!(r, Err(Error::TransitionsFailed)));
+    assert!(matches!(r, Err(Error::GuardFailed(GuardError::Custom))));
 }

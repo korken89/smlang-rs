@@ -56,8 +56,7 @@ impl parse::Parse for StateTransitions {
         let guard = if input.peek(token::Bracket) {
             let content;
             bracketed!(content in input);
-            let ge = GuardExpression::parse(&content)?;
-            Some(ge)
+            Some(GuardExpression::parse(&content)?)
         } else {
             None
         };
@@ -219,30 +218,33 @@ fn parse_primary(input: parse::ParseStream) -> syn::Result<GuardExpression> {
 }
 
 #[cfg(test)]
-mod test{
-    use syn::parse_str;
+mod test {
     use crate::parser::transition::GuardExpression;
+    use syn::parse_str;
 
     #[test]
-    fn bad_guard_expression(){
+    fn bad_guard_expression() {
         let guard_expression = "a && b c";
-        assert!( parse_str::<GuardExpression>(guard_expression).is_err() );
+        assert!(parse_str::<GuardExpression>(guard_expression).is_err());
     }
     #[test]
-    fn guard_expressions() -> Result<(),syn::Error> {
+    fn guard_expressions() -> Result<(), syn::Error> {
         for (guard_expression_str, expected) in vec![
-            ("guard","guard()"),
-            ("async guard","guard().await"),
+            ("guard", "guard()"),
+            ("async guard", "guard().await"),
             ("async a || async b", "a().await || b().await"),
-            ("!guard","!guard()"),
-            ("a && b","a() && b()"),
-            ("a || b","a() || b()"),
-            ("a || b || c","a() || b() || c()"),
-            ("a || b && c || d","a() || b() && c() || d()"),
-            ("(a || b) && (c || d)","(a() || b()) && (c() || d())"),
-            ("a && b || c && d","a() && b() || c() && d()"),
-            ("a && ( !b && c ) || d && e", "a() && (!b() && c()) || d() && e()"),
-        ]{
+            ("!guard", "!guard()"),
+            ("a && b", "a() && b()"),
+            ("a || b", "a() || b()"),
+            ("a || b || c", "a() || b() || c()"),
+            ("a || b && c || d", "a() || b() && c() || d()"),
+            ("(a || b) && (c || d)", "(a() || b()) && (c() || d())"),
+            ("a && b || c && d", "a() && b() || c() && d()"),
+            (
+                "a && ( !b && c ) || d && e",
+                "a() && (!b() && c()) || d() && e()",
+            ),
+        ] {
             let guard_expression: GuardExpression = parse_str(guard_expression_str)?;
             assert_eq!(guard_expression.to_string(), expected);
             println!("{:?}", guard_expression);

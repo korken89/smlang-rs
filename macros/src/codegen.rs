@@ -261,15 +261,30 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         };
 
         for (event, event_mapping) in event_mappings {
-            for transition in &event_mapping.transitions{
+            for transition in &event_mapping.transitions {
                 // get input state lifetimes
-                let in_state_lifetimes = sm.state_data.lifetimes.get(&event_mapping.in_state.to_string()).cloned().unwrap_or_default();
+                let in_state_lifetimes = sm
+                    .state_data
+                    .lifetimes
+                    .get(&event_mapping.in_state.to_string())
+                    .cloned()
+                    .unwrap_or_default();
 
                 // get output state lifetimes
-                let out_state_lifetimes = sm.state_data.lifetimes.get(&transition.out_state.to_string()).cloned().unwrap_or_default();
+                let out_state_lifetimes = sm
+                    .state_data
+                    .lifetimes
+                    .get(&transition.out_state.to_string())
+                    .cloned()
+                    .unwrap_or_default();
 
                 // get event lifetimes
-                let event_lifetimes = sm.event_data.lifetimes.get(event).cloned().unwrap_or_default();
+                let event_lifetimes = sm
+                    .event_data
+                    .lifetimes
+                    .get(event)
+                    .cloned()
+                    .unwrap_or_default();
 
                 // combine all lifetimes
                 let mut all_lifetimes = Lifetimes::new();
@@ -279,7 +294,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
                 // Create the guard traits for user implementation
                 if let Some(guard_expression) = &transition.guard {
-                    let _ = visit_guards(guard_expression,|guard| {
+                    visit_guards(guard_expression,|guard| {
                         let is_async = guard.is_async;
                         let guard = &guard.ident;
                         let event_data = match sm.event_data.data_types.get(event) {
@@ -304,14 +319,24 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         });
                         };
                         Ok(())
-                    });
+                    }).unwrap();
                 }
 
                 // Create the action traits for user implementation
-                if let Some(AsyncIdent {ident: action, is_async}) = &transition.action {
-                    let is_async = if *is_async { quote!{ async } } else { quote!{ } };
-                    let return_type = if let Some(output_data) =
-                        sm.state_data.data_types.get(&transition.out_state.to_string())
+                if let Some(AsyncIdent {
+                    ident: action,
+                    is_async,
+                }) = &transition.action
+                {
+                    let is_async = if *is_async {
+                        quote! { async }
+                    } else {
+                        quote! {}
+                    };
+                    let return_type = if let Some(output_data) = sm
+                        .state_data
+                        .data_types
+                        .get(&transition.out_state.to_string())
                     {
                         output_data.clone()
                     } else {
@@ -387,9 +412,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                             guard.iter()
                             .zip(action.iter().zip(out_state)).map(|(guard, (action,out_state))| {
                                 let (is_async,action_code) = generate_action(action, &temporary_context_call, g_a_param);
-                                if is_async {
-                                    sm_is_async = is_async;
-                                }
+                                sm_is_async |= is_async;
                                 if let Some(expr) = guard { // Guarded transition
                                     let mut guard_visitor = |async_ident: &AsyncIdent| {
                                         let guard_ident = &async_ident.ident;
@@ -400,7 +423,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                         }
                                     };
                                     let guard_expression = expr.to_token_stream(&mut guard_visitor);
-                                    let guard_result = if is_async {
+                                    let guard_result = if sm_is_async {
                                         // This #guard_expression contains a boolean expression of async guard functions.
                                         // Each guard function has Result<bool,_> return type.
                                         // For example, [ async f && !async g ] will expand into
@@ -430,19 +453,12 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                     quote! {
                                         #guard_result
                                         self.context.log_guard(stringify!(#guard_expression), &guard_result);
-                                        match guard_result {
-                                            Ok(guard_is_enabled) => {
-                                                if guard_is_enabled {
-                                                    #action_code
-                                                    let out_state = #states_type_name::#out_state;
-                                                    self.context.log_state_change(&out_state);
-                                                    self.state = Some(out_state);
-                                                    return self.state()
-                                                }
-                                            },
-                                            Err(e) => {
-                                                return Err(#error_type_name::GuardFailed(e));
-                                            }
+                                        if guard_result.map_err(#error_type_name::GuardFailed)? {
+                                              #action_code
+                                              let out_state = #states_type_name::#out_state;
+                                              self.context.log_state_change(&out_state);
+                                              self.state = Some(out_state);
+                                              return self.state()
                                         }
                                     }
                                 } else { // Unguarded transition
@@ -496,10 +512,10 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     let event_unique_lifetimes = event_lifetimes - state_lifetimes;
 
     let guard_error = if sm.custom_guard_error {
-         quote! {
-             /// The error type returned by guard functions.
-             type GuardError: core::fmt::Debug;
-         }
+        quote! {
+            /// The error type returned by guard functions.
+            type GuardError: core::fmt::Debug;
+        }
     } else {
         quote! {}
     };
@@ -517,11 +533,11 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     };
 
     let error_type = if sm.custom_guard_error {
-     quote! {
-         #error_type_name<<T as #state_machine_context_type_name>::GuardError>
-     }
+        quote! {
+            #error_type_name<<T as #state_machine_context_type_name>::GuardError>
+        }
     } else {
-     quote! {#error_type_name}
+        quote! {#error_type_name}
     };
 
     let derive_states_list = &sm.derive_states;
@@ -674,14 +690,22 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         }
     }
 }
-fn generate_action(action: &Option<AsyncIdent>, temporary_context_call: &TokenStream, g_a_param: &TokenStream ) -> (bool,TokenStream) {
-    let mut is_async= false;
-    let code = if let Some(AsyncIdent { ident: action_ident, is_async: is_a_async }) = action {
+fn generate_action(
+    action: &Option<AsyncIdent>,
+    temporary_context_call: &TokenStream,
+    g_a_param: &TokenStream,
+) -> (bool, TokenStream) {
+    let mut is_async = false;
+    let code = if let Some(AsyncIdent {
+        ident: action_ident,
+        is_async: is_a_async,
+    }) = action
+    {
         let action_await = if *is_a_async {
             is_async = true;
             quote! { .await }
         } else {
-            quote! { }
+            quote! {}
         };
         quote! {
             // ACTION
@@ -689,7 +713,7 @@ fn generate_action(action: &Option<AsyncIdent>, temporary_context_call: &TokenSt
             self.context.log_action(stringify!(#action_ident));
         }
     } else {
-        quote! { }
+        quote! {}
     };
-    (is_async,code)
+    (is_async, code)
 }

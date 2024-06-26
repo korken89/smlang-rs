@@ -30,7 +30,7 @@ pub struct Context;
 
 impl StateMachineContext for Context {
     // Guard1 has access to the data from Event1
-    fn guard1(&mut self, event_data: &MyEventData) -> Result<bool,()> {
+    fn guard1(&mut self, event_data: &MyEventData) -> Result<bool, ()> {
         Ok(event_data.0 % 2 == 0)
     }
 
@@ -41,7 +41,7 @@ impl StateMachineContext for Context {
     }
 
     // Guard2 has access to the data from State2
-    fn guard2(&mut self, state_data: &MyStateData) -> Result<bool,()> {
+    fn guard2(&mut self, state_data: &MyStateData) -> Result<bool, ()> {
         Ok(state_data.0 % 2 == 0)
     }
 
