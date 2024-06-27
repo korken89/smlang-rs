@@ -1,7 +1,7 @@
+use super::event::Event;
 use super::input_state::InputState;
 use super::output_state::OutputState;
 use super::AsyncIdent;
-use super::{event::Event, EntryIdent};
 use proc_macro2::TokenStream;
 use quote::quote;
 use std::fmt;
@@ -22,8 +22,6 @@ pub struct StateTransitions {
     pub event: Event,
     pub guard: Option<GuardExpression>,
     pub action: Option<AsyncIdent>,
-    pub entry: Option<EntryIdent>,
-    pub exit: Option<EntryIdent>,
     pub out_state: OutputState,
 }
 
@@ -50,33 +48,6 @@ impl parse::Parse for StateTransitions {
                 }
             }
         }
-
-        // Possible extry function
-        let entry = if input.parse::<Token![<]>().is_ok() {
-            let is_async = input.parse::<token::Async>().is_ok();
-            let entry_function: Ident = input.parse()?;
-            Some(EntryIdent {
-                ident: entry_function,
-                state: in_states.clone(),
-                is_async,
-            })
-        } else {
-            None
-        };
-        let exit = if input.parse::<Token![>]>().is_ok() {
-            let is_async = input.parse::<token::Async>().is_ok();
-            let exit_function: Ident = match input.parse() {
-                Ok(v) => v,
-                Err(e) => panic!("Could not parse exit token: {:?}", e),
-            };
-            Some(EntryIdent {
-                ident: exit_function,
-                state: in_states.clone(),
-                is_async,
-            })
-        } else {
-            None
-        };
         // Event
         let event: Event = input.parse()?;
 
@@ -109,8 +80,6 @@ impl parse::Parse for StateTransitions {
             guard,
             action,
             out_state,
-            entry,
-            exit,
         })
     }
 }

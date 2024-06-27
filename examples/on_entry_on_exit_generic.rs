@@ -6,9 +6,8 @@ use smlang::statemachine;
 
 statemachine! {
     name: OnEntryExample,
-    generate_entry_exit_states: true,
     transitions: {
-        *D0 < exit_d0 + ToD1 = D1,
+        *D0 + ToD1 = D1,
         D0 + ToD3 = D3,
         D1  + ToD2 = D2,
         D2 + ToD1 = D1,

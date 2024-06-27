@@ -21,13 +21,6 @@ use transition::StateTransition;
 pub type TransitionMap = HashMap<String, HashMap<String, EventMapping>>;
 
 #[derive(Debug, Clone)]
-pub struct EntryIdent {
-    pub ident: Ident,
-    pub state: Vec<InputState>,
-    pub is_async: bool,
-}
-
-#[derive(Debug, Clone)]
 pub struct AsyncIdent {
     pub ident: Ident,
     pub is_async: bool,
@@ -64,10 +57,7 @@ pub struct ParsedStateMachine {
     pub event_data: DataDefinitions,
     pub states_events_mapping: HashMap<String, HashMap<String, EventMapping>>,
 
-    pub generate_entry_exit_states: bool,
     pub generate_transition_callback: bool,
-    pub entry_functions: HashMap<Ident, Ident>,
-    pub exit_functions: HashMap<Ident, Ident>,
 }
 
 // helper function for adding a transition to a transition event map
@@ -146,29 +136,6 @@ impl ParsedStateMachine {
         let mut events = HashMap::new();
         let mut event_data = DataDefinitions::new();
         let mut states_events_mapping = TransitionMap::new();
-
-        let mut states_with_exit_function = HashMap::new();
-        let mut states_with_entry_function = HashMap::new();
-
-        fn add_entry(map: &mut HashMap<Ident, Ident>, vec: &Vec<EntryIdent>) -> parse::Result<()> {
-            for identifier in vec {
-                for input_state in &identifier.state {
-                    if let Some(existing_identifier) =
-                        map.insert(input_state.ident.clone(), identifier.ident.clone())
-                    {
-                        if identifier.ident != existing_identifier {
-                            return Err(parse::Error::new(
-                                Span::call_site(),
-                                "Different entry or exit functions defined for state",
-                            ));
-                        }
-                    }
-                }
-            }
-            Ok(())
-        }
-        add_entry(&mut states_with_entry_function, &sm.entries)?;
-        add_entry(&mut states_with_exit_function, &sm.exits)?;
 
         for transition in sm.transitions.iter() {
             // Collect states
@@ -265,11 +232,7 @@ impl ParsedStateMachine {
             events,
             event_data,
             states_events_mapping,
-            generate_entry_exit_states: sm.generate_entry_exit_states,
             generate_transition_callback: sm.generate_transition_callback,
-
-            entry_functions: states_with_entry_function,
-            exit_functions: states_with_exit_function,
         })
     }
 }
