@@ -48,15 +48,15 @@ fn multiple_lifetimes() {
     struct Context;
 
     impl StateMachineContext for Context {
-        fn guard1(&mut self, _event_data: &X) -> Result<bool, ()> {
+        fn guard1(&self, _event_data: &X) -> Result<bool, ()> {
             Ok(true)
         }
 
-        fn guard2(&mut self, _state_data: &X, _event_data: &Y) -> Result<bool, ()> {
+        fn guard2(&self, _state_data: &X, _event_data: &Y) -> Result<bool, ()> {
             Ok(true)
         }
 
-        fn guard3(&mut self, _event_data: &Z) -> Result<bool, ()> {
+        fn guard3(&self, _event_data: &Z) -> Result<bool, ()> {
             Ok(true)
         }
 
@@ -146,7 +146,7 @@ fn async_guards_and_actions() {
         struct Context;
         #[smlang::async_trait]
         impl StateMachineContext for Context {
-            async fn guard1(&mut self) -> Result<bool, ()> {
+            async fn guard1(&self) -> Result<bool, ()> {
                 Ok(true)
             }
 
@@ -186,10 +186,10 @@ fn guard_expressions() {
         attempts: u32,
     }
     impl StateMachineContext for Context {
-        fn valid_entry(&mut self, e: &Entry) -> Result<bool, ()> {
+        fn valid_entry(&self, e: &Entry) -> Result<bool, ()> {
             Ok(e.0 == self.password)
         }
-        fn too_many_attempts(&mut self, _e: &Entry) -> Result<bool, ()> {
+        fn too_many_attempts(&self, _e: &Entry) -> Result<bool, ()> {
             Ok(self.attempts >= 3)
         }
         fn reset(&mut self) -> Result<(), ()> {
@@ -260,7 +260,7 @@ fn guarded_transition_before_unguarded() {
         pub enabled: bool,
     }
     impl StateMachineContext for Context {
-        fn guard(&mut self) -> Result<bool, ()> {
+        fn guard(&self) -> Result<bool, ()> {
             Ok(self.enabled)
         }
 
@@ -294,7 +294,7 @@ fn guard_errors() {
         pub guard_errors: bool,
     }
     impl StateMachineContext for Context {
-        fn guard(&mut self) -> Result<bool, ()> {
+        fn guard(&self) -> Result<bool, ()> {
             if self.guard_errors {
                 Err(())
             } else {

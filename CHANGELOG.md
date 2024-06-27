@@ -31,6 +31,7 @@ process.
 - Fixed clippy warnings
 - [breaking] Changed guard functions return type from Result<(),_> to Result<bool,_>
 - [breaking] Changed action functions return type from () to Result<NextStateData,_>
+- [breaking] Disallow guards mutable access to the context
 
 ## [v0.6.0] - 2022-11-02
 

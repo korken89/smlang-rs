@@ -327,7 +327,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                             guard_list.extend(quote! {
                             #[allow(missing_docs)]
                             #[allow(clippy::result_unit_err)]
-                            #is_async fn #guard <#all_lifetimes> (&mut self, #temporary_context #state_data #event_data) -> Result<bool,#guard_error>;
+                            #is_async fn #guard <#all_lifetimes> (&self, #temporary_context #state_data #event_data) -> Result<bool,#guard_error>;
                         });
                         };
                         Ok(())
