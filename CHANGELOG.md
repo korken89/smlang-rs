@@ -32,6 +32,7 @@ process.
 - [breaking] Changed guard functions return type from Result<(),_> to Result<bool,_>
 - [breaking] Changed action functions return type from () to Result<NextStateData,_>
 - [breaking] Disallow guards mutable access to the context
+- [breaking] Renamed GuardError to Error as it is now used for both guards and actions
 
 ## [v0.6.0] - 2022-11-02
 

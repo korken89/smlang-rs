@@ -204,7 +204,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         .collect();
 
     let guard_error = if sm.custom_guard_error {
-        quote! { Self::GuardError }
+        quote! { Self::Error }
     } else {
         quote! { () }
     };
@@ -516,8 +516,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     let guard_error = if sm.custom_guard_error {
         quote! {
-            /// The error type returned by guard functions.
-            type GuardError: core::fmt::Debug;
+            /// The error type returned by guard or action functions.
+            type Error: core::fmt::Debug;
         }
     } else {
         quote! {}
@@ -531,7 +531,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     let error_type = if sm.custom_guard_error {
         quote! {
-            #error_type_name<<T as #state_machine_context_type_name>::GuardError>
+            #error_type_name<<T as #state_machine_context_type_name>::Error>
         }
     } else {
         quote! {#error_type_name}
