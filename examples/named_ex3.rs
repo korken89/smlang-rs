@@ -19,14 +19,14 @@ statemachine! {
 pub struct Context;
 
 impl LoopingWithGuardsStateMachineContext for Context {
-    fn guard(&mut self) -> Result<(), ()> {
+    fn guard(&mut self) -> Result<bool, ()> {
         // Always ok
-        Ok(())
+        Ok(true)
     }
 
-    fn guard_fail(&mut self) -> Result<(), ()> {
+    fn guard_fail(&mut self) -> Result<bool, ()> {
         // Always fail
-        Err(())
+        Ok(false)
     }
 
     fn action1(&mut self) {
@@ -54,7 +54,7 @@ fn main() {
 
     // The action will never run as the guard will fail
     let r = sm.process_event(LoopingWithGuardsEvents::Event2);
-    assert!(matches!(r, Err(LoopingWithGuardsError::GuardFailed(()))));
+    assert!(matches!(r, Err(LoopingWithGuardsError::TransitionsFailed)));
 
     println!("After action 2");
 

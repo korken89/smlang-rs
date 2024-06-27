@@ -21,12 +21,8 @@ statemachine! {
 pub struct Context;
 
 impl StateMachineContext for Context {
-    fn guard(&mut self, event_data: &MyEventData) -> Result<(), ()> {
-        if event_data == &MyEventData(42) {
-            Ok(())
-        } else {
-            Err(())
-        }
+    fn guard(&mut self, event_data: &MyEventData) -> Result<bool, ()> {
+        Ok(event_data == &MyEventData(42))
     }
 
     fn action(&mut self, event_data: MyEventData) {
@@ -38,7 +34,7 @@ fn main() {
     let mut sm = StateMachine::new(Context);
     let result = sm.process_event(Events::Event1(MyEventData(1))); // Guard will fail
 
-    assert!(matches!(result, Err(Error::GuardFailed(()))));
+    assert!(matches!(result, Err(Error::TransitionsFailed)));
 
     let result = sm.process_event(Events::Event1(MyEventData(42))); // Guard will pass
 

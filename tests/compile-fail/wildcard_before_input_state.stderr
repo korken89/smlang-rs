@@ -1,5 +1,12 @@
-error: State and event combination specified multiple times, remove duplicates.
- --> tests/compile-fail/wildcard_before_input_state.rs:8:10
-  |
-8 |         *State1 + Event1 = State2,
-  |          ^^^^^^
+error: State1 + Event1: State and event combination specified multiple times, remove duplicates.
+  --> tests/compile-fail/wildcard_before_input_state.rs:5:1
+   |
+5  | / statemachine! {
+6  | |     transitions: {
+7  | |         _ + Event1 = Fault, //~ State and event combination specified multiple times, remove duplicates.
+8  | |         *State1 + Event1 = State2,
+9  | |     }
+10 | | }
+   | |_^
+   |
+   = note: this error originates in the macro `statemachine` (in Nightly builds, run with -Z macro-backtrace for more info)

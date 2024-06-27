@@ -21,25 +21,17 @@ statemachine! {
 pub struct Context;
 
 impl StateMachineContext for Context {
-    fn guard1(&mut self, event_data: &[u8]) -> Result<(), ()> {
+    fn guard1(&mut self, event_data: &[u8]) -> Result<bool, ()> {
         // Only ok if the slice is not empty
-        if !event_data.is_empty() {
-            Ok(())
-        } else {
-            Err(())
-        }
+        Ok(!event_data.is_empty())
     }
 
     fn action1(&mut self, event_data: &[u8]) {
         println!("Got valid Event Data = {:?}", event_data);
     }
 
-    fn guard2(&mut self, event_data: &MyReferenceWrapper) -> Result<(), ()> {
-        if *event_data.0 > 9000 {
-            Ok(())
-        } else {
-            Err(())
-        }
+    fn guard2(&mut self, event_data: &MyReferenceWrapper) -> Result<bool, ()> {
+        Ok(*event_data.0 > 9000)
     }
 
     fn action2(&mut self, event_data: MyReferenceWrapper) {
@@ -51,13 +43,13 @@ fn main() {
     let mut sm = StateMachine::new(Context);
 
     let result = sm.process_event(Events::Event1(&[])); // Guard will fail
-    assert!(matches!(result, Err(Error::GuardFailed(()))));
+    assert!(matches!(result, Err(Error::TransitionsFailed)));
     let result = sm.process_event(Events::Event1(&[1, 2, 3])); // Guard will pass
     assert!(matches!(result, Ok(&States::State2)));
 
     let r = 42;
     let result = sm.process_event(Events::Event2(MyReferenceWrapper(&r))); // Guard will fail
-    assert!(matches!(result, Err(Error::GuardFailed(()))));
+    assert!(matches!(result, Err(Error::TransitionsFailed)));
 
     let r = 9001;
     let result = sm.process_event(Events::Event2(MyReferenceWrapper(&r))); // Guard will pass

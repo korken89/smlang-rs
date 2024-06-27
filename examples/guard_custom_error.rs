@@ -34,10 +34,8 @@ statemachine! {
 pub struct Context;
 
 impl StateMachineContext for Context {
-    type GuardError = GuardError;
-
-    // Guard1 has access to the data from Event1
-    fn guard1(&mut self, _event_data: &MyEventData) -> Result<(), GuardError> {
+    type GuardError = GuardError; // Guard1 has access to the data from Event1
+    fn guard1(&mut self, _event_data: &MyEventData) -> Result<bool, GuardError> {
         Err(GuardError::Custom)
     }
 
@@ -47,7 +45,7 @@ impl StateMachineContext for Context {
     }
 
     // Guard2 has access to the data from State2
-    fn guard2(&mut self, _state_data: &MyStateData) -> Result<(), GuardError> {
+    fn guard2(&mut self, _state_data: &MyStateData) -> Result<bool, GuardError> {
         todo!()
     }
 

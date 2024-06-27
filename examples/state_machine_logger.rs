@@ -30,12 +30,8 @@ pub struct Context;
 
 impl StateMachineContext for Context {
     // Guard1 has access to the data from Event1
-    fn guard1(&mut self, event_data: &MyEventData) -> Result<(), ()> {
-        if event_data.0 % 2 == 0 {
-            Ok(())
-        } else {
-            Err(())
-        }
+    fn guard1(&mut self, event_data: &MyEventData) -> Result<bool, ()> {
+        Ok(event_data.0 % 2 == 0)
     }
 
     // Action1 has access to the data from Event1, and need to return the state data for State2
@@ -45,12 +41,8 @@ impl StateMachineContext for Context {
     }
 
     // Guard2 has access to the data from State2
-    fn guard2(&mut self, state_data: &MyStateData) -> Result<(), ()> {
-        if state_data.0 % 2 == 0 {
-            Ok(())
-        } else {
-            Err(())
-        }
+    fn guard2(&mut self, state_data: &MyStateData) -> Result<bool, ()> {
+        Ok(state_data.0 % 2 == 0)
     }
 
     // Action2 has access to the data from State2
@@ -65,9 +57,13 @@ impl StateMachineContext for Context {
         );
     }
 
-    fn log_guard(&self, guard: &'static str, result: &Result<(), ()>) {
-        if result.is_ok() {
-            println!("[StateMachineLogger]\tPassed `{}`", guard);
+    fn log_guard(&self, guard: &'static str, result: &Result<bool, ()>) {
+        if let Ok(result) = *result {
+            if result {
+                println!("[StateMachineLogger]\tEnabled `{}`", guard);
+            } else {
+                println!("[StateMachineLogger]\tDisabled `{}`", guard);
+            }
         } else {
             println!("[StateMachineLogger]\tFailed `{}`", guard);
         }

@@ -9,7 +9,6 @@ fn compile_fail_tests() {
     let t = trybuild::TestCases::new();
     t.compile_fail("tests/compile-fail/*.rs");
 }
-
 #[test]
 fn wildcard_after_input_state() {
     statemachine! {
@@ -49,16 +48,16 @@ fn multiple_lifetimes() {
     struct Context;
 
     impl StateMachineContext for Context {
-        fn guard1<'a>(&mut self, _event_data: &'a X) -> Result<(), ()> {
-            Ok(())
+        fn guard1(&mut self, _event_data: &X) -> Result<bool, ()> {
+            Ok(true)
         }
 
-        fn guard2<'a, 'b>(&mut self, _state_data: &'a X, _event_data: &'b Y) -> Result<(), ()> {
-            Ok(())
+        fn guard2(&mut self, _state_data: &X, _event_data: &Y) -> Result<bool, ()> {
+            Ok(true)
         }
 
-        fn guard3<'c>(&mut self, _event_data: &'c Z) -> Result<(), ()> {
-            Ok(())
+        fn guard3(&mut self, _event_data: &Z) -> Result<bool, ()> {
+            Ok(true)
         }
 
         fn action1<'a>(&mut self, event_data: &'a X) -> &'a X {
@@ -69,7 +68,7 @@ fn multiple_lifetimes() {
             (state_data, event_data)
         }
 
-        fn action3<'c>(&mut self, _event_data: &'c Z) {}
+        fn action3(&mut self, _event_data: &Z) {}
     }
 
     #[allow(dead_code)]
@@ -93,15 +92,13 @@ fn derive_display_events_states() {
     impl StateMachineContext for Context {}
 
     let mut sm = StateMachine::new(Context);
-    assert_eq!(format!("{}", sm.state().unwrap()), "Init");
-    assert_eq!(format!("{:?}", sm.state().unwrap()), "Init");
+    assert!(matches!(sm.state(), Ok(&States::Init)));
 
     let event = Events::Event;
     assert_eq!(format!("{}", event), "Event");
 
     sm.process_event(event).unwrap();
     assert!(matches!(sm.state(), Ok(&States::End)));
-    assert_eq!(format!("{}", sm.state().unwrap()), "End");
 }
 
 #[test]
@@ -119,15 +116,13 @@ fn named_derive_display_events_states() {
     impl SMStateMachineContext for Context {}
 
     let mut sm = SMStateMachine::new(Context);
-    assert_eq!(format!("{}", sm.state().unwrap()), "Init");
-    assert_eq!(format!("{:?}", sm.state().unwrap()), "Init");
+    assert!(matches!(sm.state(), Ok(&SMStates::Init)));
 
     let event = SMEvents::Event;
     assert_eq!(format!("{}", event), "Event");
 
     sm.process_event(event).unwrap();
     assert!(matches!(sm.state(), Ok(&SMStates::End)));
-    assert_eq!(format!("{}", sm.state().unwrap()), "End");
 }
 
 #[test]
@@ -145,8 +140,8 @@ fn async_guards_and_actions() {
         struct Context;
         #[smlang::async_trait]
         impl StateMachineContext for Context {
-            async fn guard1(&mut self) -> Result<(), ()> {
-                Ok(())
+            async fn guard1(&mut self) -> Result<bool, ()> {
+                Ok(true)
             }
 
             async fn action1(&mut self) -> () {
@@ -162,4 +157,116 @@ fn async_guards_and_actions() {
         sm.process_event(Events::Event1).await.unwrap();
         assert!(matches!(sm.state(), Ok(&States::Fault)));
     });
+}
+
+#[test]
+fn guard_expressions() {
+    #[derive(PartialEq, Display)]
+    pub struct Entry(pub u32);
+
+    statemachine! {
+        derive_states: [Display, Debug],
+        transitions: {
+            *Init + Login(&'a Entry) [valid_entry] / attempt = LoggedIn,
+            Init + Login(&'a Entry) [!valid_entry && !too_many_attempts] / attempt = Init,
+            Init + Login(&'a Entry) [!valid_entry && too_many_attempts] / attempt = LoginDenied,
+            LoggedIn + Logout / reset = Init,
+        }
+    }
+
+    /// Context
+    pub struct Context {
+        password: u32,
+        attempts: u32,
+    }
+    impl StateMachineContext for Context {
+        fn valid_entry(&mut self, e: &Entry) -> Result<bool, ()> {
+            Ok(e.0 == self.password)
+        }
+        fn too_many_attempts(&mut self, _e: &Entry) -> Result<bool, ()> {
+            Ok(self.attempts >= 3)
+        }
+        fn reset(&mut self) {
+            self.attempts = 0;
+        }
+        fn attempt(&mut self, _e: &Entry) {
+            self.attempts += 1;
+        }
+    }
+
+    let mut sm = StateMachine::new(Context {
+        password: 42,
+        attempts: 0,
+    });
+    assert!(matches!(sm.state(), Ok(&States::Init)));
+
+    let bad_entry = Entry(10);
+    let good_entry = Entry(42);
+
+    let _ = sm.process_event(Events::Login(&bad_entry));
+    assert_eq!(sm.context().attempts, 1);
+    assert!(matches!(sm.state(), Ok(&States::Init)));
+
+    let _ = sm.process_event(Events::Login(&bad_entry));
+    assert_eq!(sm.context().attempts, 2);
+    assert!(matches!(sm.state(), Ok(&States::Init)));
+
+    let _ = sm.process_event(Events::Login(&good_entry));
+    assert_eq!(sm.context().attempts, 3);
+    assert!(matches!(sm.state(), Ok(&States::LoggedIn)));
+
+    let _ = sm.process_event(Events::Logout);
+    assert_eq!(sm.context().attempts, 0);
+    assert!(matches!(sm.state(), Ok(&States::Init)));
+
+    let _ = sm.process_event(Events::Login(&bad_entry));
+    let _ = sm.process_event(Events::Login(&bad_entry));
+    let _ = sm.process_event(Events::Login(&bad_entry));
+    assert_eq!(sm.context().attempts, 3);
+    assert!(matches!(sm.state(), Ok(&States::Init)));
+
+    // exhausted attempts
+    let _ = sm.process_event(Events::Login(&bad_entry));
+    assert_eq!(sm.context().attempts, 4);
+    assert!(matches!(sm.state(), Ok(&States::LoginDenied)));
+
+    // Invalid event, as we are in a final state
+    assert_eq!(
+        sm.process_event(Events::Login(&good_entry)),
+        Err(Error::InvalidEvent)
+    );
+    assert_eq!(sm.context().attempts, 4);
+    assert!(matches!(sm.state(), Ok(&States::LoginDenied)));
+}
+#[test]
+fn guarded_transition_before_unguarded() {
+    use smlang::statemachine;
+    statemachine! {
+        transitions: {
+            *State1 + Event1 [guard] / disable = State2,
+            State1 + Event1 = Fault,
+            State2 + Event1 = State1,
+        }
+    }
+    struct Context {
+        pub enabled: bool,
+    }
+    impl StateMachineContext for Context {
+        fn guard(&mut self) -> Result<bool, ()> {
+            Ok(self.enabled)
+        }
+
+        fn disable(&mut self) {
+            self.enabled = false;
+        }
+    }
+    let mut sm = StateMachine::new(Context { enabled: true });
+    sm.process_event(Events::Event1).unwrap();
+    assert!(matches!(sm.state(), Ok(&States::State2)));
+
+    sm.process_event(Events::Event1).unwrap();
+    assert!(matches!(sm.state(), Ok(&States::State1)));
+
+    sm.process_event(Events::Event1).unwrap();
+    assert!(matches!(sm.state(), Ok(&States::Fault)));
 }

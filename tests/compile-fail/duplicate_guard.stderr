@@ -4,7 +4,6 @@ error: Guard `guard` can only be reused when all input states and events have th
 3  | / statemachine! {
 4  | |     transitions: {
 5  | |         *Init + Event [guard] / action = State1(u32),
-6  | |
 ...  |
 10 | |     }
 11 | | }
