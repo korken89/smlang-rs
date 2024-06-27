@@ -40,7 +40,7 @@ impl StateMachineContext for Context {
     }
 
     // Action1 has access to the data from Event1, and need to return the state data for State2
-    fn action1(&mut self, _event_data: MyEventData) -> MyStateData {
+    fn action1(&mut self, _event_data: MyEventData) -> Result<MyStateData, Self::GuardError> {
         todo!()
     }
 
@@ -50,7 +50,7 @@ impl StateMachineContext for Context {
     }
 
     // Action2 has access to the data from State2
-    fn action2(&mut self, _state_data: &MyStateData) {
+    fn action2(&mut self, _state_data: &MyStateData) -> Result<(), Self::GuardError> {
         todo!()
     }
 }

@@ -25,8 +25,9 @@ impl StateMachineContext for Context {
         Ok(event_data == &MyEventData(42))
     }
 
-    fn action(&mut self, event_data: MyEventData) {
+    fn action(&mut self, event_data: MyEventData) -> Result<(), ()> {
         println!("Got valid Event Data = {}", event_data.0);
+        Ok(())
     }
 }
 

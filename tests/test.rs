@@ -60,15 +60,21 @@ fn multiple_lifetimes() {
             Ok(true)
         }
 
-        fn action1<'a>(&mut self, event_data: &'a X) -> &'a X {
-            event_data
+        fn action1<'a>(&mut self, event_data: &'a X) -> Result<&'a X, ()> {
+            Ok(event_data)
         }
 
-        fn action2<'a, 'b>(&mut self, state_data: &'a X, event_data: &'b Y) -> (&'a X, &'b Y) {
-            (state_data, event_data)
+        fn action2<'a, 'b>(
+            &mut self,
+            state_data: &'a X,
+            event_data: &'b Y,
+        ) -> Result<(&'a X, &'b Y), ()> {
+            Ok((state_data, event_data))
         }
 
-        fn action3(&mut self, _event_data: &Z) {}
+        fn action3(&mut self, _event_data: &Z) -> Result<(), ()> {
+            Ok(())
+        }
     }
 
     #[allow(dead_code)]
@@ -144,8 +150,8 @@ fn async_guards_and_actions() {
                 Ok(true)
             }
 
-            async fn action1(&mut self) -> () {
-                ()
+            async fn action1(&mut self) -> Result<(), ()> {
+                Ok(())
             }
         }
 
@@ -186,11 +192,13 @@ fn guard_expressions() {
         fn too_many_attempts(&mut self, _e: &Entry) -> Result<bool, ()> {
             Ok(self.attempts >= 3)
         }
-        fn reset(&mut self) {
+        fn reset(&mut self) -> Result<(), ()> {
             self.attempts = 0;
+            Ok(())
         }
-        fn attempt(&mut self, _e: &Entry) {
+        fn attempt(&mut self, _e: &Entry) -> Result<(), ()> {
             self.attempts += 1;
+            Ok(())
         }
     }
 
@@ -256,8 +264,9 @@ fn guarded_transition_before_unguarded() {
             Ok(self.enabled)
         }
 
-        fn disable(&mut self) {
+        fn disable(&mut self) -> Result<(), ()> {
             self.enabled = false;
+            Ok(())
         }
     }
     let mut sm = StateMachine::new(Context { enabled: true });

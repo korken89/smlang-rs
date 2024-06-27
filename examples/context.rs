@@ -20,12 +20,14 @@ pub struct Context {
 }
 
 impl StateMachineContext for Context {
-    fn count_transition1(&mut self) {
+    fn count_transition1(&mut self) -> Result<(), ()> {
         self.num_transitions += 1;
+        Ok(())
     }
 
-    fn count_transition2(&mut self) {
+    fn count_transition2(&mut self) -> Result<(), ()> {
         self.num_transitions += 1;
+        Ok(())
     }
 }
 

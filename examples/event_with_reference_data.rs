@@ -26,16 +26,18 @@ impl StateMachineContext for Context {
         Ok(!event_data.is_empty())
     }
 
-    fn action1(&mut self, event_data: &[u8]) {
+    fn action1(&mut self, event_data: &[u8]) -> Result<(), ()> {
         println!("Got valid Event Data = {:?}", event_data);
+        Ok(())
     }
 
     fn guard2(&mut self, event_data: &MyReferenceWrapper) -> Result<bool, ()> {
         Ok(*event_data.0 > 9000)
     }
 
-    fn action2(&mut self, event_data: MyReferenceWrapper) {
+    fn action2(&mut self, event_data: MyReferenceWrapper) -> Result<(), ()> {
         println!("Got valid Event Data = {}", event_data.0);
+        Ok(())
     }
 }
 

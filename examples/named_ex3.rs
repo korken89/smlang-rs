@@ -29,12 +29,14 @@ impl LoopingWithGuardsStateMachineContext for Context {
         Ok(false)
     }
 
-    fn action1(&mut self) {
+    fn action1(&mut self) -> Result<(), ()> {
         //println!("Action 1");
+        Ok(())
     }
 
-    fn action2(&mut self) {
+    fn action2(&mut self) -> Result<(), ()> {
         //println!("Action 1");
+        Ok(())
     }
 }
 

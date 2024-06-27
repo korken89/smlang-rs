@@ -35,22 +35,24 @@ impl AsyncSimpleStateMachineContext for Context {
         Ok(true)
     }
 
-    async fn action1(&mut self) -> () {
+    fn action3(&mut self) -> Result<bool, ()> {
+        println!("`action3` called from sync context, done = `{}`", self.done);
+        Ok(self.done)
+    }
+
+    async fn action1(&mut self) -> Result<(), ()> {
         println!("`action1` called from async context");
         let mut lock = self.lock.write().await;
         *lock = true;
+        Ok(())
     }
 
-    fn action3(&mut self) -> bool {
-        println!("`action3` called from sync context, done = `{}`", self.done);
-        self.done
-    }
-
-    async fn action2(&mut self) -> () {
+    async fn action2(&mut self) -> Result<(), ()> {
         println!("`action2` called from async context");
         if !*self.lock.read().await {
             self.done = true;
         }
+        Ok(())
     }
 }
 

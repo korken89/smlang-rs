@@ -35,9 +35,9 @@ impl StateMachineContext for Context {
     }
 
     // Action1 has access to the data from Event1, and need to return the state data for State2
-    fn action1(&mut self, event_data: MyEventData) -> MyStateData {
+    fn action1(&mut self, event_data: MyEventData) -> Result<MyStateData, ()> {
         println!("Creating state data for next state");
-        MyStateData(event_data.0)
+        Ok(MyStateData(event_data.0))
     }
 
     // Guard2 has access to the data from State2
@@ -46,8 +46,9 @@ impl StateMachineContext for Context {
     }
 
     // Action2 has access to the data from State2
-    fn action2(&mut self, state_data: &MyStateData) {
+    fn action2(&mut self, state_data: &MyStateData) -> Result<(), ()> {
         println!("Printing state data {:?}", state_data);
+        Ok(())
     }
 
     fn log_process_event(&self, current_state: &States, event: &Events) {
