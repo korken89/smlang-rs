@@ -487,14 +487,29 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                     quote! {
                                         #guard_result
                                         self.context.log_guard(stringify!(#guard_expression), &guard_result);
-                                        if guard_result.map_err(#error_type_name::GuardFailed)? {
-                                              #action_code
-                                              let out_state = #states_type_name::#out_state;
-                                              self.context.log_state_change(&out_state);
-                                              #entry_exit_states
-                                              self.state = Some(out_state);
-                                              return self.state()
+
+                                        // If the guard fails, we need to fall back to our original
+                                        // state.
+                                        match guard_result {
+                                            Err(err) => {
+                                                self.state = Some(#states_type_name::#in_state);
+                                                return Err(#error_type_name::GuardFailed(err));
+                                            }
+
+                                            // If the guard passed, we transition immediately.
+                                            // Otherwise, there may be a later transition that passes,
+                                            // so we'll defer to that.
+                                            Ok(true) => {
+                                                #action_code
+                                                let out_state = #states_type_name::#out_state;
+                                                self.context.log_state_change(&out_state);
+                                                #entry_exit_states
+                                                self.state = Some(out_state);
+                                                return self.state();
+                                            }
+                                            _ => {},
                                         }
+
                                     }
                                 } else { // Unguarded transition
                                     quote!{

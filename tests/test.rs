@@ -270,3 +270,47 @@ fn guarded_transition_before_unguarded() {
     sm.process_event(Events::Event1).unwrap();
     assert!(matches!(sm.state(), Ok(&States::Fault)));
 }
+
+#[test]
+fn guard_errors() {
+    use smlang::statemachine;
+    statemachine! {
+        transitions: {
+            *Init + Event1 [guard] = Done,
+        }
+    }
+
+    struct Context {
+        pub guard_passable: bool,
+        pub guard_errors: bool,
+    }
+    impl StateMachineContext for Context {
+        fn guard(&mut self) -> Result<bool, ()> {
+            if self.guard_errors {
+                Err(())
+            } else {
+                Ok(self.guard_passable)
+            }
+        }
+    }
+
+    let mut sm = StateMachine::new(Context { guard_passable: false, guard_errors: true });
+
+    // Test attempting to transition when the guard fails.
+    sm.context_mut().guard_errors = true;
+    assert!(sm.process_event(Events::Event1).is_err());
+    assert!(matches!(sm.state(), Ok(&States::Init)));
+
+    // Test attempting to transition when the guard is not passable.
+    sm.context_mut().guard_errors = false;
+    assert!(sm.process_event(Events::Event1).is_err());
+    assert!(matches!(sm.state(), Ok(&States::Init)));
+
+    assert!(sm.process_event(Events::Event1).is_err());
+    assert!(matches!(sm.state(), Ok(&States::Init)));
+
+    sm.context_mut().guard_passable = true;
+    sm.process_event(Events::Event1).unwrap();
+    assert!(matches!(sm.state(), Ok(&States::Done)));
+
+}
