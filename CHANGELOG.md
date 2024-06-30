@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Add transition callback. A function which is called for every transition. It has default empty
+implementation.
+
 ## [0.7.0] - 2024-07-03
 
 ### Added

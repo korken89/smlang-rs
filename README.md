@@ -311,6 +311,12 @@ The statemachine will create for all states an `on_entry_` and `on_exit_` functi
 If the are not used, they will be optimized away by the compiler. An example be
 found in `on_entry_on_exit_generic`.
 
+### Transition callback
+
+The statemachine will call for every transition a transition callback. This function
+is called with both the old state and new state as arguments. An example can be found
+in `transition_callback`.
+
 ## Helpers
 
 ### Auto-derive certain traits for states and events
