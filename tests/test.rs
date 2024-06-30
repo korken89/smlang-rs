@@ -294,7 +294,10 @@ fn guard_errors() {
         }
     }
 
-    let mut sm = StateMachine::new(Context { guard_passable: false, guard_errors: true });
+    let mut sm = StateMachine::new(Context {
+        guard_passable: false,
+        guard_errors: true,
+    });
 
     // Test attempting to transition when the guard fails.
     sm.context_mut().guard_errors = true;
@@ -312,5 +315,4 @@ fn guard_errors() {
     sm.context_mut().guard_passable = true;
     sm.process_event(Events::Event1).unwrap();
     assert!(matches!(sm.state(), Ok(&States::Done)));
-
 }
