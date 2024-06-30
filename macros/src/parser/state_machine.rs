@@ -142,12 +142,12 @@ impl parse::Parse for StateMachine {
                     return Err(parse::Error::new(
                         input.span(),
                         format!(
-                            "Unknown keyword {}. Support keywords: [\"name\", \
-                                \"transitions\", \
-                                \"temporary_context\", \
-                                \"custom_guard_error\", \
-                                \"derive_states\", \
-                                \"derive_events\"
+                            "Unknown keyword {}. Support keywords: [\"name\",
+                                \"transitions\",
+                                \"temporary_context\",
+                                \"custom_guard_error\",
+                                \"derive_states\",
+                                \"derive_events\",
                                 ]",
                             keyword
                         ),
