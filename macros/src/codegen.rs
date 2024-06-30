@@ -490,8 +490,10 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                         if guard_result.map_err(#error_type_name::GuardFailed)? {
                                               #action_code
                                               let out_state = #states_type_name::#out_state;
+                                              let in_state = #states_type_name::#in_state;
                                               self.context.log_state_change(&out_state);
                                               #entry_exit_states
+                                              self.context().transition_callback(&in_state, &out_state);
                                               self.state = Some(out_state);
                                               return self.state()
                                         }
@@ -500,8 +502,10 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                     quote!{
                                        #action_code
                                        let out_state = #states_type_name::#out_state;
+                                       let in_state = #states_type_name::#in_state;
                                        self.context.log_state_change(&out_state);
                                        #entry_exit_states
+                                       self.context().transition_callback(&in_state, &out_state);
                                        self.state = Some(out_state);
                                        return self.state();
                                    }
@@ -609,6 +613,11 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             /// `process_event()`. No-op by default but can be overridden in implementations
             /// of a state machine's `StateMachineContext` trait.
             fn log_state_change(&self, new_state: & #states_type_name) {}
+
+            /// Called when transitioning to a new state as a result of an event passed to
+            /// `process_event()`. No-op by default but can be overridden in implementations
+            /// of a state machine's `StateMachineContext` trait.
+            fn transition_callback(&self, old_state: & #states_type_name, new_state: & #states_type_name) {}
         }
 
         /// List of auto-generated states.
