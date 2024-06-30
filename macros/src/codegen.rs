@@ -19,8 +19,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     let state_machine_context_type_name =
         format_ident!("{sm_name}StateMachineContext", span = sm_name_span);
 
-    let generate_transition_callback = sm.generate_transition_callback;
-
     // Get only the unique states
     let mut state_list: Vec<_> = sm.states.values().collect();
     state_list.sort_by_key(|state| state.to_string());
@@ -261,14 +259,15 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         };
 
         let entry_ident = format_ident!("on_entry_{}", string_morph::to_snake_case(state));
+        let state_name = format!("[{}::{}]", states_type_name, state);
         entries_exits.extend(quote! {
-            #[allow(missing_docs)]
-            fn #entry_ident(&mut self){}
+            #[doc = concat!("Called on entry to ", #state_name)]
+            fn #entry_ident(&mut self) {}
         });
         let exit_ident = format_ident!("on_exit_{}", string_morph::to_snake_case(state));
         entries_exits.extend(quote! {
-           #[allow(missing_docs)]
-           fn #exit_ident(&mut self){}
+            #[doc = concat!("Called on exit from ", #state_name)]
+            fn #exit_ident(&mut self) {}
         });
 
         for (event, event_mapping) in event_mappings {
@@ -426,9 +425,9 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                             .zip(action.iter().zip(out_state)).map(|(guard, (action,out_state))| {
 
                                 let binding = out_state.to_string();
-                                let out_state_string = &binding.split('(').collect::<Vec<_>>()[0];
+                                let out_state_string = &binding.split('(').next().unwrap();
                                 let binding = in_state.to_string();
-                                let in_state_string = &binding.split('(').collect::<Vec<_>>()[0];
+                                let in_state_string = &binding.split('(').next().unwrap();
 
                                 let entry_ident = format_ident!("on_entry_{}", string_morph::to_snake_case(out_state_string));
                                 let exit_ident = format_ident!("on_exit_{}", string_morph::to_snake_case(in_state_string));
@@ -579,13 +578,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     let derive_states_list = &sm.derive_states;
     let derive_events_list = &sm.derive_events;
-    let transition_callback = if generate_transition_callback {
-        quote!(
-            self.context().transition_callback(&self.state);
-        )
-    } else {
-        quote!()
-    };
     // Build the states and events output
     quote! {
         /// This trait outlines the guards and actions that need to be implemented for the state
@@ -617,9 +609,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             /// `process_event()`. No-op by default but can be overridden in implementations
             /// of a state machine's `StateMachineContext` trait.
             fn log_state_change(&self, new_state: & #states_type_name) {}
-
-            #[allow(missing_docs)]
-            fn transition_callback(&self, new_state: &Option<#states_type_name>) {}
         }
 
         /// List of auto-generated states.
@@ -718,7 +707,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                     #states_type_name::#in_states => match event {
                         #(#events_type_name::#events => {
                             #code_blocks
-                            #transition_callback
 
                             #[allow(unreachable_code)]
                             {

@@ -9,7 +9,6 @@ pub struct StateMachine {
     pub name: Option<Ident>,
     pub derive_states: Vec<Ident>,
     pub derive_events: Vec<Ident>,
-    pub generate_transition_callback: bool,
 }
 
 impl StateMachine {
@@ -21,7 +20,6 @@ impl StateMachine {
             name: None,
             derive_states: Vec::new(),
             derive_events: Vec::new(),
-            generate_transition_callback: false,
         }
     }
 
@@ -140,24 +138,16 @@ impl parse::Parse for StateMachine {
                         };
                     }
                 }
-                "generate_transition_callback" => {
-                    input.parse::<Token![:]>()?;
-                    let generate_transition_callback: syn::LitBool = input.parse()?;
-                    if generate_transition_callback.value {
-                        statemachine.generate_transition_callback = true
-                    }
-                }
                 keyword => {
                     return Err(parse::Error::new(
                         input.span(),
                         format!(
-                            "Unknown keyword {}. Support keywords: [\"name\",
-                                \"transitions\",
-                                \"temporary_context\",
-                                \"custom_guard_error\",
-                                \"derive_states\",
-                                \"derive_events\",
-                                \"generate_transition_callback\",
+                            "Unknown keyword {}. Support keywords: [\"name\", \
+                                \"transitions\", \
+                                \"temporary_context\", \
+                                \"custom_guard_error\", \
+                                \"derive_states\", \
+                                \"derive_events\"
                                 ]",
                             keyword
                         ),
