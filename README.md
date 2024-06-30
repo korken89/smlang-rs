@@ -260,6 +260,12 @@ statemachine!{
 
 This example is available in `ex3.rs`.
 
+### Using entry and exit functions in transitions
+
+The statemachine will create for all states an `on_entry_` and `on_exit_` function.
+If the are not used, they will be optimized away by the compiler. An example be
+found in `on_entry_on_exit_generic`.
+
 ## Helpers
 
 ### Auto-derive certain traits for states and events

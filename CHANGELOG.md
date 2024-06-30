@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Add hooks to `StateMachineContext` for logging events, guards, actions, and state changes
 - Add support multiple guarded transitions for a triggering event
 - Add support for guard boolean expressions in the state machine declaration
+- There are now `on_entry_<snakecase_statename>` and `on_entry_<snakecase_statename>` functions
+defined to allow handling entry and exit from all state machine states. These have a default empty
+implementation.
 
 ### Fixed
 

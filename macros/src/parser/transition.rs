@@ -48,7 +48,6 @@ impl parse::Parse for StateTransitions {
                 }
             }
         }
-
         // Event
         let event: Event = input.parse()?;
 
