@@ -28,7 +28,7 @@ pub fn statemachine(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
                 // Generate dot syntax for the statemachine.
                 let diagram = diagramgen::generate_diagram(&sm);
-                let name = if let Some(name) = &sm.name {
+                let diagram_name = if let Some(name) = &sm.name {
                     name.to_string()
                 } else {
                     let mut diagram_hasher = std::collections::hash_map::DefaultHasher::new();
@@ -38,7 +38,7 @@ pub fn statemachine(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
                 // Start the 'dot' process.
                 let mut process = std::process::Command::new("dot")
-                    .args(["-Tsvg", "-o", &format!("statemachine_{name}.svg")])
+                    .args(["-Tsvg", "-o", &format!("statemachine_{diagram_name}.svg")])
                     .stdin(std::process::Stdio::piped())
                     .spawn()
                     .expect("Failed to execute 'dot'. Are you sure graphviz is installed?");
