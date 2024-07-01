@@ -42,7 +42,7 @@ impl StateMachineContext for Context {
     }
 
     // Action2 has access to the data from State2
-    fn action2(&mut self, _state_data: MyStateData) {
+    fn action2(&mut self, _state_data: &MyStateData) {
         todo!()
     }
 }

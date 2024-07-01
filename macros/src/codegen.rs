@@ -79,7 +79,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 }
                 Some(_) => {
                     quote! {
-                        #state_name(state_data)
+                        #state_name(ref state_data)
                     }
                 }
             }
@@ -144,7 +144,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         })
         .collect();
 
-    let guard_action_parameters: Vec<Vec<_>> = transitions
+    let action_parameters: Vec<Vec<_>> = transitions
         .iter()
         .map(|(name, value)| {
             let state_name = &sm.states.get(name).unwrap().to_string();
@@ -153,7 +153,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 .iter()
                 .map(|(name, _)| {
                     let state_data = match sm.state_data.data_types.get(state_name) {
-                        Some(_) => quote! { state_data },
+                        Some(Type::Reference(_)) => quote! { state_data },
+                        Some(_) => quote! { &state_data },
                         None => quote! {},
                     };
 
@@ -172,7 +173,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         })
         .collect();
 
-    let guard_action_ref_parameters: Vec<Vec<_>> = transitions
+    let guard_parameters: Vec<Vec<_>> = transitions
         .iter()
         .map(|(name, value)| {
             let state_name = &sm.states.get(name).unwrap().to_string();
@@ -360,14 +361,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         })
                     };
 
-                    let state_data = match sm.state_data.data_types.get(state) {
-                        Some(st) => {
-                            quote! { state_data: #st, }
-                        }
-                        None => {
-                            quote! {}
-                        }
-                    };
                     let event_data = match sm.event_data.data_types.get(event) {
                         Some(et) => {
                             quote! { event_data: #et }
@@ -408,18 +401,18 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         .zip(
             actions
                 .iter()
-                .zip(in_states.iter().zip(out_states.iter().zip(guard_action_parameters.iter().zip(guard_action_ref_parameters.iter())))),
+                .zip(in_states.iter().zip(out_states.iter().zip(action_parameters.iter().zip(guard_parameters.iter())))),
         )
         .map(
-            |(guards, (actions, (in_state, (out_states, (guard_action_parameters, guard_action_ref_parameters)))))| {
+            |(guards, (actions, (in_state, (out_states, (action_parameters, guard_parameters)))))| {
                 guards
                     .iter()
                     .zip(
                         actions
                             .iter()
-                            .zip(out_states.iter().zip(guard_action_parameters.iter().zip(guard_action_ref_parameters.iter()))),
+                            .zip(out_states.iter().zip(action_parameters.iter().zip(guard_parameters.iter()))),
                     )
-                    .map(|(guard, (action, (out_state, (g_a_param, g_a_ref_param))))| {
+                    .map(|(guard, (action, (out_state, (action_params, guard_params))))| {
                         let streams: Vec<TokenStream> =
                             guard.iter()
                             .zip(action.iter().zip(out_state)).map(|(guard, (action,out_state))| {
@@ -434,66 +427,44 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
                                 let entry_exit_states =
                                     quote! {
-                                        self.context_mut().#exit_ident();
-                                        self.context_mut().#entry_ident();
+                                        self.context.#exit_ident();
+                                        self.context.#entry_ident();
                                         };
-                                let (is_async_action,action_code) = generate_action(action, &temporary_context_call, g_a_param);
+                                let (is_async_action, action_code) = generate_action(action, &temporary_context_call, action_params);
                                 is_async_state_machine |= is_async_action;
+
                                 if let Some(expr) = guard { // Guarded transition
-                                    let mut is_async_expression = false;
                                     let guard_expression= expr.to_token_stream(&mut |async_ident: &AsyncIdent| {
                                         let guard_ident = &async_ident.ident;
-                                        is_async_expression |= async_ident.is_async;
-                                        if async_ident.is_async {
-                                            quote! {
-                                                self.context.#guard_ident(#temporary_context_call #g_a_ref_param).await?
-                                            }
+                                        let guard_await = if async_ident.is_async {
+                                            is_async_state_machine = true;
+                                            quote! { .await }
                                         } else {
-                                            quote! {
-                                                self.context.#guard_ident(#temporary_context_call #g_a_ref_param)?
-                                            }
+                                            quote! {}
+                                        };
+                                        quote! {
+                                            self.context.#guard_ident(#temporary_context_call #guard_params) #guard_await .map_err(#error_type_name::GuardFailed)?
                                         }
                                     });
-                                    is_async_state_machine |= is_async_expression;
-                                    let guard_result = if is_async_expression {
-                                        // This #guard_expression contains a boolean expression of async guard functions.
-                                        // Each guard function has Result<bool,_> return type.
-                                        // For example, [ async f && !async g ] will expand into
-                                        //     self.context.f().await? && !self.context.g().await?
-                                        // We need to catch the error, if any of the functions returns it.
-                                        // Therefore, we use an async block to catch these .await? operator results
-                                        // and convert the result of the expression back to Result<bool,_>
-                                        quote! {
-                                            #[allow(clippy::needless_question_mark)]
-                                            let guard_result = (async{Ok(#guard_expression)}).await;
-                                        }
-                                    } else {
+
+                                    quote! {
                                         // This #guard_expression contains a boolean expression of guard functions
                                         // Each guard function has Result<bool,_> return type.
                                         // For example, [ f && !g ] will expand into
                                         //  self.context.f()? && !self.context.g()?
-                                        // We need to catch the error, if any of the functions returns it.
-                                        // Therefore, we wrap it with a closure and immediately call the closure
-                                        // to catch the question mark operator results
-                                        // and convert the result of the expression back to to Result<bool,_>
-                                        quote! {
-                                            #[allow(clippy::needless_question_mark)]
-                                            let guard_result = (||Ok(#guard_expression))();
-                                        }
-                                    };
-                                    // After we assembled the result of the expression into 'guard_result' variable
-                                    // we now either check the guard Ok value to enable or disable the transition
-                                    // or repackage the Err value and propagate to the caller of process_event()
-                                    quote! {
-                                        #guard_result
-                                        self.context.log_guard(stringify!(#guard_expression), &guard_result);
-                                        if guard_result.map_err(#error_type_name::GuardFailed)? {
-                                              #action_code
-                                              let out_state = #states_type_name::#out_state;
-                                              self.context.log_state_change(&out_state);
-                                              #entry_exit_states
-                                              self.state = Some(out_state);
-                                              return self.state()
+                                        let guard_passed = #guard_expression;
+                                        self.context.log_guard(stringify!(#guard_expression), guard_passed);
+
+                                        // If the guard passed, we transition immediately.
+                                        // Otherwise, there may be a later transition that passes,
+                                        // so we'll defer to that.
+                                        if guard_passed {
+                                            #action_code
+                                            let out_state = #states_type_name::#out_state;
+                                            self.context.log_state_change(&out_state);
+                                            #entry_exit_states
+                                            self.state = out_state;
+                                            return Ok(&self.state);
                                         }
                                     }
                                 } else { // Unguarded transition
@@ -502,8 +473,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                        let out_state = #states_type_name::#out_state;
                                        self.context.log_state_change(&out_state);
                                        #entry_exit_states
-                                       self.state = Some(out_state);
-                                       return self.state();
+                                       self.state = out_state;
+                                        return Ok(&self.state);
                                    }
                                 }
                             }
@@ -526,7 +497,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         Some(st) => quote! {
             pub const fn new(context: T, state_data: #st ) -> Self {
                 #state_machine_type_name {
-                    state: Some(#states_type_name::#starting_state (state_data)),
+                    state: #states_type_name::#starting_state (state_data),
                     context
                 }
             }
@@ -534,7 +505,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         None => quote! {
             pub const fn new(context: T ) -> Self {
                 #state_machine_type_name {
-                    state: Some(#states_type_name::#starting_state),
+                    state: #states_type_name::#starting_state,
                     context
                 }
             }
@@ -554,12 +525,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         }
     } else {
         quote! {}
-    };
-
-    let guard_error_type = if sm.custom_guard_error {
-        quote! { Self::GuardError }
-    } else {
-        quote! { () }
     };
 
     let (is_async, is_async_trait) = if is_async_state_machine {
@@ -598,7 +563,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             /// Called after executing a guard during `process_event()`. No-op by
             /// default but can be overridden in implementations of a state machine's
             /// `StateMachineContext` trait.
-            fn log_guard(&self, guard: &'static str, result: &Result<bool, #guard_error_type >) {}
+            fn log_guard(&self, guard: &'static str, result: bool) {}
 
             /// Called after executing an action during `process_event()`. No-op by
             /// default but can be overridden in implementations of a state machine's
@@ -646,16 +611,11 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             TransitionsFailed,
             /// When guard is failed.
             GuardFailed(T),
-            /// When the state has an unexpected value.
-            ///
-            /// This can happen if there is a bug in the code generated by smlang,
-            /// or if a guard or action gets panicked.
-            Poisoned,
         }
 
         /// State machine structure definition.
         pub struct #state_machine_type_name<#state_lifetimes T: #state_machine_context_type_name> {
-            state: Option<#states_type_name <#state_lifetimes>>,
+            state: #states_type_name <#state_lifetimes>,
             context: T
         }
 
@@ -668,15 +628,15 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             #[inline(always)]
             pub const fn new_with_state(context: T, initial_state: #states_type_name <#state_lifetimes>) -> Self {
                 #state_machine_type_name {
-                    state: Some(initial_state),
+                    state: initial_state,
                     context
                 }
             }
 
             /// Returns the current state.
             #[inline(always)]
-            pub fn state(&self) -> Result<&#states_type_name <#state_lifetimes>, #error_type> {
-                self.state.as_ref().ok_or(#error_type_name ::Poisoned)
+            pub fn state(&self) -> &#states_type_name <#state_lifetimes> {
+                &self.state
             }
 
             /// Returns the current context.
@@ -700,8 +660,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 #temporary_context
                 event: #events_type_name <#event_lifetimes>
             ) -> Result<&#states_type_name <#state_lifetimes>, #error_type> {
-                self.context.log_process_event(self.state()?, &event);
-               match self.state.take().ok_or(#error_type_name ::Poisoned)? {
+                self.context.log_process_event(self.state(), &event);
+               match self.state {
                     #(
                     #[allow(clippy::match_single_binding)]
                     #states_type_name::#in_states => match event {
@@ -711,16 +671,11 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                             #[allow(unreachable_code)]
                             {
                                 // none of the guarded or non-guarded transitions occurred,
-                                // therefore return an error, and keep the same state
-                                self.state = Some(#states_type_name::#in_states);
                                 Err(#error_type_name ::TransitionsFailed)
                             }
                         }),*
                         #[allow(unreachable_patterns)]
-                        _ => {
-                            self.state = Some(#states_type_name::#in_states);
-                            Err(#error_type_name ::InvalidEvent)
-                        }
+                        _ => Err(#error_type_name ::InvalidEvent),
                     }),*
                 }
             }

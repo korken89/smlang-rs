@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - There are now `on_entry_<snakecase_statename>` and `on_entry_<snakecase_statename>` functions
 defined to allow handling entry and exit from all state machine states. These have a default empty
 implementation.
+* The expanded code is now written to `target/smlang-expansion-<name|default>.rs` during the build
+process.
 
 ### Fixed
 
@@ -25,8 +27,6 @@ implementation.
 
 ### Changed
 
-- [breaking] Actions now take owned values
-- [breaking] `state()` now returns a `Result`
 - `StateMachine::new` and `StateMachine::new_with_state` are now const functions
 - Fixed clippy warnings
 - [breaking] Changed guard functions return type from Result<(),_> to Result<bool,_>

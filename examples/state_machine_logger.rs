@@ -46,7 +46,7 @@ impl StateMachineContext for Context {
     }
 
     // Action2 has access to the data from State2
-    fn action2(&mut self, state_data: MyStateData) {
+    fn action2(&mut self, state_data: &MyStateData) {
         println!("Printing state data {:?}", state_data);
     }
 
@@ -57,15 +57,11 @@ impl StateMachineContext for Context {
         );
     }
 
-    fn log_guard(&self, guard: &'static str, result: &Result<bool, ()>) {
-        if let Ok(result) = *result {
-            if result {
-                println!("[StateMachineLogger]\tEnabled `{}`", guard);
-            } else {
-                println!("[StateMachineLogger]\tDisabled `{}`", guard);
-            }
+    fn log_guard(&self, guard: &'static str, result: bool) {
+        if result {
+            println!("[StateMachineLogger]\tEnabled `{}`", guard);
         } else {
-            println!("[StateMachineLogger]\tFailed `{}`", guard);
+            println!("[StateMachineLogger]\tDisabled `{}`", guard);
         }
     }
 

@@ -39,31 +39,31 @@ fn main() {
     // first event starts the dominos
     let _ = sm.process_event(OnEntryExampleEvents::ToD1).unwrap();
 
-    assert!(matches!(sm.state(), Ok(&OnEntryExampleStates::D1)));
+    assert!(matches!(sm.state(), &OnEntryExampleStates::D1));
     assert_eq!(sm.context().exited_d0, 1);
     assert_eq!(sm.context().entered_d1, 1);
 
     let _ = sm.process_event(OnEntryExampleEvents::ToD2).unwrap();
 
-    assert!(matches!(sm.state(), Ok(&OnEntryExampleStates::D2)));
+    assert!(matches!(sm.state(), &OnEntryExampleStates::D2));
     assert_eq!(sm.context().exited_d0, 1);
     assert_eq!(sm.context().entered_d1, 1);
 
     let _ = sm.process_event(OnEntryExampleEvents::ToD1).unwrap();
 
-    assert!(matches!(sm.state(), Ok(&OnEntryExampleStates::D1)));
+    assert!(matches!(sm.state(), &OnEntryExampleStates::D1));
     assert_eq!(sm.context().exited_d0, 1);
     assert_eq!(sm.context().entered_d1, 2);
 
     let _ = sm.process_event(OnEntryExampleEvents::ToD0).unwrap();
 
-    assert!(matches!(sm.state(), Ok(&OnEntryExampleStates::D0)));
+    assert!(matches!(sm.state(), &OnEntryExampleStates::D0));
     assert_eq!(sm.context().exited_d0, 1);
     assert_eq!(sm.context().entered_d1, 2);
 
     let _ = sm.process_event(OnEntryExampleEvents::ToD3).unwrap();
 
-    assert!(matches!(sm.state(), Ok(&OnEntryExampleStates::D3)));
+    assert!(matches!(sm.state(), &OnEntryExampleStates::D3));
     assert_eq!(sm.context().exited_d0, 2);
     assert_eq!(sm.context().entered_d1, 2);
 }
