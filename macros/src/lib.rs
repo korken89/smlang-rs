@@ -66,19 +66,7 @@ pub fn statemachine(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                 return e.to_compile_error().into();
             }
 
-            let tokens = codegen::generate_code(&sm).into();
-            // Write expanded state machine to a file for reference.
-            let name = if let Some(name) = &sm.name {
-                name.to_string()
-            } else {
-                "default".to_string()
-            };
-            let mut expansion_file =
-                std::fs::File::create(format!("target/smlang-expansion-{name}.rs")).unwrap();
-            expansion_file
-                .write_all(format!("{tokens}").as_bytes())
-                .unwrap();
-            tokens
+            codegen::generate_code(&sm).into()
         }
         Err(error) => error.to_compile_error().into(),
     }
