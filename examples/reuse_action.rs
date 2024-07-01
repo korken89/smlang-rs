@@ -25,7 +25,7 @@ impl StateMachineContext for Context {
 
 fn main() {
     let mut sm = StateMachine::new(Context(0));
-    assert!(matches!(sm.state(), Ok(&States::State1)));
+    assert!(matches!(sm.state(), &States::State1));
     assert!(sm.context.0 == 0);
 
     // triggers action

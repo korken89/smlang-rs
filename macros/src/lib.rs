@@ -8,6 +8,7 @@ mod diagramgen;
 mod parser;
 mod validation;
 
+use std::io::Write;
 use syn::parse_macro_input;
 
 // dot -Tsvg statemachine.gv -o statemachine.svg
@@ -28,7 +29,7 @@ pub fn statemachine(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
                 // Generate dot syntax for the statemachine.
                 let diagram = diagramgen::generate_diagram(&sm);
-                let diagram_name = if let Some(name) = &sm.name {
+                let name = if let Some(name) = &sm.name {
                     name.to_string()
                 } else {
                     let mut diagram_hasher = std::collections::hash_map::DefaultHasher::new();
@@ -38,7 +39,7 @@ pub fn statemachine(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
                 // Start the 'dot' process.
                 let mut process = std::process::Command::new("dot")
-                    .args(["-Tsvg", "-o", &format!("statemachine_{diagram_name}.svg")])
+                    .args(["-Tsvg", "-o", &format!("statemachine_{name}.svg")])
                     .stdin(std::process::Stdio::piped())
                     .spawn()
                     .expect("Failed to execute 'dot'. Are you sure graphviz is installed?");
@@ -65,7 +66,19 @@ pub fn statemachine(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                 return e.to_compile_error().into();
             }
 
-            codegen::generate_code(&sm).into()
+            let tokens = codegen::generate_code(&sm).into();
+            // Write expanded state machine to a file for reference.
+            let name = if let Some(name) = &sm.name {
+                name.to_string()
+            } else {
+                "default".to_string()
+            };
+            let mut expansion_file =
+                std::fs::File::create(format!("target/smlang-expansion-{name}.rs")).unwrap();
+            expansion_file
+                .write_all(format!("{tokens}").as_bytes())
+                .unwrap();
+            tokens
         }
         Err(error) => error.to_compile_error().into(),
     }

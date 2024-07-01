@@ -25,8 +25,6 @@ implementation.
 
 ### Changed
 
-- [breaking] Actions now take owned values
-- [breaking] `state()` now returns a `Result`
 - `StateMachine::new` and `StateMachine::new_with_state` are now const functions
 - Fixed clippy warnings
 - [breaking] Changed guard functions return type from Result<(),_> to Result<bool,_>

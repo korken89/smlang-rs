@@ -39,7 +39,7 @@ impl StateMachineContext for Context {
 
 fn main() {
     let mut sm = StateMachine::new(Context);
-    assert!(matches!(sm.state(), Ok(&States::State1)));
+    assert!(matches!(sm.state(), &States::State1));
 
     println!("Before action 1");
 
@@ -58,5 +58,5 @@ fn main() {
     println!("After action 2");
 
     // Now we are stuck due to the guard never returning true
-    assert!(matches!(sm.state(), Ok(&States::State2)));
+    assert!(matches!(sm.state(), &States::State2));
 }

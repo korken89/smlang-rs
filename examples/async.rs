@@ -64,7 +64,7 @@ fn main() {
             lock: smol::lock::RwLock::new(false),
             done: false,
         });
-        assert!(matches!(sm.state(), Ok(&States::State1)));
+        assert!(matches!(sm.state(), &States::State1));
 
         let r = sm.process_event(Events::Event1).await;
         assert!(matches!(r, Ok(&States::State2)));
@@ -78,11 +78,11 @@ fn main() {
         // Now all events will not give any change of state
         let r = sm.process_event(Events::Event1).await;
         assert!(matches!(r, Err(Error::InvalidEvent)));
-        assert!(matches!(sm.state(), Ok(&States::State4(_))));
+        assert!(matches!(sm.state(), &States::State4(_)));
 
         let r = sm.process_event(Events::Event2).await;
         assert!(matches!(r, Err(Error::InvalidEvent)));
-        assert!(matches!(sm.state(), Ok(&States::State4(_))));
+        assert!(matches!(sm.state(), &States::State4(_)));
     });
 
     // ...

@@ -23,15 +23,15 @@ impl DominosStateMachineContext for Context {
         Some(DominosEvents::ToD2)
     }
 
-    fn to_d3(&mut self, _state_data: Option<DominosEvents>) -> Option<DominosEvents> {
+    fn to_d3(&mut self, _state_data: &Option<DominosEvents>) -> Option<DominosEvents> {
         Some(DominosEvents::ToD3)
     }
 
-    fn to_d4(&mut self, _state_data: Option<DominosEvents>) -> Option<DominosEvents> {
+    fn to_d4(&mut self, _state_data: &Option<DominosEvents>) -> Option<DominosEvents> {
         Some(DominosEvents::ToD4)
     }
 
-    fn to_d5(&mut self, _state_data: Option<DominosEvents>) -> Option<DominosEvents> {
+    fn to_d5(&mut self, _state_data: &Option<DominosEvents>) -> Option<DominosEvents> {
         Some(DominosEvents::ToD5)
     }
 }
@@ -68,5 +68,5 @@ fn main() {
     }
 
     // All the dominos fell!
-    assert!(matches!(sm.state(), Ok(&DominosStates::D5)));
+    assert!(matches!(sm.state(), &DominosStates::D5));
 }
