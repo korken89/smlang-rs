@@ -447,18 +447,11 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                         }
                                     });
 
-                                    // After we assembled the result of the expression into 'guard_result' variable
-                                    // we now either check the guard Ok value to enable or disable the transition
-                                    // or repackage the Err value and propagate to the caller of process_event()
                                     quote! {
                                         // This #guard_expression contains a boolean expression of guard functions
                                         // Each guard function has Result<bool,_> return type.
                                         // For example, [ f && !g ] will expand into
                                         //  self.context.f()? && !self.context.g()?
-                                        // We need to catch the error, if any of the functions returns it.
-                                        // Therefore, we wrap it with a closure and immediately call the closure
-                                        // to catch the question mark operator results
-                                        // and convert the result of the expression back to to Result<bool,_>
                                         let guard_passed = #guard_expression;
                                         self.context.log_guard(stringify!(#guard_expression), guard_passed);
 
