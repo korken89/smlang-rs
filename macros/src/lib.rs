@@ -8,7 +8,6 @@ mod diagramgen;
 mod parser;
 mod validation;
 
-use std::io::Write;
 use syn::parse_macro_input;
 
 // dot -Tsvg statemachine.gv -o statemachine.svg
