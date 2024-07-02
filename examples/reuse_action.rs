@@ -18,8 +18,9 @@ statemachine! {
 pub struct Context(usize);
 
 impl StateMachineContext for Context {
-    fn action(&mut self) {
+    fn action(&mut self) -> Result<(), ()> {
         self.0 += 1;
+        Ok(())
     }
 }
 

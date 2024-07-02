@@ -2,9 +2,9 @@
 
 use crate::parser::transition::visit_guards;
 use crate::parser::{lifetimes::Lifetimes, AsyncIdent, ParsedStateMachine};
-use proc_macro2::{Span, TokenStream};
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
-use syn::{punctuated::Punctuated, token::Paren, Type, TypeTuple};
+use syn::Type;
 
 pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     let (sm_name, sm_name_span) = sm
@@ -203,6 +203,12 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         })
         .collect();
 
+    let guard_error = if sm.custom_guard_error {
+        quote! { Self::Error }
+    } else {
+        quote! { () }
+    };
+
     let out_states: Vec<Vec<Vec<TokenStream>>> = transitions
         .values()
         .map(|event_mappings| {
@@ -314,12 +320,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                             None => quote! {},
                         };
 
-                        let guard_error = if sm.custom_guard_error {
-                            quote! { Self::GuardError }
-                        } else {
-                            quote! { () }
-                        };
-
                         // Only add the guard if it hasn't been added before
                         if !guard_set.iter().any(|g| g == guard) {
                             guard_set.push(guard.clone());
@@ -327,7 +327,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                             guard_list.extend(quote! {
                             #[allow(missing_docs)]
                             #[allow(clippy::result_unit_err)]
-                            #is_async fn #guard <#all_lifetimes> (&mut self, #temporary_context #state_data #event_data) -> Result<bool,#guard_error>;
+                            #is_async fn #guard <#all_lifetimes> (&self, #temporary_context #state_data #event_data) -> Result<bool,#guard_error>;
                         });
                         };
                         Ok(())
@@ -350,15 +350,10 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         .data_types
                         .get(&transition.out_state.to_string())
                     {
-                        output_data.clone()
+                        quote! { Result<#output_data,#guard_error> }
                     } else {
                         // Empty return type
-                        Type::Tuple(TypeTuple {
-                            paren_token: Paren {
-                                span: Span::call_site(),
-                            },
-                            elems: Punctuated::new(),
-                        })
+                        quote! { Result<(),#guard_error> }
                     };
 
                     let event_data = match sm.event_data.data_types.get(event) {
@@ -430,7 +425,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                         self.context.#exit_ident();
                                         self.context.#entry_ident();
                                         };
-                                let (is_async_action, action_code) = generate_action(action, &temporary_context_call, action_params);
+                                let (is_async_action, action_code) = generate_action(action, &temporary_context_call, action_params, &error_type_name);
                                 is_async_state_machine |= is_async_action;
 
                                 if let Some(expr) = guard { // Guarded transition
@@ -468,7 +463,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                         }
                                     }
                                 } else { // Unguarded transition
-                                    quote!{
+
+                                   quote!{
                                        #action_code
                                        let out_state = #states_type_name::#out_state;
                                        self.context.log_state_change(&out_state);
@@ -520,8 +516,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     let guard_error = if sm.custom_guard_error {
         quote! {
-            /// The error type returned by guard functions.
-            type GuardError: core::fmt::Debug;
+            /// The error type returned by guard or action functions.
+            type Error: core::fmt::Debug;
         }
     } else {
         quote! {}
@@ -535,7 +531,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
     let error_type = if sm.custom_guard_error {
         quote! {
-            #error_type_name<<T as #state_machine_context_type_name>::GuardError>
+            #error_type_name<<T as #state_machine_context_type_name>::Error>
         }
     } else {
         quote! {#error_type_name}
@@ -611,6 +607,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             TransitionsFailed,
             /// When guard is failed.
             GuardFailed(T),
+            /// When action returns Err
+            ActionFailed(T),
         }
 
         /// State machine structure definition.
@@ -686,6 +684,7 @@ fn generate_action(
     action: &Option<AsyncIdent>,
     temporary_context_call: &TokenStream,
     g_a_param: &TokenStream,
+    error_type_name: &Ident,
 ) -> (bool, TokenStream) {
     let mut is_async = false;
     let code = if let Some(AsyncIdent {
@@ -701,7 +700,7 @@ fn generate_action(
         };
         quote! {
             // ACTION
-            let _data = self.context.#action_ident(#temporary_context_call #g_a_param) #action_await;
+            let _data = self.context.#action_ident(#temporary_context_call #g_a_param) #action_await .map_err(#error_type_name::ActionFailed)?;
             self.context.log_action(stringify!(#action_ident));
         }
     } else {

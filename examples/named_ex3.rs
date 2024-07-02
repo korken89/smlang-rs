@@ -19,22 +19,24 @@ statemachine! {
 pub struct Context;
 
 impl LoopingWithGuardsStateMachineContext for Context {
-    fn guard(&mut self) -> Result<bool, ()> {
+    fn guard(&self) -> Result<bool, ()> {
         // Always ok
         Ok(true)
     }
 
-    fn guard_fail(&mut self) -> Result<bool, ()> {
+    fn guard_fail(&self) -> Result<bool, ()> {
         // Always fail
         Ok(false)
     }
 
-    fn action1(&mut self) {
+    fn action1(&mut self) -> Result<(), ()> {
         //println!("Action 1");
+        Ok(())
     }
 
-    fn action2(&mut self) {
+    fn action2(&mut self) -> Result<(), ()> {
         //println!("Action 1");
+        Ok(())
     }
 }
 

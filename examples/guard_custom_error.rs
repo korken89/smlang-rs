@@ -34,23 +34,23 @@ statemachine! {
 pub struct Context;
 
 impl StateMachineContext for Context {
-    type GuardError = GuardError; // Guard1 has access to the data from Event1
-    fn guard1(&mut self, _event_data: &MyEventData) -> Result<bool, GuardError> {
+    type Error = GuardError; // Guard1 has access to the data from Event1
+    fn guard1(&self, _event_data: &MyEventData) -> Result<bool, GuardError> {
         Err(GuardError::Custom)
     }
 
     // Action1 has access to the data from Event1, and need to return the state data for State2
-    fn action1(&mut self, _event_data: MyEventData) -> MyStateData {
+    fn action1(&mut self, _event_data: MyEventData) -> Result<MyStateData, Self::Error> {
         todo!()
     }
 
     // Guard2 has access to the data from State2
-    fn guard2(&mut self, _state_data: &MyStateData) -> Result<bool, GuardError> {
+    fn guard2(&self, _state_data: &MyStateData) -> Result<bool, GuardError> {
         todo!()
     }
 
     // Action2 has access to the data from State2
-    fn action2(&mut self, _state_data: &MyStateData) {
+    fn action2(&mut self, _state_data: &MyStateData) -> Result<(), Self::Error> {
         todo!()
     }
 }
