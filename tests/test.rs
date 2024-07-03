@@ -144,7 +144,7 @@ fn async_guards_and_actions() {
         }
 
         struct Context;
-        #[smlang::async_trait]
+
         impl StateMachineContext for Context {
             async fn guard1(&self) -> Result<bool, ()> {
                 Ok(true)

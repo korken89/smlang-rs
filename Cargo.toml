@@ -6,7 +6,7 @@ description = "A no-std state machine language DSL"
 keywords = ["dsl", "statemachine"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/korken89/smlang-rs"
-version = "0.6.0"
+version = "0.7.0"
 edition = "2018"
 readme = "README.md"
 
