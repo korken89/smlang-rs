@@ -4,7 +4,7 @@
 
 #![deny(missing_docs)]
 
-use smlang::{async_trait, statemachine};
+use smlang::statemachine;
 
 statemachine! {
     name: AsyncSimple,
@@ -21,7 +21,6 @@ pub struct Context {
     done: bool,
 }
 
-#[async_trait]
 impl AsyncSimpleStateMachineContext for Context {
     fn guard1(&self) -> Result<bool, ()> {
         println!("`guard1` called from sync context");

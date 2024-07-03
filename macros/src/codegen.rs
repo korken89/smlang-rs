@@ -523,10 +523,10 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         quote! {}
     };
 
-    let (is_async, is_async_trait) = if is_async_state_machine {
-        (quote! { async }, quote! { #[smlang::async_trait] })
+    let is_async = if is_async_state_machine {
+        quote! { async }
     } else {
-        (quote! {}, quote! {})
+        quote! {}
     };
 
     let error_type = if sm.custom_guard_error {
@@ -543,7 +543,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     quote! {
         /// This trait outlines the guards and actions that need to be implemented for the state
         /// machine.
-        #is_async_trait
         pub trait #state_machine_context_type_name {
             #guard_error
             #guard_list

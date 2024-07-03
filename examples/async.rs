@@ -4,7 +4,7 @@
 
 #![deny(missing_docs)]
 
-use smlang::{async_trait, statemachine};
+use smlang::statemachine;
 
 statemachine! {
     transitions: {
@@ -20,7 +20,6 @@ pub struct Context {
     done: bool,
 }
 
-#[async_trait]
 impl StateMachineContext for Context {
     fn guard3(&self) -> Result<bool, ()> {
         println!("`guard3` called from async context");

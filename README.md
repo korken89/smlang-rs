@@ -5,13 +5,16 @@
 
 > A state machine language DSL based on the syntax of [Boost-SML](https://boost-ext.github.io/sml/).
 
-## Aim
+`smlang` is a procedural macro library creating a state machine language DSL, whose aim to facilitate the
+use of state machines, as they quite fast can become overly complicated to write and get an
+overview of.
 
-The aim of this DSL is to facilitate the use of state machines, as they quite fast can become overly complicated to write and get an overview of.
+The library supports both `async` and non-`async` code.
 
 ## Transition DSL
 
-The DSL is defined as follows:
+Below is a sample of the DSL. For a full description of the `statemachine` macro, please reference
+the [DSL document](docs/dsl.md).
 
 ```rust
 statemachine!{
@@ -23,7 +26,9 @@ statemachine!{
 }
 ```
 
-Where `guard` and `action` are optional and can be left out. A `guard` is a function which returns `true` if the state transition should happen, and `false`  if the transition should not happen, while `action` are functions that are run during the transition which are guaranteed to finish before entering the new state.
+Where `guard` and `action` are optional and can be left out. A `guard` is a function which returns
+`Ok(true)` if the state transition should happen - otherwise, the transition should not happen.
+The `action` functions are run during the state machine transition.
 
 > This implies that any state machine must be written as a list of transitions.
 
@@ -89,7 +94,9 @@ in the order they appear in the state machine definition, will be selected.
 ### State machine context
 
 The state machine needs a context to be defined.
-The `StateMachineContext` is generated from the `statemachine!` proc-macro and is what implements guards and actions, and data that is available in all states within the state machine and persists between state transitions:
+The `StateMachineContext` is generated from the `statemachine!` proc-macro and is what implements
+guards and actions, and data that is available in all states within the state machine and persists
+between state transitions:
 
 ```rust
 statemachine!{
@@ -111,6 +118,7 @@ fn main() {
 ```
 
 See example `examples/context.rs` for a usage example.
+
 
 ### State data
 
@@ -202,12 +210,49 @@ See example `examples/guard_action_syntax.rs` for a usage-example.
 
 ### Async Guard and Action
 
+Guards and actions may both be optionally `async`:
+```rust
+use smlang::{async_trait, statemachine};
+
+statemachine! {
+    transitions: {
+        *State1 + Event1 [guard1] / async action1 = State2,
+        State2 + Event2 [async guard2] / action2 = State3,
+    }
+}
+
+
+pub struct Context {
+    // ...
+}
+
+impl StateMachineContext for Context {
+    async fn action1(&mut self) -> () {
+        // ...
+    }
+
+    async fn guard2(&mut self) -> Result<(), ()> {
+        // ...
+    }
+
+    fn guard1(&mut self) -> Result<(), ()> {
+        // ...
+    }
+
+    fn action2(&mut self) -> () {
+        // ...
+    }
+}
+```
+
+
 See example `examples/async.rs` for a usage-example.
 
 ## State Machine Examples
 
-Here are some examples of state machines converted from UML to the State Machine Language DSL. Runnable versions of each example is available in the `examples` folder.
-The `.png`s are generated with the `graphviz` feature.
+Here are some examples of state machines converted from UML to the State Machine Language DSL.
+Runnable versions of each example is available in the `examples` folder. The `.png`s are generated
+with the `graphviz` feature.
 
 ### Linear state machine
 
@@ -315,6 +360,7 @@ List of contributors in alphabetical order:
 
 * Emil Fresk ([@korken89](https://github.com/korken89))
 * Mathias Koch ([@MathiasKoch](https://github.com/MathiasKoch))
+* Ryan Summers ([@ryan-summers](https://github.com/ryan-summers))
 * Donny Zimmanck ([@dzimmanck](https://github.com/dzimmanck))
 
 ---
@@ -323,10 +369,8 @@ List of contributors in alphabetical order:
 
 Licensed under either of
 
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or
-  http://www.apache.org/licenses/LICENSE-2.0)
-
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+- Apache License, Version 2.0 [LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>
+- MIT license [LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>
 
 at your option.
 
