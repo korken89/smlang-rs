@@ -21,7 +21,7 @@
 //! use smlang::statemachine;
 //!
 //! statemachine! {
-//!     name: "Sample",
+//!     name: Sample,
 //!     derive_states: [Debug],
 //!     derive_events: [Clone, Debug],
 //!     transitions: {
@@ -43,7 +43,7 @@
 //!     InitEvent,
 //! }
 //!
-//! struct SampleStateMachine {
+//! struct SampleStateMachine<C: SampleStateMachineContext> {
 //!     // ...
 //! }
 //!
@@ -53,7 +53,7 @@
 //!     // ...
 //! }
 //!
-//! impl SampleStateMachine {
+//! impl<C: SampleStateMachineContext> SampleStateMachine<C> {
 //!     /// Creates a state machine with the starting state
 //!     pub fn new() -> Self { /**/ }
 //!
@@ -65,7 +65,10 @@
 //!     /// # Returns
 //!     /// `Ok(NextState)` if the transition was successful or `Err()` if the transition failed.
 //!     /// guard failed
-//!     pub fn process_event(&mut self, event: Events) -> Result<States, SampleError> { /**/ }
+//!     pub fn process_event(&mut self, event: Events) -> Result<SampleStates, SampleError> {
+//! #       Err(SampleError::InvalidEvent);
+//!     /**/
+//!     }
 //! }
 //!
 //! trait SampleStateMachineContext {

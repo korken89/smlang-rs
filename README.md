@@ -5,7 +5,7 @@
 
 > A state machine language DSL based on the syntax of [Boost-SML](https://boost-ext.github.io/sml/).
 
-`smlang` is a procedural macro library creating a state machine language DSL is to facilitate the
+`smlang` is a procedural macro library creating a state machine language DSL, whose aim to facilitate the
 use of state machines, as they quite fast can become overly complicated to write and get an
 overview of.
 
@@ -27,9 +27,8 @@ statemachine!{
 ```
 
 Where `guard` and `action` are optional and can be left out. A `guard` is a function which returns
-`Ok()` if the state transition should happen, and `false`  if the transition should not happen,
-while `action` are functions that are run during the transition which are guaranteed to finish
-before entering the new state.
+`Ok(true)` if the state transition should happen - otherwise, the transition should not happen.
+The `action` functions are run during the state machine transition.
 
 > This implies that any state machine must be written as a list of transitions.
 
@@ -223,7 +222,6 @@ statemachine! {
 }
 
 
-#[async_trait]
 pub struct Context {
     // ...
 }
