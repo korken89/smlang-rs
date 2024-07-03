@@ -23,7 +23,7 @@ impl LoopingStateMachineContext for Context {}
 
 fn main() {
     let mut sm = LoopingStateMachine::new(Context);
-    assert!(matches!(sm.state(), Ok(&LoopingStates::State1)));
+    assert!(matches!(sm.state(), &LoopingStates::State1));
 
     let r = sm.process_event(LoopingEvents::Event1);
     assert!(matches!(r, Ok(&LoopingStates::State2)));
@@ -44,5 +44,5 @@ fn main() {
     // Now we cannot use Event1 again, as it is outside the state machine loop
     let r = sm.process_event(LoopingEvents::Event1);
     assert!(matches!(r, Err(LoopingError::InvalidEvent)));
-    assert!(matches!(sm.state(), Ok(&LoopingStates::State2)));
+    assert!(matches!(sm.state(), &LoopingStates::State2));
 }

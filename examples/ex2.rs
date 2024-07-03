@@ -22,7 +22,7 @@ impl StateMachineContext for Context {}
 
 fn main() {
     let mut sm = StateMachine::new(Context);
-    assert!(matches!(sm.state(), Ok(&States::State1)));
+    assert!(matches!(sm.state(), &States::State1));
 
     let r = sm.process_event(Events::Event1);
     assert!(matches!(r, Ok(&States::State2)));
@@ -43,5 +43,5 @@ fn main() {
     // Now we cannot use Event1 again, as it is outside the state machine loop
     let r = sm.process_event(Events::Event1);
     assert!(matches!(r, Err(Error::InvalidEvent)));
-    assert!(matches!(sm.state(), Ok(&States::State2)));
+    assert!(matches!(sm.state(), &States::State2));
 }

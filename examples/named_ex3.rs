@@ -19,28 +19,30 @@ statemachine! {
 pub struct Context;
 
 impl LoopingWithGuardsStateMachineContext for Context {
-    fn guard(&mut self) -> Result<(), ()> {
+    fn guard(&self) -> Result<bool, ()> {
         // Always ok
+        Ok(true)
+    }
+
+    fn guard_fail(&self) -> Result<bool, ()> {
+        // Always fail
+        Ok(false)
+    }
+
+    fn action1(&mut self) -> Result<(), ()> {
+        //println!("Action 1");
         Ok(())
     }
 
-    fn guard_fail(&mut self) -> Result<(), ()> {
-        // Always fail
-        Err(())
-    }
-
-    fn action1(&mut self) {
+    fn action2(&mut self) -> Result<(), ()> {
         //println!("Action 1");
-    }
-
-    fn action2(&mut self) {
-        //println!("Action 1");
+        Ok(())
     }
 }
 
 fn main() {
     let mut sm = LoopingWithGuardsStateMachine::new(Context);
-    assert!(matches!(sm.state(), Ok(&LoopingWithGuardsStates::State1)));
+    assert!(matches!(sm.state(), &LoopingWithGuardsStates::State1));
 
     println!("Before action 1");
 
@@ -54,10 +56,10 @@ fn main() {
 
     // The action will never run as the guard will fail
     let r = sm.process_event(LoopingWithGuardsEvents::Event2);
-    assert!(matches!(r, Err(LoopingWithGuardsError::GuardFailed(()))));
+    assert!(matches!(r, Err(LoopingWithGuardsError::TransitionsFailed)));
 
     println!("After action 2");
 
     // Now we are stuck due to the guard never returning true
-    assert!(matches!(sm.state(), Ok(&LoopingWithGuardsStates::State2)));
+    assert!(matches!(sm.state(), &LoopingWithGuardsStates::State2));
 }

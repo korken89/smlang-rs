@@ -22,8 +22,8 @@ statemachine! {
 pub struct Context;
 
 impl StateMachineContext for Context {
-    fn action<'a>(&mut self) -> MyStateData<'a> {
-        MyStateData(&42)
+    fn action<'a>(&mut self) -> Result<MyStateData<'a>, ()> {
+        Ok(MyStateData(&42))
     }
 }
 

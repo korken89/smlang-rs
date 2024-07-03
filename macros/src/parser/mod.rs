@@ -11,18 +11,36 @@ use event::EventMapping;
 use state_machine::StateMachine;
 
 use input_state::InputState;
-use proc_macro2::Span;
+use proc_macro2::{Span, TokenStream};
 
+use crate::parser::event::Transition;
 use std::collections::{hash_map, HashMap};
+use std::fmt;
 use syn::{parse, Ident, Type};
 use transition::StateTransition;
-
 pub type TransitionMap = HashMap<String, HashMap<String, EventMapping>>;
 
 #[derive(Debug, Clone)]
 pub struct AsyncIdent {
     pub ident: Ident,
     pub is_async: bool,
+}
+impl AsyncIdent {
+    pub fn to_token_stream<F>(&self, visit: &mut F) -> TokenStream
+    where
+        F: FnMut(&AsyncIdent) -> TokenStream,
+    {
+        visit(self)
+    }
+}
+impl fmt::Display for AsyncIdent {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.is_async {
+            write!(f, "{}().await", self.ident)
+        } else {
+            write!(f, "{}()", self.ident)
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -50,28 +68,33 @@ fn add_transition(
         .get_mut(&transition.in_state.ident.to_string())
         .unwrap();
 
-    if let hash_map::Entry::Vacant(entry) = p.entry(transition.event.ident.to_string()) {
-        let mapping = EventMapping {
-            in_state: transition.in_state.ident.clone(),
-            event: transition.event.ident.clone(),
-            guard: transition.guard.clone(),
-            action: transition.action.clone(),
-            out_state: transition.out_state.ident.clone(),
-        };
-
-        entry.insert(mapping);
-    } else {
-        return Err(parse::Error::new(
-            transition.in_state.ident.span(),
-            "State and event combination specified multiple times, remove duplicates.",
-        ));
+    match p.entry(transition.event.ident.to_string()) {
+        hash_map::Entry::Vacant(entry) => {
+            let mapping = EventMapping {
+                in_state: transition.in_state.ident.clone(),
+                event: transition.event.ident.clone(),
+                transitions: vec![Transition {
+                    guard: transition.guard.clone(),
+                    action: transition.action.clone(),
+                    out_state: transition.out_state.ident.clone(),
+                }],
+            };
+            entry.insert(mapping);
+        }
+        hash_map::Entry::Occupied(mut entry) => {
+            let mapping = entry.get_mut();
+            mapping.transitions.push(Transition {
+                guard: transition.guard.clone(),
+                action: transition.action.clone(),
+                out_state: transition.out_state.ident.clone(),
+            });
+        }
     }
 
     // Check for actions when states have data a
     if state_data
         .data_types
-        .get(&transition.out_state.ident.to_string())
-        .is_some()
+        .contains_key(&transition.out_state.ident.to_string())
     {
         // This transition goes to a state that has data associated, check so it has an
         // action
@@ -91,12 +114,10 @@ impl ParsedStateMachine {
         // Check the initial state definition
         let mut starting_transitions_iter = sm.transitions.iter().filter(|sm| sm.in_state.start);
 
-        let starting_transition = starting_transitions_iter.next().ok_or_else(|| {
-            parse::Error::new(
-                Span::call_site(),
-                "No starting state defined, indicate the starting state with a *.",
-            )
-        })?;
+        let starting_transition = starting_transitions_iter.next().ok_or(parse::Error::new(
+            Span::call_site(),
+            "No starting state defined, indicate the starting state with a *.",
+        ))?;
 
         if starting_transitions_iter.next().is_some() {
             return Err(parse::Error::new(

@@ -68,8 +68,29 @@ statemachine!{
     // ...
 }
 ```
-
 See example `examples/input_state_pattern_match.rs` for a usage example.
+
+#### Guard expressions
+
+Guard expression in square brackets [] allows to define a boolean expressions of multiple guard functions.
+For example:
+```rust
+statemachine! {
+  transitions: {
+      *Init + Login(Entry) [valid_entry] / attempt = LoggedIn,
+      Init + Login(Entry) [!valid_entry && !too_many_attempts] / attempt = Init,
+      Init + Login(Entry) [!valid_entry && too_many_attempts] / attempt = LoginDenied,
+      LoggedIn + Logout / reset = Init,
+  }
+}
+```
+Guard expressions may consist of guard function names, and their combinations with &&, || and ! operations.
+
+#### Multiple guarded transitions for the same state and triggering event
+Multiple guarded transitions for the same state and triggering event are supported (see the example above).
+It is assumed that only one guard is enabled in such a case to avoid a conflict over which transition should be selected.
+However, if there is a conflict and more than one guard is enabled, the first enabled transition,
+in the order they appear in the state machine definition, will be selected.
 
 ### State machine context
 
@@ -285,6 +306,12 @@ statemachine!{
 ```
 
 This example is available in `ex3.rs`.
+
+### Using entry and exit functions in transitions
+
+The statemachine will create for all states an `on_entry_` and `on_exit_` function.
+If the are not used, they will be optimized away by the compiler. An example be
+found in `on_entry_on_exit_generic`.
 
 ## Helpers
 

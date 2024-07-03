@@ -1,0 +1,12 @@
+error: State1 + Event1: [guard()] : guarded transition is unreachable because it follows an unguarded transition, which handles all cases
+  --> tests/compile-fail/guarded_transition_after_unguarded.rs:5:1
+   |
+5  | / statemachine! {
+6  | |     transitions: {
+7  | |         State1 + Event1 = Fault,
+8  | |         *State1 + Event1 [guard] = State2,
+9  | |     }
+10 | | }
+   | |_^
+   |
+   = note: this error originates in the macro `statemachine` (in Nightly builds, run with -Z macro-backtrace for more info)

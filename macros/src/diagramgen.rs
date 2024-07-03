@@ -10,25 +10,27 @@ pub fn generate_diagram(sm: &ParsedStateMachine) -> String {
     let mut diagram_events = vec![];
     let mut diagram_transitions = vec![];
     for (state, event) in transitions {
-        for (_event, eventmapping) in event {
-            diagram_events.push((
-                eventmapping.event.to_string(),
-                eventmapping
-                    .guard
-                    .as_ref()
-                    .map(|i| i.ident.to_string())
-                    .unwrap_or_else(|| "_".to_string()),
-                eventmapping
-                    .action
-                    .as_ref()
-                    .map(|i| i.ident.to_string())
-                    .unwrap_or_else(|| "_".to_string()),
-            ));
-            diagram_transitions.push((
-                state,
-                eventmapping.out_state.to_string(),
-                eventmapping.event.to_string(),
-            ));
+        for eventmapping in event.values() {
+            for transition in &eventmapping.transitions {
+                diagram_events.push((
+                    eventmapping.event.to_string(),
+                    transition
+                        .guard
+                        .as_ref()
+                        .map(|i| i.to_string())
+                        .unwrap_or_else(|| "_".to_string()),
+                    transition
+                        .action
+                        .as_ref()
+                        .map(|i| i.ident.to_string())
+                        .unwrap_or_else(|| "_".to_string()),
+                ));
+                diagram_transitions.push((
+                    state,
+                    transition.out_state.to_string(),
+                    eventmapping.event.to_string(),
+                ));
+            }
         }
     }
     // Sorting is needed to ensure stable (ie not changing between runs of
@@ -75,7 +77,7 @@ pub fn generate_diagram(sm: &ParsedStateMachine) -> String {
 
 {}
 }}",
-        sm.starting_state.to_string(),
+        sm.starting_state,
         state_string.join("\n"),
         event_string.join("\n"),
         transition_string.join("\n")

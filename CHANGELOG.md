@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Add name to statemachine and make dot output stable and unique ([issue-62](https://github.com/korken89/smlang-rs/pull/62))
 - Add derive macros to states and events ([issue-62](https://github.com/korken89/smlang-rs/pull/62))
 - Add hooks to `StateMachineContext` for logging events, guards, actions, and state changes
+- Add support multiple guarded transitions for a triggering event
+- Add support for guard boolean expressions in the state machine declaration
+- There are now `on_entry_<snakecase_statename>` and `on_entry_<snakecase_statename>` functions
+defined to allow handling entry and exit from all state machine states. These have a default empty
+implementation.
+* The expanded code is now written to `target/smlang-expansion-<name|default>.rs` during the build
+process.
 
 ### Fixed
 
@@ -22,10 +29,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
-- [breaking] Actions now take owned values
-- [breaking] `state()` now returns a `Result`
 - `StateMachine::new` and `StateMachine::new_with_state` are now const functions
 - Fixed clippy warnings
+- [breaking] Changed guard functions return type from Result<(),_> to Result<bool,_>
+- [breaking] Changed action functions return type from () to Result<NextStateData,_>
+- [breaking] Disallow guards mutable access to the context
+- [breaking] Renamed GuardError to Error as it is now used for both guards and actions
 
 ## [v0.6.0] - 2022-11-02
 

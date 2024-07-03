@@ -21,13 +21,14 @@ statemachine! {
 pub struct Context;
 
 impl StateMachineContext for Context {
-    fn guard(&mut self, event_data: &mut MyEventData) -> Result<(), ()> {
+    fn guard(&self, event_data: &mut MyEventData) -> Result<bool, ()> {
         event_data.0 = 55;
-        Ok(())
+        Ok(true)
     }
 
-    fn action(&mut self, event_data: &mut MyEventData) {
+    fn action(&mut self, event_data: &mut MyEventData) -> Result<(), ()> {
         println!("Got valid Event Data = {}", event_data.0);
+        Ok(())
     }
 }
 

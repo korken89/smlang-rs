@@ -1,5 +1,12 @@
-error: State and event combination specified multiple times, remove duplicates.
- --> $DIR/double_state_event.rs:8:9
-  |
-8 |         State1 + Event1 = State3, //~ State and event combination specified multiple times, remove duplicates.
-  |         ^^^^^^
+error: State1 + Event1: State and event combination specified multiple times, remove duplicates.
+  --> tests/compile-fail/double_state_event.rs:5:1
+   |
+5  | / statemachine! {
+6  | |     transitions: {
+7  | |         *State1 + Event1 = State2,
+8  | |         State1 + Event1 = State3, //~ State and event combination specified multiple times, remove duplicates.
+9  | |     }
+10 | | }
+   | |_^
+   |
+   = note: this error originates in the macro `statemachine` (in Nightly builds, run with -Z macro-backtrace for more info)

@@ -18,20 +18,20 @@ statemachine! {
 pub struct Context;
 
 impl StateMachineContext for Context {
-    fn to_d2(&mut self) -> Option<Events> {
-        Some(Events::ToD2)
+    fn to_d2(&mut self) -> Result<Option<Events>, ()> {
+        Ok(Some(Events::ToD2))
     }
 
-    fn to_d3(&mut self, _state_data: Option<Events>) -> Option<Events> {
-        Some(Events::ToD3)
+    fn to_d3(&mut self, _state_data: &Option<Events>) -> Result<Option<Events>, ()> {
+        Ok(Some(Events::ToD3))
     }
 
-    fn to_d4(&mut self, _state_data: Option<Events>) -> Option<Events> {
-        Some(Events::ToD4)
+    fn to_d4(&mut self, _state_data: &Option<Events>) -> Result<Option<Events>, ()> {
+        Ok(Some(Events::ToD4))
     }
 
-    fn to_d5(&mut self, _state_data: Option<Events>) -> Option<Events> {
-        Some(Events::ToD5)
+    fn to_d5(&mut self, _state_data: &Option<Events>) -> Result<Option<Events>, ()> {
+        Ok(Some(Events::ToD5))
     }
 }
 
@@ -67,5 +67,5 @@ fn main() {
     }
 
     // All the dominos fell!
-    assert!(matches!(sm.state(), Ok(&States::D5)));
+    assert!(matches!(sm.state(), &States::D5));
 }

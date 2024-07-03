@@ -5,7 +5,6 @@
 #![deny(missing_docs)]
 
 use smlang::{async_trait, statemachine};
-use smol;
 
 statemachine! {
     name: AsyncSimple,
@@ -24,34 +23,36 @@ pub struct Context {
 
 #[async_trait]
 impl AsyncSimpleStateMachineContext for Context {
-    fn guard1(&mut self) -> Result<(), ()> {
+    fn guard1(&self) -> Result<bool, ()> {
         println!("`guard1` called from sync context");
-        Ok(())
+        Ok(true)
     }
 
-    async fn action1(&mut self) -> () {
-        println!("`action1` called from async context");
-        let mut lock = self.lock.write().await;
-        *lock = true;
-    }
-
-    async fn guard2(&mut self) -> Result<(), ()> {
+    async fn guard2(&self) -> Result<bool, ()> {
         println!("`guard2` called from async context");
         let mut lock = self.lock.write().await;
         *lock = false;
+        Ok(true)
+    }
+
+    fn action3(&mut self) -> Result<bool, ()> {
+        println!("`action3` called from sync context, done = `{}`", self.done);
+        Ok(self.done)
+    }
+
+    async fn action1(&mut self) -> Result<(), ()> {
+        println!("`action1` called from async context");
+        let mut lock = self.lock.write().await;
+        *lock = true;
         Ok(())
     }
 
-    async fn action2(&mut self) -> () {
+    async fn action2(&mut self) -> Result<(), ()> {
         println!("`action2` called from async context");
         if !*self.lock.read().await {
             self.done = true;
         }
-    }
-
-    fn action3(&mut self) -> bool {
-        println!("`action3` called from sync context, done = `{}`", self.done);
-        self.done
+        Ok(())
     }
 }
 
@@ -61,7 +62,7 @@ fn main() {
             lock: smol::lock::RwLock::new(false),
             done: false,
         });
-        assert!(matches!(sm.state(), Ok(&AsyncSimpleStates::State1)));
+        assert!(matches!(sm.state(), &AsyncSimpleStates::State1));
 
         let r = sm.process_event(AsyncSimpleEvents::Event1).await;
         assert!(matches!(r, Ok(&AsyncSimpleStates::State2)));
@@ -75,11 +76,11 @@ fn main() {
         // Now all events will not give any change of state
         let r = sm.process_event(AsyncSimpleEvents::Event1).await;
         assert!(matches!(r, Err(AsyncSimpleError::InvalidEvent)));
-        assert!(matches!(sm.state(), Ok(&AsyncSimpleStates::State4(_))));
+        assert!(matches!(sm.state(), &AsyncSimpleStates::State4(_)));
 
         let r = sm.process_event(AsyncSimpleEvents::Event2).await;
         assert!(matches!(r, Err(AsyncSimpleError::InvalidEvent)));
-        assert!(matches!(sm.state(), Ok(&AsyncSimpleStates::State4(_))));
+        assert!(matches!(sm.state(), &AsyncSimpleStates::State4(_)));
     });
 
     // ...
