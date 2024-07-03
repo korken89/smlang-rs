@@ -12,7 +12,6 @@ readme = "README.md"
 
 [dependencies]
 smlang-macros = { path = "macros", version = "0.7.0" }
-async-trait = "0.1"
 
 [dev-dependencies]
 smol = "1"
