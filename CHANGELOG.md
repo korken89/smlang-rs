@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 implementation.
 - Add support for implicit and wildcard internal transitions
 
+### Changed
+
+- [breaking] Renamed custom_guard_error flag to custom_error as it is not guard specific anymore
+
 ## [0.7.0] - 2024-07-03
 
 ### Added

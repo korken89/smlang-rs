@@ -203,7 +203,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         })
         .collect();
 
-    let guard_error = if sm.custom_guard_error {
+    let custom_error = if sm.custom_error {
         quote! { Self::Error }
     } else {
         quote! { () }
@@ -329,7 +329,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                             guard_list.extend(quote! {
                             #[allow(missing_docs)]
                             #[allow(clippy::result_unit_err)]
-                            #is_async fn #guard <#all_lifetimes> (&self, #temporary_context #state_data #event_data) -> Result<bool,#guard_error>;
+                            #is_async fn #guard <#all_lifetimes> (&self, #temporary_context #state_data #event_data) -> Result<bool,#custom_error>;
                         });
                         };
                         Ok(())
@@ -352,10 +352,10 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         .data_types
                         .get(&transition.out_state.to_string())
                     {
-                        quote! { Result<#output_data,#guard_error> }
+                        quote! { Result<#output_data,#custom_error> }
                     } else {
                         // Empty return type
-                        quote! { Result<(),#guard_error> }
+                        quote! { Result<(),#custom_error> }
                     };
 
                     let event_data = match sm.event_data.data_types.get(event) {
@@ -523,7 +523,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     // lifetimes that exists in #events_type_name but not in #states_type_name
     let event_unique_lifetimes = event_lifetimes - state_lifetimes;
 
-    let guard_error = if sm.custom_guard_error {
+    let custom_error = if sm.custom_error {
         quote! {
             /// The error type returned by guard or action functions.
             type Error: core::fmt::Debug;
@@ -538,7 +538,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         quote! {}
     };
 
-    let error_type = if sm.custom_guard_error {
+    let error_type = if sm.custom_error {
         quote! {
             #error_type_name<<T as #state_machine_context_type_name>::Error>
         }
@@ -553,7 +553,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         /// This trait outlines the guards and actions that need to be implemented for the state
         /// machine.
         pub trait #state_machine_context_type_name {
-            #guard_error
+            #custom_error
             #guard_list
             #action_list
             #entries_exits

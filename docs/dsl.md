@@ -21,7 +21,7 @@ statemachine!{
     // [Optional] Can be optionally specified to add a new `type Error` to the
     // generated `StateMachineContext` trait to allow guards to return a custom
     // error type instead of `()`.
-    custom_guard_error: false,
+    custom_error: false,
 
     // [Optional] A list of derive names for the generated `States` and `Events`
     // enumerations respectively. For example, to `#[derive(Debug)]`, these
