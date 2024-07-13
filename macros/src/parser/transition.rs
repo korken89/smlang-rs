@@ -7,7 +7,7 @@ use quote::quote;
 use std::fmt;
 use syn::{bracketed, parse, token, Ident, Token};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StateTransition {
     pub in_state: InputState,
     pub event: Event,

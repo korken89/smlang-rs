@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Add transition callback. A function which is called for every transition. It has default empty
 implementation.
+- Add support for implicit and wildcard internal transitions
 
 ## [0.7.0] - 2024-07-03
 

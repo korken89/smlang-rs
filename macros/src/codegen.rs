@@ -269,11 +269,13 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         let state_name = format!("[{}::{}]", states_type_name, state);
         entries_exits.extend(quote! {
             #[doc = concat!("Called on entry to ", #state_name)]
+            #[inline(always)]
             fn #entry_ident(&mut self) {}
         });
         let exit_ident = format_ident!("on_exit_{}", string_morph::to_snake_case(state));
         entries_exits.extend(quote! {
             #[doc = concat!("Called on exit from ", #state_name)]
+            #[inline(always)]
             fn #exit_ident(&mut self) {}
         });
 
@@ -427,6 +429,24 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                 let (is_async_action, action_code) = generate_action(action, &temporary_context_call, action_params, &error_type_name);
                                 is_async_state_machine |= is_async_action;
 
+                                let transition = if in_state_string == out_state_string {
+                                    // Stay in the same state => no need to call on_entry/on_exit and log_state_change
+                                    quote!{
+                                            self.state = #states_type_name::#out_state;
+                                            return Ok(&self.state);
+                                        }
+
+                                } else {
+                                    quote!{
+                                            let out_state = #states_type_name::#out_state;
+                                            self.context.log_state_change(&out_state);
+                                            #entry_exit_states
+                                            self.context().transition_callback(&self.state, &out_state);
+                                            self.state = out_state;
+                                            return Ok(&self.state);
+                                        }
+                                };
+
                                 if let Some(expr) = guard { // Guarded transition
                                     let guard_expression= expr.to_token_stream(&mut |async_ident: &AsyncIdent| {
                                         let guard_ident = &async_ident.ident;
@@ -453,23 +473,13 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                         // so we'll defer to that.
                                         if guard_passed {
                                             #action_code
-                                            let out_state = #states_type_name::#out_state;
-                                            self.context.log_state_change(&out_state);
-                                            #entry_exit_states
-                                            self.context().transition_callback(&self.state, &out_state);
-                                            self.state = out_state;
-                                            return Ok(&self.state);
+                                            #transition
                                         }
                                     }
                                 } else { // Unguarded transition
                                    quote!{
-                                       #action_code
-                                       let out_state = #states_type_name::#out_state;
-                                       self.context.log_state_change(&out_state);
-                                       #entry_exit_states
-                                       self.context().transition_callback(&self.state, &out_state);
-                                       self.state = out_state;
-                                        return Ok(&self.state);
+                                        #action_code
+                                        #transition
                                    }
                                 }
                             }

@@ -82,3 +82,35 @@
 #![no_std]
 
 pub use smlang_macros::statemachine;
+
+pub(crate) mod internal_macros {
+    #[macro_export]
+    macro_rules! assert_transition {
+        ($sm:expr, $event:expr, $expected_state:expr, $expected_count:expr) => {{
+            let prev_state = $sm.state;
+            $sm.process_event($event).unwrap();
+            println!("{:?} -> {:?} : {:?}", prev_state, $sm.state, $sm.context());
+            assert_eq!($expected_state, $sm.state);
+            assert_eq!($expected_count, $sm.context().count);
+        }};
+    }
+    #[macro_export]
+    macro_rules! assert_transition_ok {
+        ($sm:expr, $event:expr, $expected_result:expr, $expected_context:expr) => {{
+            let prev_state = $sm.state;
+            if let Ok(result_2132) = $sm.process_event($event) {
+                let result_2132 = result_2132.clone();
+                println!(
+                    "{:?} -> {:?} : {:?}",
+                    prev_state,
+                    result_2132,
+                    $sm.context()
+                );
+                assert_eq!($expected_result, result_2132);
+                assert_eq!(&$expected_context, $sm.context());
+            } else {
+                panic!("assert_transition_ok failed")
+            }
+        }};
+    }
+}

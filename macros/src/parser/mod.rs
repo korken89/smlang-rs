@@ -111,6 +111,22 @@ fn add_transition(
 
 impl ParsedStateMachine {
     pub fn new(sm: StateMachine) -> parse::Result<Self> {
+        // Derive out_state for internal non-wildcard transitions
+        let sm = {
+            let mut sm = sm;
+            for transition in sm.transitions.iter_mut() {
+                if transition.out_state.internal_transition && !transition.in_state.wildcard {
+                    transition.out_state.ident = transition.in_state.ident.clone();
+                    transition
+                        .out_state
+                        .data_type
+                        .clone_from(&transition.in_state.data_type);
+                    transition.out_state.internal_transition = false;
+                }
+            }
+            sm
+        };
+
         // Check the initial state definition
         let mut starting_transitions_iter = sm.transitions.iter().filter(|sm| sm.in_state.start);
 
@@ -138,16 +154,18 @@ impl ParsedStateMachine {
         for transition in sm.transitions.iter() {
             // Collect states
             let in_state_name = transition.in_state.ident.to_string();
-            let out_state_name = transition.out_state.ident.to_string();
             if !transition.in_state.wildcard {
                 states.insert(in_state_name.clone(), transition.in_state.ident.clone());
                 state_data.collect(in_state_name.clone(), transition.in_state.data_type.clone())?;
             }
-            states.insert(out_state_name.clone(), transition.out_state.ident.clone());
-            state_data.collect(
-                out_state_name.clone(),
-                transition.out_state.data_type.clone(),
-            )?;
+            if !transition.out_state.internal_transition {
+                let out_state_name = transition.out_state.ident.to_string();
+                states.insert(out_state_name.clone(), transition.out_state.ident.clone());
+                state_data.collect(
+                    out_state_name.clone(),
+                    transition.out_state.data_type.clone(),
+                )?;
+            }
 
             // Collect events
             let event_name = transition.event.ident.to_string();
@@ -158,7 +176,10 @@ impl ParsedStateMachine {
             if !transition.in_state.wildcard {
                 states_events_mapping.insert(transition.in_state.ident.to_string(), HashMap::new());
             }
-            states_events_mapping.insert(transition.out_state.ident.to_string(), HashMap::new());
+            if !transition.out_state.internal_transition {
+                states_events_mapping
+                    .insert(transition.out_state.ident.to_string(), HashMap::new());
+            }
         }
 
         for transition in sm.transitions.iter() {
@@ -185,12 +206,17 @@ impl ParsedStateMachine {
                     };
 
                     // create the transition
+                    let mut out_state = transition.out_state.clone();
+                    if out_state.internal_transition {
+                        out_state.ident = in_state.ident.clone();
+                        out_state.data_type.clone_from(&in_state.data_type);
+                    }
                     let wildcard_transition = StateTransition {
                         in_state,
                         event: transition.event.clone(),
                         guard: transition.guard.clone(),
                         action: transition.action.clone(),
-                        out_state: transition.out_state.clone(),
+                        out_state,
                     };
 
                     // add the wildcard transition to the transition map
