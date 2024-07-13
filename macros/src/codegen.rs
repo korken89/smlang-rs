@@ -414,9 +414,9 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                             guard.iter()
                             .zip(action.iter().zip(out_state)).map(|(guard, (action,out_state))| {
                                 let binding = out_state.to_string();
-                                let out_state_string = &binding.split('(').next().unwrap();
+                                let out_state_string = binding.split('(').next().unwrap().trim();
                                 let binding = in_state.to_string();
-                                let in_state_string = &binding.split('(').next().unwrap();
+                                let in_state_string = binding.split('(').next().unwrap().trim();
 
                                 let entry_ident = format_ident!("on_entry_{}", string_morph::to_snake_case(out_state_string));
                                 let exit_ident = format_ident!("on_exit_{}", string_morph::to_snake_case(in_state_string));
