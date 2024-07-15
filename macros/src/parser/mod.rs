@@ -110,22 +110,18 @@ fn add_transition(
 }
 
 impl ParsedStateMachine {
-    pub fn new(sm: StateMachine) -> parse::Result<Self> {
+    pub fn new(mut sm: StateMachine) -> parse::Result<Self> {
         // Derive out_state for internal non-wildcard transitions
-        let sm = {
-            let mut sm = sm;
-            for transition in sm.transitions.iter_mut() {
-                if transition.out_state.internal_transition && !transition.in_state.wildcard {
-                    transition.out_state.ident = transition.in_state.ident.clone();
-                    transition
-                        .out_state
-                        .data_type
-                        .clone_from(&transition.in_state.data_type);
-                    transition.out_state.internal_transition = false;
-                }
+        for transition in sm.transitions.iter_mut() {
+            if transition.out_state.internal_transition && !transition.in_state.wildcard {
+                transition.out_state.ident = transition.in_state.ident.clone();
+                transition
+                    .out_state
+                    .data_type
+                    .clone_from(&transition.in_state.data_type);
+                transition.out_state.internal_transition = false;
             }
-            sm
-        };
+        }
 
         // Check the initial state definition
         let mut starting_transitions_iter = sm.transitions.iter().filter(|sm| sm.in_state.start);

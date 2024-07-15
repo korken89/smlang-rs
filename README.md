@@ -118,7 +118,7 @@ statemachine! {
 }
 ```
 
-See also `examples/wildcard_states_and_internal_transitions.rs` or `examples/internal_transitions_with_data.rs` for a usage example.
+See also tests: `test_internal_transition_with_data()` or `test_wildcard_states_and_internal_transitions()` for a usage example.
 
 #### Guard expressions
 
