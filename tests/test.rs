@@ -17,18 +17,20 @@ mod internal_macros {
     }
     #[macro_export]
     macro_rules! assert_transition_ok {
-        ($sm:expr, $event:expr, $expected_result:expr, $expected_context:expr) => {{
+        ($sm:expr, $event:expr, $expected_action:expr, $expected_result:pat) => {{
             let prev_state = $sm.state;
-            if let Ok(result_2132) = $sm.process_event($event) {
-                let result_2132 = result_2132.clone();
-                println!(
-                    "{:?} -> {:?} : {:?}",
-                    prev_state,
-                    result_2132,
-                    $sm.context()
-                );
-                assert_eq!($expected_result, result_2132);
-                assert_eq!(&$expected_context, $sm.context());
+            if let Ok(result) = $sm.process_event($event) {
+                let result = result.clone();
+                println!("{:?} -> {:?} : {:?}", prev_state, result, $sm.context());
+                match result {
+                    $expected_result => {}
+                    _ => panic!(
+                        "Assertion failed:\n expected: {:?},\n actual:    {:?}",
+                        stringify!($expected_result),
+                        result
+                    ),
+                }
+                assert_eq!($expected_action, $sm.context().action);
             } else {
                 panic!("assert_transition_ok failed")
             }
@@ -360,9 +362,9 @@ fn guard_errors() {
 #[test]
 fn test_internal_transition_with_data() {
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    pub struct State1Data(pub i32);
+    pub struct State1Data(pub ActionId);
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    pub struct State3Data(pub i32);
+    pub struct State3Data(pub ActionId);
 
     statemachine! {
         transitions: {
@@ -381,100 +383,75 @@ fn test_internal_transition_with_data() {
         derive_states: [Debug, Clone,  Copy, Eq ]
     }
     /// Context
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Default, Debug, PartialEq, Eq)]
     pub struct Context {
-        count: u32,
+        action: ActionId,
+    }
+    #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
+    enum ActionId {
+        #[default]
+        Init,
+        Action3,
+        Action12,
+        Action13,
+        Action14,
+        Action23,
+        Action44,
     }
     impl StateMachineContext for Context {
         fn action_3(&mut self, d: &State3Data) -> Result<State3Data, ()> {
-            self.count += 3;
+            self.action = ActionId::Action3;
             Ok(*d)
         }
 
-        fn action44(&mut self, d: &State3Data) -> Result<State3Data, ()> {
-            self.count += 44;
-            Ok(State3Data(d.0 + 1343))
+        fn action44(&mut self, _d: &State3Data) -> Result<State3Data, ()> {
+            self.action = ActionId::Action44;
+            Ok(State3Data(ActionId::Action44))
         }
-        fn action13(&mut self, d: &State1Data) -> Result<State3Data, ()> {
-            self.count += 13;
-            Ok(State3Data(d.0 + 313))
-        }
-        fn action14(&mut self, d: &State1Data) -> Result<State3Data, ()> {
-            self.count += 14;
-            Ok(State3Data(d.0 + 314))
+        fn action14(&mut self, _d: &State1Data) -> Result<State3Data, ()> {
+            self.action = ActionId::Action14;
+            Ok(State3Data(ActionId::Action14))
         }
         fn action12(&mut self, _d: &State1Data) -> Result<(), ()> {
-            self.count += 12;
+            self.action = ActionId::Action12;
             Ok(())
         }
+        fn action13(&mut self, _d: &State1Data) -> Result<State3Data, ()> {
+            self.action = ActionId::Action13;
+            Ok(State3Data(ActionId::Action13))
+        }
         fn action23(&mut self) -> Result<State3Data, ()> {
-            self.count += 23;
-            Ok(State3Data(300))
+            self.action = ActionId::Action23;
+            Ok(State3Data(ActionId::Action23))
         }
     }
 
     {
-        let mut sm = StateMachine::new(Context { count: 0 }, State1Data(1));
-        assert_transition_ok!(sm, Events::Event2, States::State2, Context { count: 12 }); // action12
-        assert!(sm.process_event(Events::Event1).is_err()); // InvalidEvent
-        assert!(sm.process_event(Events::Event2).is_err()); // InvalidEvent
-        assert!(sm.process_event(Events::Event4).is_err()); // InvalidEvent
-        assert_transition_ok!(
-            sm,
-            Events::Event3,
-            States::State3(State3Data(0)),
-            Context { count: 12 + 23 }
-        ); // action23
-        assert_transition_ok!(
-            sm,
-            Events::Event3,
-            States::State3(State3Data(0)),
-            Context { count: 12 + 23 + 3 }
-        ); // action_3
-        assert_transition_ok!(
-            sm,
-            Events::Event3,
-            States::State3(State3Data(0)),
-            Context {
-                count: 12 + 23 + 3 + 3
-            }
-        ); // action_3
-        assert!(sm.process_event(Events::Event1).is_err()); // InvalidEvent
-        assert!(sm.process_event(Events::Event2).is_err()); // InvalidEvent
-        assert!(sm.process_event(Events::Event4).is_err()); // InvalidEvent
+        let mut sm = StateMachine::new(Context::default(), State1Data(ActionId::Init));
+        matches!(States::State2, States::State2);
+        assert_transition_ok!(sm, Events::Event2, ActionId::Action12, States::State2);
+        assert!(sm.process_event(Events::Event1).is_err());
+        assert!(sm.process_event(Events::Event2).is_err());
+        assert!(sm.process_event(Events::Event4).is_err());
+        assert_transition_ok!(sm, Events::Event3, ActionId::Action23, States::State3(_));
+        assert_transition_ok!(sm, Events::Event3, ActionId::Action3, States::State3(_));
+        assert_transition_ok!(sm, Events::Event3, ActionId::Action3, States::State3(_));
+        assert!(sm.process_event(Events::Event1).is_err());
+        assert!(sm.process_event(Events::Event2).is_err());
+        assert!(sm.process_event(Events::Event4).is_err());
     }
     {
-        let mut sm = StateMachine::new(Context { count: 0 }, State1Data(1));
-        assert_transition_ok!(
-            sm,
-            Events::Event3,
-            States::State3(State3Data(0)),
-            Context { count: 13 }
-        ); // action13
-        assert!(sm.process_event(Events::Event1).is_err()); // InvalidEvent
-        assert!(sm.process_event(Events::Event2).is_err()); // InvalidEvent
-        assert!(sm.process_event(Events::Event4).is_err()); // InvalidEvent
+        let mut sm = StateMachine::new(Context::default(), State1Data(ActionId::Init));
+        assert_transition_ok!(sm, Events::Event3, ActionId::Action13, States::State3(_));
+        assert!(sm.process_event(Events::Event1).is_err());
+        assert!(sm.process_event(Events::Event2).is_err());
+        assert!(sm.process_event(Events::Event4).is_err());
     }
     {
-        let mut sm = StateMachine::new(Context { count: 0 }, State1Data(1));
-        assert_transition_ok!(
-            sm,
-            Events::Event4,
-            States::State4(State3Data(0)),
-            Context { count: 14 }
-        ); // action14
-        assert_transition_ok!(
-            sm,
-            Events::Event1,
-            States::State4(State3Data(0)),
-            Context { count: 14 + 44 }
-        ); // action44
-        assert_transition_ok!(
-            sm,
-            Events::Event3,
-            States::State4(State3Data(0)),
-            Context { count: 14 + 44 + 3 }
-        ); // action_3
+        let mut sm = StateMachine::new(Context::default(), State1Data(ActionId::Init));
+        assert_transition_ok!(sm, Events::Event4, ActionId::Action14, States::State4(_));
+        assert_transition_ok!(sm, Events::Event1, ActionId::Action44, States::State4(_));
+        assert_transition_ok!(sm, Events::Event3, ActionId::Action3, States::State4(_));
     }
 }
 #[test]
