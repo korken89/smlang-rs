@@ -16,6 +16,7 @@ implementation.
 ### Changed
 
 - [breaking] Renamed custom_guard_error flag to custom_error as it is not guard specific anymore
+- [breaking] Re-ordered on_exit/on_entry hooks calls
 
 ## [0.7.0] - 2024-07-03
 

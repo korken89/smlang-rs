@@ -421,32 +421,32 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                 let entry_ident = format_ident!("on_entry_{}", string_morph::to_snake_case(out_state_string));
                                 let exit_ident = format_ident!("on_exit_{}", string_morph::to_snake_case(in_state_string));
 
-                                let entry_exit_states =
-                                    quote! {
-                                        self.context.#exit_ident();
-                                        self.context.#entry_ident();
-                                        };
+                                let on_exit = quote!{self.context.#exit_ident();};
+                                let on_entry = quote!{ self.context.#entry_ident(); };
+
                                 let (is_async_action, action_code) = generate_action(action, &temporary_context_call, action_params, &error_type_name);
                                 is_async_state_machine |= is_async_action;
 
                                 let transition = if in_state_string == out_state_string {
                                     // Stay in the same state => no need to call on_entry/on_exit and log_state_change
                                     quote!{
+                                            #action_code
                                             self.state = #states_type_name::#out_state;
                                             return Ok(&self.state);
                                         }
 
                                 } else {
                                     quote!{
+                                            #on_exit
+                                            #action_code
                                             let out_state = #states_type_name::#out_state;
                                             self.context.log_state_change(&out_state);
-                                            #entry_exit_states
                                             self.context().transition_callback(&self.state, &out_state);
                                             self.state = out_state;
+                                            #on_entry
                                             return Ok(&self.state);
                                         }
                                 };
-
                                 if let Some(expr) = guard { // Guarded transition
                                     let guard_expression= expr.to_token_stream(&mut |async_ident: &AsyncIdent| {
                                         let guard_ident = &async_ident.ident;
@@ -472,13 +472,11 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                         // Otherwise, there may be a later transition that passes,
                                         // so we'll defer to that.
                                         if guard_passed {
-                                            #action_code
                                             #transition
                                         }
                                     }
                                 } else { // Unguarded transition
                                    quote!{
-                                        #action_code
                                         #transition
                                    }
                                 }
