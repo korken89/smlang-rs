@@ -411,7 +411,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         let streams: Vec<TokenStream> =
                             guard.iter()
                             .zip(action.iter().zip(out_state)).map(|(guard, (action,out_state))| {
-
                                 let binding = out_state.to_string();
                                 let out_state_string = &binding.split('(').next().unwrap();
                                 let binding = in_state.to_string();
@@ -441,7 +440,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                             self.context.#guard_ident(#temporary_context_call #guard_params) #guard_await .map_err(#error_type_name::GuardFailed)?
                                         }
                                     });
-
                                     quote! {
                                         // This #guard_expression contains a boolean expression of guard functions
                                         // Each guard function has Result<bool,_> return type.
@@ -458,17 +456,18 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                             let out_state = #states_type_name::#out_state;
                                             self.context.log_state_change(&out_state);
                                             #entry_exit_states
+                                            self.context().transition_callback(&self.state, &out_state);
                                             self.state = out_state;
                                             return Ok(&self.state);
                                         }
                                     }
                                 } else { // Unguarded transition
-
                                    quote!{
                                        #action_code
                                        let out_state = #states_type_name::#out_state;
                                        self.context.log_state_change(&out_state);
                                        #entry_exit_states
+                                       self.context().transition_callback(&self.state, &out_state);
                                        self.state = out_state;
                                         return Ok(&self.state);
                                    }
@@ -569,6 +568,11 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             /// `process_event()`. No-op by default but can be overridden in implementations
             /// of a state machine's `StateMachineContext` trait.
             fn log_state_change(&self, new_state: & #states_type_name) {}
+
+            /// Called when transitioning to a new state as a result of an event passed to
+            /// `process_event()`. No-op by default which can be overridden in implementations
+            /// of a state machine's `StateMachineContext` trait.
+            fn transition_callback(&self, old_state: & #states_type_name, new_state: & #states_type_name) {}
         }
 
         /// List of auto-generated states.
