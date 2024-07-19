@@ -5,6 +5,8 @@
 use smlang::statemachine;
 
 statemachine! {
+    derive_states: [Debug],
+    derive_events: [Debug],
     transitions: {
         *D0 +  ToD1 / to_d2  = D1,
         D1(Option<Events>) +  ToD2 / to_d3  = D2,
@@ -32,6 +34,9 @@ impl StateMachineContext for Context {
 
     fn to_d5(&mut self, _state_data: &Option<Events>) -> Result<Option<Events>, ()> {
         Ok(Some(Events::ToD5))
+    }
+    fn transition_callback(&self, exit: &States, entry: &States) {
+        println!("Domino {:?} fell. Next up: {:?}", exit, entry);
     }
 }
 

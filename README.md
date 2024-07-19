@@ -315,7 +315,7 @@ found in `on_entry_on_exit_generic`.
 
 The statemachine will call for every transition a transition callback. This function
 is called with both the old state and new state as arguments. An example can be found
-in `transition_callback`.
+in `dominos`.
 
 ## Helpers
 
