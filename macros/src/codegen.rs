@@ -421,9 +421,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                 let entry_ident = format_ident!("on_entry_{}", string_morph::to_snake_case(out_state_string));
                                 let exit_ident = format_ident!("on_exit_{}", string_morph::to_snake_case(in_state_string));
 
-                                let on_exit = quote!{self.context.#exit_ident();};
-                                let on_entry = quote!{ self.context.#entry_ident(); };
-
                                 let (is_async_action, action_code) = generate_action(action, &temporary_context_call, action_params, &error_type_name);
                                 is_async_state_machine |= is_async_action;
 
@@ -434,16 +431,15 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                             self.state = #states_type_name::#out_state;
                                             return Ok(&self.state);
                                         }
-
                                 } else {
                                     quote!{
-                                            #on_exit
+                                            self.context.#exit_ident();
                                             #action_code
                                             let out_state = #states_type_name::#out_state;
                                             self.context.log_state_change(&out_state);
                                             self.context().transition_callback(&self.state, &out_state);
                                             self.state = out_state;
-                                            #on_entry
+                                            self.context.#entry_ident();
                                             return Ok(&self.state);
                                         }
                                 };
