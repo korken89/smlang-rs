@@ -4,6 +4,40 @@ use derive_more::Display;
 
 use smlang::statemachine;
 
+mod internal_macros {
+    #[macro_export]
+    macro_rules! assert_transition {
+        ($sm:expr, $event:expr, $expected_state:expr, $expected_count:expr) => {{
+            let prev_state = $sm.state;
+            $sm.process_event($event).unwrap();
+            println!("{:?} -> {:?} : {:?}", prev_state, $sm.state, $sm.context());
+            assert_eq!($expected_state, $sm.state);
+            assert_eq!($expected_count, $sm.context().count);
+        }};
+    }
+    #[macro_export]
+    macro_rules! assert_transition_ok {
+        ($sm:expr, $event:expr, $expected_action:expr, $expected_result:pat) => {{
+            let prev_state = $sm.state;
+            if let Ok(result) = $sm.process_event($event) {
+                let result = result.clone();
+                println!("{:?} -> {:?} : {:?}", prev_state, result, $sm.context());
+                match result {
+                    $expected_result => {}
+                    _ => panic!(
+                        "Assertion failed:\n expected: {:?},\n actual:    {:?}",
+                        stringify!($expected_result),
+                        result
+                    ),
+                }
+                assert_eq!($expected_action, $sm.context().action);
+            } else {
+                panic!("assert_transition_ok failed")
+            }
+        }};
+    }
+}
+
 #[test]
 fn compile_fail_tests() {
     let t = trybuild::TestCases::new();
@@ -324,4 +358,132 @@ fn guard_errors() {
     sm.context_mut().guard_passable = true;
     sm.process_event(Events::Event1).unwrap();
     assert!(matches!(sm.state(), &States::Done));
+}
+#[test]
+fn test_internal_transition_with_data() {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct State1Data(pub ActionId);
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct State3Data(pub ActionId);
+
+    statemachine! {
+        transitions: {
+            *State1(State1Data) + Event2 / action12 = State2,
+            State1(State1Data) + Event3 / action13 = State3(State3Data),
+            State1(State1Data) + Event4 / action14 = State4(State3Data),
+
+            State2 + Event3 / action23 = State3(State3Data),
+            State4(State3Data) + Event1 / action44 = _, // Same as State4(State3Data) + Event1 / action44
+
+            // TRANSITION : _ + Event3 / increment_count = _, IS EQUIVALENT TO THE FOLLOWING TWO:
+            // State3(State3Data) + Event3 / action_3 = State3(State3Data),
+            // State4(State3Data) + Event3 / action_3 = State4(State3Data),
+            _ + Event3 / action_3 = _,
+        },
+        derive_states: [Debug, Clone,  Copy, Eq ]
+    }
+    /// Context
+    #[derive(Default, Debug, PartialEq, Eq)]
+    pub struct Context {
+        action: ActionId,
+    }
+    #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
+    enum ActionId {
+        #[default]
+        Init,
+        Action3,
+        Action12,
+        Action13,
+        Action14,
+        Action23,
+        Action44,
+    }
+    impl StateMachineContext for Context {
+        fn action_3(&mut self, d: &State3Data) -> Result<State3Data, ()> {
+            self.action = ActionId::Action3;
+            Ok(*d)
+        }
+
+        fn action44(&mut self, _d: &State3Data) -> Result<State3Data, ()> {
+            self.action = ActionId::Action44;
+            Ok(State3Data(ActionId::Action44))
+        }
+        fn action14(&mut self, _d: &State1Data) -> Result<State3Data, ()> {
+            self.action = ActionId::Action14;
+            Ok(State3Data(ActionId::Action14))
+        }
+        fn action12(&mut self, _d: &State1Data) -> Result<(), ()> {
+            self.action = ActionId::Action12;
+            Ok(())
+        }
+        fn action13(&mut self, _d: &State1Data) -> Result<State3Data, ()> {
+            self.action = ActionId::Action13;
+            Ok(State3Data(ActionId::Action13))
+        }
+        fn action23(&mut self) -> Result<State3Data, ()> {
+            self.action = ActionId::Action23;
+            Ok(State3Data(ActionId::Action23))
+        }
+    }
+
+    {
+        let mut sm = StateMachine::new(Context::default(), State1Data(ActionId::Init));
+        matches!(States::State2, States::State2);
+        assert_transition_ok!(sm, Events::Event2, ActionId::Action12, States::State2);
+        assert!(sm.process_event(Events::Event1).is_err());
+        assert!(sm.process_event(Events::Event2).is_err());
+        assert!(sm.process_event(Events::Event4).is_err());
+        assert_transition_ok!(sm, Events::Event3, ActionId::Action23, States::State3(_));
+        assert_transition_ok!(sm, Events::Event3, ActionId::Action3, States::State3(_));
+        assert_transition_ok!(sm, Events::Event3, ActionId::Action3, States::State3(_));
+        assert!(sm.process_event(Events::Event1).is_err());
+        assert!(sm.process_event(Events::Event2).is_err());
+        assert!(sm.process_event(Events::Event4).is_err());
+    }
+    {
+        let mut sm = StateMachine::new(Context::default(), State1Data(ActionId::Init));
+        assert_transition_ok!(sm, Events::Event3, ActionId::Action13, States::State3(_));
+        assert!(sm.process_event(Events::Event1).is_err());
+        assert!(sm.process_event(Events::Event2).is_err());
+        assert!(sm.process_event(Events::Event4).is_err());
+    }
+    {
+        let mut sm = StateMachine::new(Context::default(), State1Data(ActionId::Init));
+        assert_transition_ok!(sm, Events::Event4, ActionId::Action14, States::State4(_));
+        assert_transition_ok!(sm, Events::Event1, ActionId::Action44, States::State4(_));
+        assert_transition_ok!(sm, Events::Event3, ActionId::Action3, States::State4(_));
+    }
+}
+#[test]
+fn test_wildcard_states_and_internal_transitions() {
+    statemachine! {
+        transitions: {
+            *State1 + Event2 = State2,
+            State2 + Event3 = State3,
+            _ + Event1 / increment_count,      // Internal transition (implicit: omitting target state)
+            _ + Event3 / increment_count = _ , // Internal transition (explicit: using _ as target state)
+        },
+        derive_states: [Debug, Clone,  Copy]
+    }
+    #[derive(Debug)]
+    pub struct Context {
+        count: u32,
+    }
+    impl StateMachineContext for Context {
+        fn increment_count(&mut self) -> Result<(), ()> {
+            self.count += 1;
+            Ok(())
+        }
+    }
+
+    let mut sm = StateMachine::new(Context { count: 0 });
+
+    assert_transition!(sm, Events::Event1, States::State1, 1);
+    assert_transition!(sm, Events::Event2, States::State2, 1);
+    assert_transition!(sm, Events::Event3, States::State3, 1);
+    assert_transition!(sm, Events::Event1, States::State3, 2);
+    assert_transition!(sm, Events::Event3, States::State3, 3);
+
+    assert!(sm.process_event(Events::Event2).is_err()); // InvalidEvent
+    assert_eq!(States::State3, sm.state);
 }

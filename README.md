@@ -69,6 +69,57 @@ statemachine!{
 ```
 See example `examples/input_state_pattern_match.rs` for a usage example.
 
+#### Internal transitions
+
+The DSL supports internal transitions.
+Internal transition allow to accept an event and process an action,
+and then stay in the current state. 
+Internal transitions can be specified explicitly, e.g.
+```plantuml
+State2 + Event2 / event2_action = State2,
+```
+or 
+```plantuml
+State2 + Event2 / event2_action = _,
+```
+or implicitly, by omitting the target state including '='.
+```plantuml
+State2 + Event2 / event2_action,
+```
+It is also possible to define wildcard implicit (or explicit using '_') internal transitions.  
+
+```rust
+statemachine! {
+    transitions: {
+        *State1 + Event2 = State2,
+        State1 + Event3 = State3,
+        State1 + Event4 = State4,
+        
+        _ + Event2 / event2_action,
+    },
+}
+```
+The example above demonstrates how you could make Event2 acceptable for any state,
+not covered by any of the previous transitions, and to do an action to process it.
+
+It is equivalent to:
+
+```rust
+statemachine! {
+    transitions: {
+        *State1 + Event2 = State2,
+        State1 + Event3 = State3,
+        State1 + Event4 = State4,
+        
+        State2 + Event2 / event2_action = State2,
+        State3 + Event2 / event2_action = State3,
+        State4 + Event2 / event2_action = State4,
+    },
+}
+```
+
+See also tests: `test_internal_transition_with_data()` or `test_wildcard_states_and_internal_transitions()` for a usage example.
+
 #### Guard expressions
 
 Guard expression in square brackets [] allows to define a boolean expressions of multiple guard functions.

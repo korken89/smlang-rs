@@ -4,7 +4,7 @@ use syn::{braced, bracketed, parse, spanned::Spanned, token, Ident, Token, Type}
 #[derive(Debug)]
 pub struct StateMachine {
     pub temporary_context_type: Option<Type>,
-    pub custom_guard_error: bool,
+    pub custom_error: bool,
     pub transitions: Vec<StateTransition>,
     pub name: Option<Ident>,
     pub derive_states: Vec<Ident>,
@@ -15,7 +15,7 @@ impl StateMachine {
     pub fn new() -> Self {
         StateMachine {
             temporary_context_type: None,
-            custom_guard_error: false,
+            custom_error: false,
             transitions: Vec::new(),
             name: None,
             derive_states: Vec::new(),
@@ -72,11 +72,11 @@ impl parse::Parse for StateMachine {
                         }
                     }
                 }
-                "custom_guard_error" => {
+                "custom_error" => {
                     input.parse::<Token![:]>()?;
-                    let custom_guard_error: syn::LitBool = input.parse()?;
-                    if custom_guard_error.value {
-                        statemachine.custom_guard_error = true
+                    let custom_error: syn::LitBool = input.parse()?;
+                    if custom_error.value {
+                        statemachine.custom_error = true
                     }
                 }
                 "temporary_context" => {
@@ -145,7 +145,7 @@ impl parse::Parse for StateMachine {
                             "Unknown keyword {}. Support keywords: [\"name\", \
                                 \"transitions\", \
                                 \"temporary_context\", \
-                                \"custom_guard_error\", \
+                                \"custom_error\", \
                                 \"derive_states\", \
                                 \"derive_events\"
                                 ]",

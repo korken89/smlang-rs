@@ -27,7 +27,7 @@ statemachine! {
         State2(MyStateData) + Event2  [guard2] / action2 = State3,
         // ...
     },
-    custom_guard_error: true,
+    custom_error: true,
 }
 
 /// Context

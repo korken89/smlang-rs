@@ -47,13 +47,19 @@ impl DataDefinitions {
                 if prev != &data_type.clone() {
                     return Err(parse::Error::new(
                         data_type.span(),
-                        "This event's type does not match its previous definition.",
+                        format!(
+                            "This event's type {} does not match its previous definition",
+                            key
+                        ),
                     ));
                 }
             } else {
                 return Err(parse::Error::new(
                     data_type.span(),
-                    "This event's type does not match its previous definition.",
+                    format!(
+                        "This event's type {} does not match its previous definition",
+                        key
+                    ),
                 ));
             }
         }
