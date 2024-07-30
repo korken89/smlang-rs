@@ -425,7 +425,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                 is_async_state_machine |= is_async_action;
 
                                 let transition = if in_state_string == out_state_string {
-                                    // Stay in the same state => no need to call on_entry/on_exit and log_state_change
+                                    // Stay in the same state => no need to call on_entry/on_exit
                                     quote!{
                                             #action_code
                                             self.state = #states_type_name::#out_state;
@@ -436,7 +436,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                             self.context.#exit_ident();
                                             #action_code
                                             let out_state = #states_type_name::#out_state;
-                                            self.context.log_state_change(&out_state);
                                             self.context().transition_callback(&self.state, &out_state);
                                             self.state = out_state;
                                             self.context.#entry_ident();
@@ -567,11 +566,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             /// default but can be overridden in implementations of a state machine's
             /// `StateMachineContext` trait.
             fn log_action(&self, action: &'static str) {}
-
-            /// Called when transitioning to a new state as a result of an event passed to
-            /// `process_event()`. No-op by default but can be overridden in implementations
-            /// of a state machine's `StateMachineContext` trait.
-            fn log_state_change(&self, new_state: & #states_type_name) {}
 
             /// Called when transitioning to a new state as a result of an event passed to
             /// `process_event()`. No-op by default which can be overridden in implementations

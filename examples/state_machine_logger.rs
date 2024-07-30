@@ -53,7 +53,7 @@ impl StateMachineContext for Context {
 
     fn log_process_event(&self, current_state: &States, event: &Events) {
         println!(
-            "[StateMachineLogger][{:?}] Processing event {:?}",
+            "[StateMachineLogger]\t[{:?}] Processing event {:?}",
             current_state, event
         );
     }
@@ -70,8 +70,11 @@ impl StateMachineContext for Context {
         println!("[StateMachineLogger]\tRunning `{}`", action);
     }
 
-    fn log_state_change(&self, new_state: &States) {
-        println!("[StateMachineLogger]\tTransitioning to {:?}", new_state);
+    fn transition_callback(&self, old_state: &States, new_state: &States) {
+        println!(
+            "[StateMachineLogger]\tTransitioning {:?} -> {:?}",
+            old_state, new_state
+        );
     }
 }
 
