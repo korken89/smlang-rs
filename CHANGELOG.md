@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+* None yet!
+
+## [v0.8.0] - 2024-08-07
+
 ### Added
 
 - Add transition callback. A function which is called for every transition. It has default empty
@@ -186,7 +190,8 @@ a long list of states to go through.
 * Support for data in states
 * Change log added
 
-[Unreleased]: https://github.com/korken89/smlang-rs/compare/v0.7.0...master
+[Unreleased]: https://github.com/korken89/smlang-rs/compare/v0.8.0...master
+[v0.8.0]: https://github.com/korken89/smlang-rs/compare/v0.7.0...v0.8.0
 [v0.7.0]: https://github.com/korken89/smlang-rs/compare/v0.6.0...v0.7.0
 [v0.6.0]: https://github.com/korken89/smlang-rs/compare/v0.5.1...v0.6.0
 [v0.5.1]: https://github.com/korken89/smlang-rs/compare/v0.5.0...v0.5.1
