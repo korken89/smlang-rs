@@ -487,3 +487,33 @@ fn test_wildcard_states_and_internal_transitions() {
     assert!(sm.process_event(Events::Event2).is_err()); // InvalidEvent
     assert_eq!(States::State3, sm.state);
 }
+#[test]
+fn test_specify_attrs() {
+    #![deny(non_camel_case_types)]
+    statemachine! {
+        transitions: {
+            *State1 + tostate2 = State2,
+            State2 + tostate3 / increment_count = State3
+        },
+        derive_states: [Debug, Clone, Copy],
+        states_attr: #[non_exhaustive] #[repr(u8)],
+        events_attr: #[derive(Debug)] #[allow(non_camel_case_types)]
+    }
+
+    #[derive(Debug, Default)]
+    pub struct Context {
+        count: u32,
+    }
+
+    impl StateMachineContext for Context {
+        fn increment_count(&mut self) -> Result<(), ()> {
+            self.count += 1;
+            Ok(())
+        }
+    }
+    let mut sm = StateMachine::new(Context::default());
+
+    assert_eq!(sm.state().clone(), States::State1);
+    assert_transition!(sm, Events::tostate2, States::State2, 0);
+    assert_transition!(sm, Events::tostate3, States::State3, 1);
+}

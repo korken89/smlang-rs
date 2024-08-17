@@ -1,5 +1,5 @@
 use super::transition::{StateTransition, StateTransitions};
-use syn::{braced, bracketed, parse, spanned::Spanned, token, Ident, Token, Type};
+use syn::{braced, bracketed, parse, spanned::Spanned, token, Attribute, Ident, Token, Type};
 
 #[derive(Debug)]
 pub struct StateMachine {
@@ -9,6 +9,8 @@ pub struct StateMachine {
     pub name: Option<Ident>,
     pub derive_states: Vec<Ident>,
     pub derive_events: Vec<Ident>,
+    pub states_attr: Vec<Attribute>,
+    pub events_attr: Vec<Attribute>,
 }
 
 impl StateMachine {
@@ -20,6 +22,8 @@ impl StateMachine {
             name: None,
             derive_states: Vec::new(),
             derive_events: Vec::new(),
+            states_attr: Vec::new(),
+            events_attr: Vec::new(),
         }
     }
 
@@ -138,6 +142,17 @@ impl parse::Parse for StateMachine {
                         };
                     }
                 }
+
+                "states_attr" => {
+                    input.parse::<Token![:]>()?;
+                    statemachine.events_attr = Attribute::parse_outer(&input)?;
+                }
+
+                "events_attr" => {
+                    input.parse::<Token![:]>()?;
+                    statemachine.events_attr = Attribute::parse_outer(&input)?;
+                }
+
                 keyword => {
                     return Err(parse::Error::new(
                         input.span(),
