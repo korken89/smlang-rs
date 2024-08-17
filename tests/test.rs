@@ -490,13 +490,14 @@ fn test_wildcard_states_and_internal_transitions() {
 #[test]
 fn test_specify_attrs() {
     #![deny(non_camel_case_types)]
+    use serde::Serialize;
     statemachine! {
         transitions: {
             *State1 + tostate2 = State2,
             State2 + tostate3 / increment_count = State3
         },
-        derive_states: [Debug, Clone, Copy],
-        states_attr: #[non_exhaustive] #[repr(u8)],
+        derive_states: [Debug, Clone, Copy, Serialize],
+        states_attr: #[non_exhaustive] #[repr(u8)] #[serde(tag="type")],
         events_attr: #[derive(Debug)] #[allow(non_camel_case_types)]
     }
 
