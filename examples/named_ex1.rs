@@ -9,7 +9,7 @@ use smlang::statemachine;
 
 statemachine! {
     name: Linear,
-    derive_states: [Debug],
+    states_attr: #[derive(Debug)],
     transitions: {
         *State1 + Event1 = State2,
         State2 + Event2 = State3,

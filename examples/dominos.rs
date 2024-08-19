@@ -5,8 +5,8 @@
 use smlang::statemachine;
 
 statemachine! {
-    derive_states: [Debug],
-    derive_events: [Debug],
+    states_attr: #[derive(Debug)],
+    events_attr: #[derive(Debug)],
     transitions: {
         *D0 +  ToD1 / to_d2  = D1,
         D1(Option<Events>) +  ToD2 / to_d3  = D2,

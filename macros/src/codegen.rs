@@ -539,8 +539,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         quote! {#error_type_name}
     };
 
-    let derive_states_list = &sm.derive_states;
-    let derive_events_list = &sm.derive_events;
+    let states_attr_list = &sm.states_attr;
+    let events_attr_list = &sm.events_attr;
     // Build the states and events output
     quote! {
         /// This trait outlines the guards and actions that need to be implemented for the state
@@ -575,7 +575,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
         /// List of auto-generated states.
         #[allow(missing_docs)]
-        #[derive(#(#derive_states_list),*)]
+        #(#states_attr_list)*
         pub enum #states_type_name <#state_lifetimes> { #(#state_list),* }
 
         /// Manually define PartialEq for #states_type_name based on variant only to address issue-#21
@@ -588,7 +588,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
         /// List of auto-generated events.
         #[allow(missing_docs)]
-        #[derive(#(#derive_events_list),*)]
+        #(#events_attr_list)*
         pub enum #events_type_name <#event_lifetimes> { #(#event_list),* }
 
         /// Manually define PartialEq for #events_type_name based on variant only to address issue-#21

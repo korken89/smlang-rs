@@ -16,8 +16,8 @@ pub struct MyEventData(pub u32);
 pub struct MyStateData(pub u32);
 
 statemachine! {
-    derive_states: [Debug],
-    derive_events: [Debug],
+    states_attr: #[derive(Debug)],
+    events_attr: #[derive(Debug)],
     transitions: {
         *State1 + Event1(MyEventData) [guard1] / action1 = State2,
         State2(MyStateData) + Event2  [guard2] / action2 = State3,

@@ -121,8 +121,8 @@ fn multiple_lifetimes() {
 #[test]
 fn derive_display_events_states() {
     statemachine! {
-        derive_events: [Debug,Display],
-        derive_states: [Debug,Display],
+        events_attr: #[derive(Debug,Display)],
+        states_attr: #[derive(Debug,Display)],
         transitions: {
             *Init + Event = End,
         }
@@ -145,8 +145,8 @@ fn derive_display_events_states() {
 fn named_derive_display_events_states() {
     statemachine! {
         name: SM,
-        derive_events: [Debug,Display],
-        derive_states: [Debug,Display],
+        events_attr: #[derive(Debug,Display)],
+        states_attr: #[derive(Debug,Display)],
         transitions: {
             *Init + Event = End,
         }
@@ -205,7 +205,7 @@ fn guard_expressions() {
     pub struct Entry(pub u32);
 
     statemachine! {
-        derive_states: [Display, Debug],
+        states_attr: #[derive(Display, Debug)],
         transitions: {
             *Init + Login(&'a Entry) [valid_entry] / attempt = LoggedIn,
             Init + Login(&'a Entry) [!valid_entry && !too_many_attempts] / attempt = Init,
@@ -380,7 +380,7 @@ fn test_internal_transition_with_data() {
             // State4(State3Data) + Event3 / action_3 = State4(State3Data),
             _ + Event3 / action_3 = _,
         },
-        derive_states: [Debug, Clone,  Copy, Eq ]
+        states_attr: #[derive(Debug, Clone,  Copy, Eq)]
     }
     /// Context
     #[derive(Default, Debug, PartialEq, Eq)]
@@ -463,7 +463,7 @@ fn test_wildcard_states_and_internal_transitions() {
             _ + Event1 / increment_count,      // Internal transition (implicit: omitting target state)
             _ + Event3 / increment_count = _ , // Internal transition (explicit: using _ as target state)
         },
-        derive_states: [Debug, Clone,  Copy]
+        states_attr: #[derive(Debug, Clone,  Copy)]
     }
     #[derive(Debug)]
     pub struct Context {
@@ -486,4 +486,34 @@ fn test_wildcard_states_and_internal_transitions() {
 
     assert!(sm.process_event(Events::Event2).is_err()); // InvalidEvent
     assert_eq!(States::State3, sm.state);
+}
+#[test]
+fn test_specify_attrs() {
+    #![deny(non_camel_case_types)]
+    use serde::Serialize;
+    statemachine! {
+        transitions: {
+            *State1 + tostate2 = State2,
+            State2 + tostate3 / increment_count = State3
+        },
+        states_attr: #[derive(Debug, Clone, Copy, Serialize)] #[non_exhaustive] #[repr(u8)] #[serde(tag="type")],
+        events_attr: #[derive(Debug)] #[allow(non_camel_case_types)]
+    }
+
+    #[derive(Debug, Default)]
+    pub struct Context {
+        count: u32,
+    }
+
+    impl StateMachineContext for Context {
+        fn increment_count(&mut self) -> Result<(), ()> {
+            self.count += 1;
+            Ok(())
+        }
+    }
+    let mut sm = StateMachine::new(Context::default());
+
+    assert_eq!(sm.state().clone(), States::State1);
+    assert_transition!(sm, Events::tostate2, States::State2, 0);
+    assert_transition!(sm, Events::tostate3, States::State3, 1);
 }

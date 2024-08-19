@@ -16,7 +16,7 @@ use proc_macro2::{Span, TokenStream};
 use crate::parser::event::Transition;
 use std::collections::{hash_map, HashMap};
 use std::fmt;
-use syn::{parse, Ident, Type};
+use syn::{parse, Attribute, Ident, Type};
 use transition::StateTransition;
 pub type TransitionMap = HashMap<String, HashMap<String, EventMapping>>;
 
@@ -46,8 +46,8 @@ impl fmt::Display for AsyncIdent {
 #[derive(Debug)]
 pub struct ParsedStateMachine {
     pub name: Option<Ident>,
-    pub derive_states: Vec<Ident>,
-    pub derive_events: Vec<Ident>,
+    pub states_attr: Vec<Attribute>,
+    pub events_attr: Vec<Attribute>,
     pub temporary_context_type: Option<Type>,
     pub custom_error: bool,
     pub states: HashMap<String, Ident>,
@@ -242,8 +242,8 @@ impl ParsedStateMachine {
 
         Ok(ParsedStateMachine {
             name: sm.name,
-            derive_states: sm.derive_states,
-            derive_events: sm.derive_events,
+            states_attr: sm.states_attr,
+            events_attr: sm.events_attr,
             temporary_context_type: sm.temporary_context_type,
             custom_error: sm.custom_error,
             states,
