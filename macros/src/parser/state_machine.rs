@@ -109,12 +109,12 @@ impl parse::Parse for StateMachine {
 
                 "states_attr" => {
                     input.parse::<Token![:]>()?;
-                    statemachine.states_attr = Attribute::parse_outer(&input)?;
+                    statemachine.states_attr = Attribute::parse_outer(input)?;
                 }
 
                 "events_attr" => {
                     input.parse::<Token![:]>()?;
-                    statemachine.events_attr = Attribute::parse_outer(&input)?;
+                    statemachine.events_attr = Attribute::parse_outer(input)?;
                 }
 
                 keyword => {

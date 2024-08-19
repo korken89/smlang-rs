@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-* None yet!
+### Added
+
+- Add support for defining States and Events attributes using `states_attr` and `events_attr` fields
+
+### Changed
+
+- [breaking] Remove `derive_states` and `derive_events` fields in lieu of `states_attr` and `events_attr` to define attributes generically
 
 ## [v0.8.0] - 2024-08-07
 
