@@ -370,9 +370,9 @@ in `dominos`.
 
 ## Helpers
 
-### Auto-derive certain traits for states and events
+### Specify attributes for states and events
 
-Setting `derive_events` and `derive_states` fields to an array of traits adds a derive expression to `Events` and `States` enums respectively. To derive Display, use `derive_more::Display`.
+Setting `events_attr` and `states_attr` fields to a list of attributes to `Events` and `States` enums respectively. To derive Display, use `derive_more::Display`.
 
 
 ```rust
@@ -380,8 +380,8 @@ use core::Debug;
 use derive_more::Display;
 // ...
 statemachine!{
-    derive_states: [Debug, Display],
-    derive_events: [Debug, Display],
+    states_attr: #[derive(Debug, Display)],
+    events_attr: #[derive(Debug, Display)],
     transitions: {
         *State1 + Event1 = State2,
     }
@@ -409,7 +409,7 @@ fn log_action(&self, action: &'static str) {}
 fn log_state_change(&self, new_state: &States) {}
 ```
 
-See `examples/state_machine_logger.rs` for an example which uses `derive_states` and `derive_events` to derive `Debug` implementations for easy logging.
+See `examples/state_machine_logger.rs` for an example which uses `states_attr` and `events_attr` to derive `Debug` implementations for easy logging.
 
 ## Contributors
 

@@ -23,11 +23,11 @@ statemachine!{
     // error type instead of `()`.
     custom_error: false,
 
-    // [Optional] A list of derive names for the generated `States` and `Events`
-    // enumerations respectively. For example, to `#[derive(Debug)]`, these
-    // would both be specified as `[Debug]`.
-    derive_states: [],
-    derive_events: [],
+    // [Optional] A list of attributes for the generated `States` and `Events`
+    // enumerations respectively. For example, to `#[derive(Debug)]` and `#[repr(u8)], these
+    // would both be specified in a list as follows:
+    states_attr: #[derive(Debug)] #[repr(u8)],
+    events_attr: #[derive(Debug)] #[repr(u8)],
 
     transitions: {
         // * denotes the starting state

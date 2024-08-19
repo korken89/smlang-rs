@@ -22,8 +22,8 @@
 //!
 //! statemachine! {
 //!     name: Sample,
-//!     derive_states: [Debug],
-//!     derive_events: [Clone, Debug],
+//!     states_attr: #[derive(Debug)],
+//!     events_attr: #[derive(Clone, Debug)],
 //!     transitions: {
 //!         *Init + InitEvent [ guard_init ] / action_init = Ready,
 //!     }
