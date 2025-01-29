@@ -14,10 +14,7 @@ readme = "../README.md"
 quote = "1"
 proc-macro2 = "1"
 string_morph = "0.1.0"
-
-[dependencies.syn]
-features = ["extra-traits", "full"]
-version = "2"
+syn = "2"
 
 [lib]
 proc-macro = true
