@@ -267,16 +267,21 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
         let entry_ident = format_ident!("on_entry_{}", string_morph::to_snake_case(state));
         let state_name = format!("[{}::{}]", states_type_name, state);
+        let entry_exit_async = if sm.entry_exit_async {
+            quote! { async }
+        } else {
+            quote! {}
+        };
         entries_exits.extend(quote! {
             #[doc = concat!("Called on entry to ", #state_name)]
             #[inline(always)]
-            fn #entry_ident(&mut self) {}
+            #entry_exit_async fn #entry_ident(&mut self) {}
         });
         let exit_ident = format_ident!("on_exit_{}", string_morph::to_snake_case(state));
         entries_exits.extend(quote! {
             #[doc = concat!("Called on exit from ", #state_name)]
             #[inline(always)]
-            fn #exit_ident(&mut self) {}
+            #entry_exit_async fn #exit_ident(&mut self) {}
         });
 
         for (event, event_mapping) in event_mappings {
@@ -390,7 +395,13 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         }
     };
 
-    let mut is_async_state_machine = false;
+    let mut is_async_state_machine = sm.entry_exit_async;
+
+    let entry_exit_await = if sm.entry_exit_async {
+        quote! { .await }
+    } else {
+        quote! {}
+    };
 
     // Create the code blocks inside the switch cases
     let code_blocks: Vec<Vec<_>> = guards
@@ -433,12 +444,12 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                         }
                                 } else {
                                     quote!{
-                                            self.context.#exit_ident();
+                                            self.context.#exit_ident()#entry_exit_await;
                                             #action_code
                                             let out_state = #states_type_name::#out_state;
                                             self.context().transition_callback(&self.state, &out_state);
                                             self.state = out_state;
-                                            self.context.#entry_ident();
+                                            self.context.#entry_ident()#entry_exit_await;
                                             return Ok(&self.state);
                                         }
                                 };
