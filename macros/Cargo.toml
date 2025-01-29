@@ -20,4 +20,4 @@ syn = "2"
 proc-macro = true
 
 [features]
-graphviz = []
+graphviz = ["syn/extra-traits"]
