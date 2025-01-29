@@ -17,7 +17,7 @@ string_morph = "0.1.0"
 
 [dependencies.syn]
 features = ["extra-traits", "full"]
-version = "1"
+version = "2"
 
 [lib]
 proc-macro = true
