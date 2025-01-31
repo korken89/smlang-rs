@@ -259,13 +259,14 @@ See example `examples/event_with_data.rs` for a usage example.
 
 See example `examples/guard_action_syntax.rs` for a usage-example.
 
-### Async Guard and Action
+### Async Guard, Action And Entry/Exit
 
 Guards and actions may both be optionally `async`:
 ```rust
 use smlang::{async_trait, statemachine};
 
 statemachine! {
+    entry_exit_async: true,
     transitions: {
         *State1 + Event1 [guard1] / async action1 = State2,
         State2 + Event2 [async guard2] / action2 = State3,
@@ -293,9 +294,16 @@ impl StateMachineContext for Context {
     fn action2(&mut self) -> () {
         // ...
     }
+
+    async fn on_entry_state1(&mut self) {
+        // ...
+    }
+
+    async fn on_exit_state2(&mut self) {
+        // ...
+    }
 }
 ```
-
 
 See example `examples/async.rs` for a usage-example.
 

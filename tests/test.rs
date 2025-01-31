@@ -200,6 +200,41 @@ fn async_guards_and_actions() {
 }
 
 #[test]
+fn async_on_entry_and_exit() {
+    use smol;
+
+    smol::block_on(async {
+        statemachine! {
+            entry_exit_async: true,
+            transitions: {
+                *State1 + Event1 = State2,
+                State2 + Event2 = State3,
+            }
+        }
+
+        struct Context;
+
+        impl StateMachineContext for Context {
+            async fn on_entry_state1(&mut self) {}
+
+            async fn on_exit_state1(&mut self) {}
+
+            async fn on_entry_state2(&mut self) {}
+
+            async fn on_exit_state2(&mut self) {}
+        }
+
+        let mut sm = StateMachine::new(Context);
+
+        sm.process_event(Events::Event1).await.unwrap();
+        assert!(matches!(sm.state(), &States::State2));
+
+        sm.process_event(Events::Event2).await.unwrap();
+        assert!(matches!(sm.state(), &States::State3));
+    });
+}
+
+#[test]
 fn guard_expressions() {
     #[derive(PartialEq, Display)]
     pub struct Entry(pub u32);

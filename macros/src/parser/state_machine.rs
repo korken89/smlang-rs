@@ -9,6 +9,7 @@ pub struct StateMachine {
     pub name: Option<Ident>,
     pub states_attr: Vec<Attribute>,
     pub events_attr: Vec<Attribute>,
+    pub entry_exit_async: bool,
 }
 
 impl StateMachine {
@@ -20,6 +21,7 @@ impl StateMachine {
             name: None,
             states_attr: Vec::new(),
             events_attr: Vec::new(),
+            entry_exit_async: false,
         }
     }
 
@@ -117,6 +119,14 @@ impl parse::Parse for StateMachine {
                     statemachine.events_attr = Attribute::parse_outer(input)?;
                 }
 
+                "entry_exit_async" => {
+                    input.parse::<Token![:]>()?;
+                    let entry_exit_async: syn::LitBool = input.parse()?;
+                    if entry_exit_async.value {
+                        statemachine.entry_exit_async = true;
+                    }
+                }
+
                 keyword => {
                     return Err(parse::Error::new(
                         input.span(),
@@ -126,7 +136,8 @@ impl parse::Parse for StateMachine {
                                 \"temporary_context\", \
                                 \"custom_error\", \
                                 \"states_attr\", \
-                                \"events_attr\"
+                                \"events_attr\", \
+                                \"entry_exit_async\"
                                 ]",
                             keyword
                         ),
