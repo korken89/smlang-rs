@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 - Add support for defining States and Events attributes using `states_attr` and `events_attr` fields
+- Add support for async on_entry_* and on_exit_* hooks with flag `entry_exit_async = true`
 
 ### Changed
 
