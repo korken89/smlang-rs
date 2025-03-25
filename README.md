@@ -2,6 +2,7 @@
 
 ![Build Status](https://github.com/korken89/smlang-rs/actions/workflows/build.yml/badge.svg)
 ![Documentation](https://github.com/korken89/smlang-rs/actions/workflows/docs.yml/badge.svg)
+[![libs.tech recommends](https://libs.tech/project/162562947/badge.svg)](https://libs.tech/project/162562947/smlang-rs)
 
 > A state machine language DSL based on the syntax of [Boost-SML](https://boost-ext.github.io/sml/).
 
