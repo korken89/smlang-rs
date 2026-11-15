@@ -67,8 +67,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     let transitions = &sm.states_events_mapping;
 
     let in_states: Vec<_> = transitions
-        .iter()
-        .map(|(name, _)| {
+        .keys()
+        .map(|name| {
             let state_name = sm.states.get(name).unwrap();
 
             match sm.state_data.data_types.get(name) {
@@ -87,8 +87,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         .collect();
 
     let events: Vec<Vec<_>> = transitions
-        .iter()
-        .map(|(_, value)| {
+        .values()
+        .map(|value| {
             value
                 .iter()
                 .map(|(name, value)| {
@@ -150,8 +150,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             let state_name = &sm.states.get(name).unwrap().to_string();
 
             value
-                .iter()
-                .map(|(name, _)| {
+                .keys()
+                .map(|name| {
                     let state_data = match sm.state_data.data_types.get(state_name) {
                         Some(Type::Reference(_)) => quote! { state_data },
                         Some(_) => quote! { &state_data },
@@ -179,8 +179,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             let state_name = &sm.states.get(name).unwrap().to_string();
 
             value
-                .iter()
-                .map(|(name, _)| {
+                .keys()
+                .map(|name| {
                     let state_data = match sm.state_data.data_types.get(state_name) {
                         Some(Type::Reference(_)) => quote! { state_data },
                         Some(_) => quote! { &state_data },

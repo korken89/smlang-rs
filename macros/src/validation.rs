@@ -63,9 +63,7 @@ fn validate_action_signatures(sm: &ParsedStateMachine) -> Result<(), parse::Erro
     for (in_state_name, from_transitions) in all_transitions.iter() {
         let in_state_data = sm.state_data.data_types.get(in_state_name);
 
-        for (out_state_name, event_mapping) in from_transitions.iter() {
-            let out_state_data = sm.state_data.data_types.get(out_state_name);
-
+        for event_mapping in from_transitions.values() {
             // Get the data associated with this event.
             let event_data = sm
                 .event_data
@@ -77,6 +75,13 @@ fn validate_action_signatures(sm: &ParsedStateMachine) -> Result<(), parse::Erro
                     is_async,
                 }) = &transition.action
                 {
+                    // Internal transitions are already resolved to their input state, so the
+                    // output state is always a concrete state here.
+                    let out_state_data = sm
+                        .state_data
+                        .data_types
+                        .get(&transition.out_state.to_string());
+
                     let signature = FunctionSignature::new(
                         in_state_data,
                         event_data,
@@ -114,7 +119,7 @@ fn validate_guard_signatures(sm: &ParsedStateMachine) -> Result<(), parse::Error
     for (in_state_name, from_transitions) in all_transitions.iter() {
         let in_state_data = sm.state_data.data_types.get(in_state_name);
 
-        for (_out_state_name, event_mapping) in from_transitions.iter() {
+        for event_mapping in from_transitions.values() {
             // Get the data associated with this event.
             let event_data = sm
                 .event_data

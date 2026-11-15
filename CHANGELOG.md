@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - [breaking] Remove `derive_states` and `derive_events` fields in lieu of `states_attr` and `events_attr` to define attributes generically
 - Bumped `syn` dependency to version 2
 
+### Fixed
+
+- `smlang-macros` failing to build when no other crate enables `syn/extra-traits`
+- Action signature validation ignoring output-state data, so reusing an action for targets with different state data now gives the intended error
+
 ## [v0.8.0] - 2024-08-07
 
 ### Added
