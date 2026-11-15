@@ -29,7 +29,7 @@ impl StateMachine {
         for in_state in transitions.in_states {
             let transition = StateTransition {
                 in_state,
-                event: transitions.event.clone(),
+                event: transitions.event.clone(), // `None` for eventless transitions
                 guard: transitions.guard.clone(),
                 action: transitions.action.clone(),
                 out_state: transitions.out_state.clone(),

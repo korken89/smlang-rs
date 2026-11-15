@@ -1,0 +1,5 @@
+error: Unguarded eventless transitions form an infinite loop: A -> B -> A (no guarded eventless transition leads out of it)
+  --> tests/compile-fail/eventless_guard_back_into_loop.rs:10:13
+   |
+10 |         A = B, //~ Unguarded eventless transitions form an infinite loop: A -> B -> A (no guarded eventless transition leads out of it)
+   |             ^

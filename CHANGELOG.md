@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Add support for defining States and Events attributes using `states_attr` and `events_attr` fields
 - Add support for async on_entry_* and on_exit_* hooks with flag `entry_exit_async: true`
-- Add non-compiling example `eventless_transition` (behind the `eventless-transitions` feature) documenting the desired eventless transition syntax
+- Add support for eventless transitions (`State [guard] / action = Target`), which are taken right after the source state is entered, without an event. See `examples/eventless_transition.rs`
 
 ### Changed
 

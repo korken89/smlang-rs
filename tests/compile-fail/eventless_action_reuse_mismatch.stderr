@@ -1,0 +1,12 @@
+error: Action `action` can only be reused when all input states, events, and output states have the same data
+  --> tests/compile-fail/eventless_action_reuse_mismatch.rs:5:1
+   |
+ 5 | / statemachine! {
+ 6 | |     transitions: {
+ 7 | |         *State1 + Event1(u8) / action = State2,
+ 8 | |         State2 / action = State3, //~ Action `action` can only be reused when all input states, events, and output states have the...
+ 9 | |     }
+10 | | }
+   | |_^
+   |
+   = note: this error originates in the macro `statemachine` (in Nightly builds, run with -Z macro-backtrace for more info)

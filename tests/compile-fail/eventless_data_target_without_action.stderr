@@ -1,0 +1,5 @@
+error: This state has data associated, but not action is define here to provide it.
+ --> tests/compile-fail/eventless_data_target_without_action.rs:8:26
+  |
+8 |         State2 [guard] = State3(u32), //~ This state has data associated, but not action is define here to provide it.
+  |                          ^^^^^^
