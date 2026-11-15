@@ -71,30 +71,12 @@ fn visit_transitions<F>(sm: &ParsedStateMachine, mut visit: F) -> Result<(), par
 where
     F: FnMut(&TransitionData, &Transition) -> Result<(), parse::Error>,
 {
-    for (in_state_name, from_transitions) in sm.states_events_mapping.iter() {
-        let in_state = sm.state_data.data_types.get(in_state_name);
-
-        for event_mapping in from_transitions.values() {
-            // Get the data associated with this event.
-            let event = sm
-                .event_data
-                .data_types
-                .get(&event_mapping.event.to_string());
-            let data = TransitionData { in_state, event };
-            for transition in &event_mapping.transitions {
-                visit(&data, transition)?;
-            }
-        }
-    }
-
-    for (in_state_name, transitions) in sm.eventless_transitions.iter() {
+    for (in_state, event, transition) in sm.all_transitions() {
         let data = TransitionData {
-            in_state: sm.state_data.data_types.get(in_state_name),
-            event: None,
+            in_state: sm.state_data.data_types.get(in_state),
+            event: event.and_then(|event| sm.event_data.data_types.get(event)),
         };
-        for transition in transitions {
-            visit(&data, transition)?;
-        }
+        visit(&data, transition)?;
     }
 
     Ok(())
@@ -173,21 +155,25 @@ fn validate_guard_signatures(sm: &ParsedStateMachine) -> Result<(), parse::Error
 /// never be taken.
 ///
 /// There can be at most one unguarded transition, and no guarded transition can follow it.
-/// `label` names the source state and event in the error message and `duplicate` describes
-/// what is specified multiple times. Errors of eventless transitions point to the offending
-/// transition, errors of event transitions keep the span of the macro invocation.
+/// The error messages name the source state and the event, or say that the transitions are
+/// eventless. Errors of eventless transitions point to the offending transition, errors of event
+/// transitions keep the span of the macro invocation.
 fn check_reachability(
-    label: &str,
-    duplicate: &str,
+    in_state: &str,
+    event: Option<&str>,
     transitions: &[Transition],
-    precise_spans: bool,
 ) -> Result<(), parse::Error> {
-    let span_of = |t: &Transition| {
-        if precise_spans {
-            t.out_state.span()
-        } else {
-            Span::call_site()
-        }
+    let label = || match event {
+        Some(event) => format!("{} + {}", in_state, event),
+        None => format!("{} (eventless)", in_state),
+    };
+    let duplicate = match event {
+        Some(_) => "State and event combination",
+        None => "Unguarded eventless transition",
+    };
+    let span_of = |t: &Transition| match event {
+        Some(_) => Span::call_site(),
+        None => t.out_state.span(),
     };
 
     let mut unguarded_count = 0;
@@ -198,7 +184,7 @@ fn check_reachability(
                 return Err(parse::Error::new(
                     span_of(t),
                     format!("{}: [{}] : guarded transition is unreachable because it follows an unguarded transition, which handles all cases",
-                            label, g),
+                            label(), g),
                 ));
             }
         } else {
@@ -209,7 +195,8 @@ fn check_reachability(
                     span_of(t),
                     format!(
                         "{}: {} specified multiple times, remove duplicates.",
-                        label, duplicate
+                        label(),
+                        duplicate
                     ),
                 ));
             }
@@ -224,27 +211,15 @@ fn validate_unreachable_transitions(sm: &ParsedStateMachine) -> Result<(), parse
         for (event, event_mapping) in event_mappings {
             // more than single transition for (in_state,event)
             if event_mapping.transitions.len() > 1 {
-                check_reachability(
-                    &format!("{} + {}", in_state, event),
-                    "State and event combination",
-                    &event_mapping.transitions,
-                    false,
-                )?;
+                check_reachability(in_state, Some(event), &event_mapping.transitions)?;
             }
         }
     }
 
     // The eventless transitions of a state are evaluated in declaration order, like the
-    // transitions of an event. Iterate in sorted order to report errors deterministically.
-    let mut eventless: Vec<_> = sm.eventless_transitions.iter().collect();
-    eventless.sort_by_key(|(in_state, _)| *in_state);
-    for (in_state, transitions) in eventless {
-        check_reachability(
-            &format!("{} (eventless)", in_state),
-            "Unguarded eventless transition",
-            transitions,
-            true,
-        )?;
+    // transitions of an event. The states are sorted, so errors are reported deterministically.
+    for (in_state, transitions) in &sm.eventless_transitions {
+        check_reachability(in_state, None, transitions)?;
     }
     Ok(())
 }
@@ -262,28 +237,37 @@ fn validate_unreachable_transitions(sm: &ParsedStateMachine) -> Result<(), parse
 /// A loop that has a guarded way out is accepted, because guarded transitions are evaluated
 /// before the unguarded one: `S [done] = T, S / work = S` is a valid `while !done { work }`.
 fn validate_eventless_cycles(sm: &ParsedStateMachine) -> Result<(), parse::Error> {
+    // The names of the targets of the eventless transitions of each state.
+    let targets: BTreeMap<&str, Vec<String>> = sm
+        .eventless_transitions
+        .iter()
+        .map(|(in_state, transitions)| {
+            let names = transitions.iter().map(|t| t.out_state.to_string());
+            (in_state.as_str(), names.collect())
+        })
+        .collect();
+
     // After `validate_unreachable_transitions` every state has at most one unguarded eventless
-    // transition. Take the first one to stay independent of the validation order.
-    let mut edges: BTreeMap<String, &Transition> = BTreeMap::new();
-    for (in_state, transitions) in &sm.eventless_transitions {
-        if let Some(transition) = transitions.iter().find(|t| t.guard.is_none()) {
-            edges.insert(in_state.clone(), transition);
-        }
-    }
+    // transition. Take the first one to stay independent of the validation order. `edges` holds
+    // the index of that transition.
+    let edges: BTreeMap<&str, usize> = sm
+        .eventless_transitions
+        .iter()
+        .filter_map(|(in_state, transitions)| {
+            let index = transitions.iter().position(|t| t.guard.is_none())?;
+            Some((in_state.as_str(), index))
+        })
+        .collect();
 
     // Start with every state that has an unguarded eventless transition, and repeatedly remove
     // the states that have an eventless transition to a state that is not doomed. What is left
     // at the fixpoint can never stop.
-    let mut doomed: BTreeSet<String> = edges.keys().cloned().collect();
+    let mut doomed: BTreeSet<&str> = edges.keys().copied().collect();
     loop {
-        let rescued: Vec<String> = doomed
+        let rescued: Vec<&str> = doomed
             .iter()
-            .filter(|state| {
-                sm.eventless_transitions[*state]
-                    .iter()
-                    .any(|t| !doomed.contains(&t.out_state.to_string()))
-            })
-            .cloned()
+            .copied()
+            .filter(|state| targets[state].iter().any(|t| !doomed.contains(t.as_str())))
             .collect();
         if rescued.is_empty() {
             break;
@@ -294,40 +278,28 @@ fn validate_eventless_cycles(sm: &ParsedStateMachine) -> Result<(), parse::Error
     }
 
     // Report the cycle that is reachable from the smallest doomed state, so the message is
-    // stable across builds. The unguarded edges of doomed states stay inside the doomed
-    // states, so the walk ends in a cycle.
-    if let Some(start) = doomed.iter().next() {
-        let mut path: Vec<&String> = Vec::new();
-        let mut current = start;
-        let cycle_start = loop {
-            if let Some(position) = path.iter().position(|state| *state == current) {
-                break Some(position);
-            }
-            path.push(current);
-            match edges
-                .get(current)
-                .and_then(|t| doomed.get(&t.out_state.to_string()))
-            {
-                Some(next) => current = next,
-                None => break None,
+    // stable across builds. The unguarded edge of a doomed state stays inside the doomed states
+    // (otherwise it would have been rescued), so the walk ends in a cycle.
+    if let Some(&start) = doomed.iter().next() {
+        let mut path = vec![start];
+        let cycle = loop {
+            let last = path[path.len() - 1];
+            let next = targets[last][edges[last]].as_str();
+            match path.iter().position(|&state| state == next) {
+                Some(position) => break path.split_off(position),
+                None => path.push(next),
             }
         };
 
-        if let Some(position) = cycle_start {
-            let cycle = &path[position..];
-            let names: Vec<&str> = cycle
-                .iter()
-                .map(|state| state.as_str())
-                .chain(std::iter::once(cycle[0].as_str()))
-                .collect();
-            return Err(parse::Error::new(
-                edges[cycle[0]].out_state.span(),
-                format!(
-                    "Unguarded eventless transitions form an infinite loop: {} (no guarded eventless transition leads out of it)",
-                    names.join(" -> ")
-                ),
-            ));
-        }
+        let names: Vec<&str> = cycle.iter().copied().chain([cycle[0]]).collect();
+        let first_edge = &sm.eventless_transitions[cycle[0]][edges[cycle[0]]];
+        return Err(parse::Error::new(
+            first_edge.out_state.span(),
+            format!(
+                "Unguarded eventless transitions form an infinite loop: {} (no guarded eventless transition leads out of it)",
+                names.join(" -> ")
+            ),
+        ));
     }
     Ok(())
 }
@@ -344,14 +316,12 @@ pub fn validate(sm: &ParsedStateMachine) -> Result<(), parse::Error> {
 #[cfg(test)]
 mod tests {
     use super::validate;
-    use crate::parser::state_machine::StateMachine;
-    use crate::parser::ParsedStateMachine;
+    use crate::parser::parse_machine;
     use syn::parse;
 
     fn check(transitions: &str) -> parse::Result<()> {
         let source = format!("transitions: {{ {} }}", transitions);
-        let sm = ParsedStateMachine::new(syn::parse_str::<StateMachine>(&source)?)?;
-        validate(&sm)
+        validate(&parse_machine(&source)?)
     }
 
     fn accepted(transitions: &str) {

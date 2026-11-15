@@ -55,7 +55,9 @@ statemachine!{
         // Eventless transitions omit the event. After every transition taken by
         // `process_event`, the eventless transitions of the resulting state are
         // evaluated; the first enabled one fires. They need an explicit target and
-        // cannot start from the starting state or from a wildcard.
+        // cannot start from the starting state or from a wildcard. The generated
+        // `process_eventless()` evaluates them on demand, for example to retry after
+        // an error or to settle a machine created with `new_with_state`.
         SrcState8 [ guard8 ] / action8 = DstState8,
         SrcState8 = DstState9,
     }

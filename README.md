@@ -146,6 +146,7 @@ Eventless transitions are evaluated like this:
 - This is repeated until the current state has no enabled eventless transition. `process_event`
   returns that final state.
 - They are not evaluated by `new()` or `new_with_state()`, nor at the start of `process_event`.
+  Call `process_eventless()` to evaluate them on demand.
 
 If no eventless transition is enabled, the machine stays in that state and `process_event`
 returns `Ok`. This is not an error, unlike an event transition where no guard passes and
@@ -153,9 +154,40 @@ returns `Ok`. This is not an error, unlike an event transition where no guard pa
 conditional wait. With `S + Tick / work = _` and `S [done] = T`, every `Tick` runs `work`, and the
 machine moves on to `T` as soon as `done` passes.
 
+A machine with eventless transitions also gets a public method `process_eventless()`. It takes the
+eventless transitions of the current state in the order they are declared, until the machine
+reaches a state without an enabled eventless transition, and returns that state. If none is
+enabled, nothing happens and the current state is returned. `process_event` calls it after
+every transition into a state with eventless transitions. It is `async` if an eventless guard or
+action is async, or if `entry_exit_async` is set. Use it to:
+
+- retry after an eventless guard or action returned an error, see below,
+- settle a machine created with `new_with_state` in a state that has eventless transitions,
+- check the guards of a resting state again, for example to poll a condition without an event
+  (`Waiting [ready] = Go`).
+
 If a guard or action of an eventless transition returns an error, `process_event` returns
-`GuardFailed` or `ActionFailed`. Earlier steps are not rolled back, so the machine stays in the
-source state of the failed eventless transition. Use `sm.state()` to find out where it stopped.
+`GuardFailed` or `ActionFailed`. The transition of the event and earlier eventless steps are not
+rolled back, so the machine stays in the source state of the failed eventless transition. Use
+`sm.state()` to find out where it stopped.
+
+Recovery works as for event transitions. If a guard returned an error, nothing of that transition
+ran. If an action returned an error, `on_exit` of the source state has run, but the state is
+unchanged. For an event transition, sending the event again retries it. This does not work for
+an eventless transition: the machine has already left the source state of the event, so the
+event no longer leads to the failed step, and usually returns `InvalidEvent`. Call
+`process_eventless()` instead, as often as needed. As for an event transition, `on_exit` of the
+source state runs again when a failed action is retried.
+```rust
+match sm.process_event(Events::StartEvent) {
+    Err(Error::GuardFailed(_)) => {
+        // The machine rests in `CheckConfiguration`, the source state of the failed
+        // eventless transition. Fix the cause, then retry:
+        sm.process_eventless()?;
+    }
+    // ...
+}
+```
 
 The following is checked at compile time:
 
@@ -174,9 +206,12 @@ Loops that a guard can end are allowed, for example `S [done] = T` together with
 `S / work = S`. Making sure they end is up to you.
 
 Guards and actions of eventless transitions have the usual signatures, without the event data
-parameter. If a `temporary_context` is configured, they receive it, so it must be `Copy` or a
-`&mut` reference. The `log_guard`, `log_action` and `transition_callback` hooks are also called for
-eventless transitions, `log_process_event` is not.
+parameter. If a `temporary_context` is configured, they receive it. It must be `Copy` or a
+`&mut` reference, because `process_event` also passes the same value to the guard and action of
+the event transition. `process_eventless()` takes the `temporary_context` only if at least one
+eventless transition has a guard or action. So an owned context such as `String` works with
+eventless transitions that have none. The `log_guard`, `log_action` and `transition_callback`
+hooks are also called for eventless transitions, `log_process_event` is not.
 
 See example `examples/eventless_transition.rs` for a usage example.
 

@@ -2,7 +2,7 @@ use super::event::Event;
 use super::input_state::InputState;
 use super::output_state::OutputState;
 use super::AsyncIdent;
-use proc_macro2::{Span, TokenStream};
+use proc_macro2::TokenStream;
 use quote::quote;
 use std::fmt;
 use syn::{bracketed, parse, token, Ident, Token};
@@ -101,9 +101,12 @@ impl parse::Parse for StateTransitions {
             let span = if has_target_marker {
                 out_state.ident.span()
             } else {
+                // `in_states` is never empty, the loop above parses at least one input state.
                 in_states
                     .last()
-                    .map_or_else(Span::call_site, |in_state| in_state.ident.span())
+                    .expect("at least one input state")
+                    .ident
+                    .span()
             };
             return Err(parse::Error::new(span, EVENTLESS_NO_TARGET));
         }

@@ -1,4 +1,4 @@
-use crate::parser::transition::GuardExpression;
+use crate::parser::transition::{GuardExpression, StateTransition};
 use crate::parser::AsyncIdent;
 use syn::{parenthesized, parse, spanned::Spanned, token, Ident, Token, Type};
 
@@ -10,7 +10,6 @@ pub struct Event {
 
 #[derive(Debug)]
 pub struct EventMapping {
-    pub in_state: Ident,
     pub event: Ident,
     pub transitions: Vec<Transition>,
 }
@@ -20,6 +19,16 @@ pub struct Transition {
     pub guard: Option<GuardExpression>,
     pub action: Option<AsyncIdent>,
     pub out_state: Ident,
+}
+
+impl From<&StateTransition> for Transition {
+    fn from(transition: &StateTransition) -> Self {
+        Self {
+            guard: transition.guard.clone(),
+            action: transition.action.clone(),
+            out_state: transition.out_state.ident.clone(),
+        }
+    }
 }
 
 impl parse::Parse for Event {

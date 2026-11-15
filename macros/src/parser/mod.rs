@@ -14,13 +14,15 @@ use input_state::InputState;
 use proc_macro2::{Span, TokenStream};
 
 use crate::parser::event::Transition;
-use std::collections::{hash_map, HashMap};
+use std::collections::{hash_map, BTreeMap, HashMap};
 use std::fmt;
 use syn::{parse, Attribute, Ident, Type};
 use transition::StateTransition;
 pub type TransitionMap = HashMap<String, HashMap<String, EventMapping>>;
-/// Eventless transitions by source state name, in declaration order.
-pub type EventlessMap = HashMap<String, Vec<Transition>>;
+/// Eventless transitions by source state name. The transitions of a state are in declaration
+/// order and the states are sorted, so the generated code and the errors do not depend on the
+/// iteration order of a hash map.
+pub type EventlessMap = BTreeMap<String, Vec<Transition>>;
 
 #[derive(Debug, Clone)]
 pub struct AsyncIdent {
@@ -100,23 +102,14 @@ fn add_transition(
     match p.entry(event.ident.to_string()) {
         hash_map::Entry::Vacant(entry) => {
             let mapping = EventMapping {
-                in_state: transition.in_state.ident.clone(),
                 event: event.ident.clone(),
-                transitions: vec![Transition {
-                    guard: transition.guard.clone(),
-                    action: transition.action.clone(),
-                    out_state: transition.out_state.ident.clone(),
-                }],
+                transitions: vec![transition.into()],
             };
             entry.insert(mapping);
         }
         hash_map::Entry::Occupied(mut entry) => {
             let mapping = entry.get_mut();
-            mapping.transitions.push(Transition {
-                guard: transition.guard.clone(),
-                action: transition.action.clone(),
-                out_state: transition.out_state.ident.clone(),
-            });
+            mapping.transitions.push(transition.into());
         }
     }
 
@@ -125,6 +118,34 @@ fn add_transition(
 }
 
 impl ParsedStateMachine {
+    /// All transitions with the name of their source state and of their event, if any: first the
+    /// event transitions, then the eventless transitions, which have no event. The eventless
+    /// transitions are sorted by source state.
+    pub fn all_transitions(&self) -> impl Iterator<Item = (&String, Option<&String>, &Transition)> {
+        let event_transitions =
+            self.states_events_mapping
+                .iter()
+                .flat_map(|(state, event_mappings)| {
+                    event_mappings
+                        .iter()
+                        .flat_map(move |(event, event_mapping)| {
+                            event_mapping
+                                .transitions
+                                .iter()
+                                .map(move |transition| (state, Some(event), transition))
+                        })
+                });
+        let eventless_transitions =
+            self.eventless_transitions
+                .iter()
+                .flat_map(|(state, transitions)| {
+                    transitions
+                        .iter()
+                        .map(move |transition| (state, None, transition))
+                });
+        event_transitions.chain(eventless_transitions)
+    }
+
     pub fn new(mut sm: StateMachine) -> parse::Result<Self> {
         // Derive out_state for internal non-wildcard transitions
         for transition in sm.transitions.iter_mut() {
@@ -215,20 +236,13 @@ impl ParsedStateMachine {
         for transition in sm.transitions.iter() {
             // Eventless transitions are kept apart from the event transitions. They never
             // take part in wildcard expansion (a wildcard source is rejected by the parser).
-            let event = match &transition.event {
-                Some(event) => event,
-                None => {
-                    check_out_state_data_has_action(transition, &state_data)?;
-                    eventless_transitions
-                        .entry(transition.in_state.ident.to_string())
-                        .or_default()
-                        .push(Transition {
-                            guard: transition.guard.clone(),
-                            action: transition.action.clone(),
-                            out_state: transition.out_state.ident.clone(),
-                        });
-                    continue;
-                }
+            let Some(event) = &transition.event else {
+                check_out_state_data_has_action(transition, &state_data)?;
+                eventless_transitions
+                    .entry(transition.in_state.ident.to_string())
+                    .or_default()
+                    .push(transition.into());
+                continue;
             };
 
             // if input state is a wildcard, we need to add this transition for all states
@@ -311,13 +325,15 @@ impl ParsedStateMachine {
     }
 }
 
+/// Parses a state machine from the source of a `statemachine!` invocation, for the unit tests.
+#[cfg(test)]
+pub(crate) fn parse_machine(source: &str) -> parse::Result<ParsedStateMachine> {
+    ParsedStateMachine::new(syn::parse_str::<StateMachine>(source)?)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn parse_machine(source: &str) -> parse::Result<ParsedStateMachine> {
-        ParsedStateMachine::new(syn::parse_str::<StateMachine>(source)?)
-    }
 
     fn machine(source: &str) -> ParsedStateMachine {
         parse_machine(source).unwrap_or_else(|e| panic!("`{}` should parse: {}", source, e))
@@ -330,8 +346,8 @@ mod tests {
         }
     }
 
-    fn sorted_keys<V>(map: &HashMap<String, V>) -> Vec<&str> {
-        let mut keys: Vec<&str> = map.keys().map(String::as_str).collect();
+    fn sorted_keys<'a, V>(map: impl IntoIterator<Item = (&'a String, V)>) -> Vec<&'a str> {
+        let mut keys: Vec<&str> = map.into_iter().map(|(key, _)| key.as_str()).collect();
         keys.sort_unstable();
         keys
     }
