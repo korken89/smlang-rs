@@ -1,0 +1,5 @@
+error: The starting state cannot have eventless transitions, because `new()` cannot run guards or actions
+ --> tests/compile-fail/eventless_from_starting_state.rs:8:9
+  |
+8 |         State1 [guard] = State3, //~ The starting state cannot have eventless transitions, because `new()` cannot run guards or actions
+  |         ^^^^^^

@@ -1,0 +1,5 @@
+error: State2 (eventless): [guard()] : guarded transition is unreachable because it follows an unguarded transition, which handles all cases
+ --> tests/compile-fail/eventless_guarded_after_unguarded.rs:9:26
+  |
+9 | ...   State2 [guard] = State4, //~ State2 (eventless): [guard()] : guarded transition is unreachable because it follows an unguarded ...
+  |                        ^^^^^^

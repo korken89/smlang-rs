@@ -1,0 +1,5 @@
+error: Eventless transitions cannot use a wildcard input state; add an event (`_ + Event`)
+ --> tests/compile-fail/eventless_wildcard.rs:8:9
+  |
+8 |         _ [guard] = State1, //~ Eventless transitions cannot use a wildcard input state; add an event (`_ + Event`)
+  |         ^

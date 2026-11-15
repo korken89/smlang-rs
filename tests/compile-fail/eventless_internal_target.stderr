@@ -1,0 +1,5 @@
+error: expected `+ Event`, or an explicit target state (`= State`) for an eventless transition
+ --> tests/compile-fail/eventless_internal_target.rs:8:26
+  |
+8 |         State2 [guard] = _, //~ expected `+ Event`, or an explicit target state (`= State`) for an eventless transition
+  |                          ^

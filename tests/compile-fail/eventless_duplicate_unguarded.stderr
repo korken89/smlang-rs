@@ -1,0 +1,5 @@
+error: State2 (eventless): Unguarded eventless transition specified multiple times, remove duplicates.
+ --> tests/compile-fail/eventless_duplicate_unguarded.rs:9:18
+  |
+9 |         State2 = State4, //~ State2 (eventless): Unguarded eventless transition specified multiple times, remove duplicates.
+  |                  ^^^^^^

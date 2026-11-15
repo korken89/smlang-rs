@@ -11,11 +11,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Add support for defining States and Events attributes using `states_attr` and `events_attr` fields
 - Add support for async on_entry_* and on_exit_* hooks with flag `entry_exit_async: true`
+- Add support for eventless transitions (`State [guard] / action = Target`), which `process_event` takes after it enters their source state, without another event. `process_eventless()` takes them on demand, for example to retry after an error or to settle a machine created with `new_with_state`. See `examples/eventless_transition.rs`
 
 ### Changed
 
 - [breaking] Remove `derive_states` and `derive_events` fields in lieu of `states_attr` and `events_attr` to define attributes generically
 - Bumped `syn` dependency to version 2
+
+### Fixed
+
+- `smlang-macros` failing to build when no other crate enables `syn/extra-traits`
+- Action signature validation ignoring output-state data, so reusing an action for targets with different state data now gives the intended error
 
 ## [v0.8.0] - 2024-08-07
 

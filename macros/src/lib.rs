@@ -3,7 +3,8 @@
 extern crate proc_macro;
 
 mod codegen;
-#[cfg(feature = "graphviz")]
+// Only used with the `graphviz` feature, but always compiled so that its tests run.
+#[cfg_attr(not(feature = "graphviz"), allow(dead_code))]
 mod diagramgen;
 mod parser;
 mod validation;

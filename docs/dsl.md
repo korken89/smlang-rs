@@ -51,6 +51,15 @@ statemachine!{
         // Guards can be logically combined using `!`, `||`, and `&&`.
         SrcState6 + Event6 [ async guard6 || other_guard6 ] / action6 = DstState6,
         SrcState7 + Event7 [ async guard7 && !other_guard7 ] / action7 = DstState7,
+
+        // Eventless transitions omit the event. After every transition taken by
+        // `process_event`, the eventless transitions of the resulting state are
+        // evaluated; the first enabled one fires. They need an explicit target and
+        // cannot start from the starting state or from a wildcard. The generated
+        // `process_eventless()` evaluates them on demand, for example to retry after
+        // an error or to settle a machine created with `new_with_state`.
+        SrcState8 [ guard8 ] / action8 = DstState8,
+        SrcState8 = DstState9,
     }
     // ...
 }

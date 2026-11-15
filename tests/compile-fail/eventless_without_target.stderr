@@ -1,0 +1,5 @@
+error: expected `+ Event`, or an explicit target state (`= State`) for an eventless transition
+ --> tests/compile-fail/eventless_without_target.rs:8:9
+  |
+8 |         State2 / action, //~ expected `+ Event`, or an explicit target state (`= State`) for an eventless transition
+  |         ^^^^^^

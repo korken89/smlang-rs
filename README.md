@@ -120,6 +120,101 @@ statemachine! {
 
 See also tests: `test_internal_transition_with_data()` or `test_wildcard_states_and_internal_transitions()` for a usage example.
 
+#### Eventless transitions
+
+A transition without `+ Event` is an eventless transition. It is taken without waiting for an
+event, which makes it possible to write transient states and choice points. For example, a
+state that checks the result of an action and then picks the next state:
+```rust
+statemachine! {
+    transitions: {
+        *Idle + StartEvent / configure = CheckConfiguration,
+        CheckConfiguration [ configuration_successful ] = Ready,
+        CheckConfiguration = Error,
+    },
+}
+```
+A single `process_event(Events::StartEvent)` call runs `configure` and ends in `Ready` or `Error`,
+never in `CheckConfiguration`. Guards and actions are written as for any other transition,
+for example `Flush / write_out = Idle`.
+
+Eventless transitions are evaluated like this:
+
+- After `process_event` takes a transition, including an internal transition, the eventless
+  transitions of the resulting state are checked in the order they are declared. The first one
+  whose guard passes, or which has no guard, fires.
+- This is repeated until the current state has no enabled eventless transition. `process_event`
+  returns that final state.
+- They are not evaluated by `new()` or `new_with_state()`, nor at the start of `process_event`.
+  Call `process_eventless()` to evaluate them on demand.
+
+If no eventless transition is enabled, the machine stays in that state and `process_event`
+returns `Ok`. This is not an error, unlike an event transition where no guard passes and
+`TransitionsFailed` is returned. So a guarded eventless transition can act as a
+conditional wait. With `S + Tick / work = _` and `S [done] = T`, every `Tick` runs `work`, and the
+machine moves on to `T` as soon as `done` passes.
+
+A machine with eventless transitions also gets a public method `process_eventless()`. It takes the
+eventless transitions of the current state in the order they are declared, until the machine
+reaches a state without an enabled eventless transition, and returns that state. If none is
+enabled, nothing happens and the current state is returned. `process_event` calls it after
+every transition into a state with eventless transitions. It is `async` if an eventless guard or
+action is async, or if `entry_exit_async` is set. Use it to:
+
+- retry after an eventless guard or action returned an error, see below,
+- settle a machine created with `new_with_state` in a state that has eventless transitions,
+- check the guards of a resting state again, for example to poll a condition without an event
+  (`Waiting [ready] = Go`).
+
+If a guard or action of an eventless transition returns an error, `process_event` returns
+`GuardFailed` or `ActionFailed`. The transition of the event and earlier eventless steps are not
+rolled back, so the machine stays in the source state of the failed eventless transition. Use
+`sm.state()` to find out where it stopped.
+
+Recovery works as for event transitions. If a guard returned an error, nothing of that transition
+ran. If an action returned an error, `on_exit` of the source state has run, but the state is
+unchanged. For an event transition, sending the event again retries it. This does not work for
+an eventless transition: the machine has already left the source state of the event, so the
+event no longer leads to the failed step, and usually returns `InvalidEvent`. Call
+`process_eventless()` instead, as often as needed. As for an event transition, `on_exit` of the
+source state runs again when a failed action is retried.
+```rust
+match sm.process_event(Events::StartEvent) {
+    Err(Error::GuardFailed(_)) => {
+        // The machine rests in `CheckConfiguration`, the source state of the failed
+        // eventless transition. Fix the cause, then retry:
+        sm.process_eventless()?;
+    }
+    // ...
+}
+```
+
+The following is checked at compile time:
+
+- An eventless transition needs an explicit target. Internal forms, `= _` or no target, are not
+  allowed. Use `S [guard] / action = S` for an intentional loop.
+- The source cannot be the wildcard `_`.
+- The starting state cannot have eventless transitions.
+- Loops of eventless transitions that can never end are rejected. A loop never ends when it is
+  made of unguarded transitions and no guarded eventless transition leads out of it, for
+  example `S / action = S` on its own, or `A [g] = B, A = B, B = A`.
+- The usual rules for transitions from one state apply: at most one unguarded transition, no
+  guarded transition after an unguarded one, consistent guard and action signatures, and a target
+  with state data needs an action.
+
+Loops that a guard can end are allowed, for example `S [done] = T` together with
+`S / work = S`. Making sure they end is up to you.
+
+Guards and actions of eventless transitions have the usual signatures, without the event data
+parameter. If a `temporary_context` is configured, they receive it. It must be `Copy` or a
+`&mut` reference, because `process_event` also passes the same value to the guard and action of
+the event transition. `process_eventless()` takes the `temporary_context` only if at least one
+eventless transition has a guard or action. So an owned context such as `String` works with
+eventless transitions that have none. The `log_guard`, `log_action` and `transition_callback`
+hooks are also called for eventless transitions, `log_process_event` is not.
+
+See example `examples/eventless_transition.rs` for a usage example.
+
 #### Guard expressions
 
 Guard expression in square brackets [] allows to define a boolean expressions of multiple guard functions.
@@ -375,6 +470,25 @@ found in `on_entry_on_exit_generic`.
 The statemachine will call for every transition a transition callback. This function
 is called with both the old state and new state as arguments. An example can be found
 in `dominos`.
+
+### Choice point with eventless transitions
+
+`CheckConfiguration` has no event of its own. It is entered by `StartEvent` and then moves on to
+`Ready` or `Error` depending on a guard.
+
+DSL implementation:
+
+```rust
+statemachine!{
+    transitions: {
+        *Idle + StartEvent / configure = CheckConfiguration,
+        CheckConfiguration [ configuration_successful ] = Ready,
+        CheckConfiguration = Error,
+    }
+}
+```
+
+This example is available in `eventless_transition.rs`.
 
 ## Helpers
 
