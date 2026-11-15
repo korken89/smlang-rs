@@ -35,3 +35,13 @@ members = ["macros"]
 default = []
 
 graphviz = ["smlang-macros/graphviz"]
+
+# Gates `examples/eventless_transition.rs`, which uses a not-yet-supported syntax and
+# intentionally does not compile. Do not enable outside of feature development.
+eventless-transitions = []
+
+# Documents desired (unsupported) behavior and does not compile yet, so it is skipped
+# unless the `eventless-transitions` feature is enabled.
+[[example]]
+name = "eventless_transition"
+required-features = ["eventless-transitions"]
